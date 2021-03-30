@@ -12,7 +12,7 @@ from events import services
 class MainView(views.View):
     @staticmethod
     def get(request):
-        return redirect('event', event_id=1)
+        #return redirect('event', event_id=1)
         events = Event.objects.all()
         return render(
             request=request,
@@ -177,13 +177,8 @@ class EventEnterView(views.View):
             pin = participant_form.cleaned_data['pin']
             try:
                 participant = Participant.objects.get(pin=int(pin))
-            except Participant.DoesNotExist:
-                pass
-                participant = services.create_participant_with_default_accents(
-                    event=event,
-                    first_name=participant_form.cleaned_data['first_name'],
-                    last_name=participant_form.cleaned_data['last_name'],
-                )
+            except (Participant.DoesNotExist, TypeError):
+                return redirect('event_enter', event_id=event_id)   # TODO: msg for user
             participant_accents = Accent.objects.filter(participant=participant, event=event)
             for index, accent in enumerate(participant_accents):
                 accent.accent = accent_formset.cleaned_data[index]['accent']
