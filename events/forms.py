@@ -7,8 +7,8 @@ from events.models import Participant, Event, Accent
 
 
 class ParticipantRegistrationForm(forms.ModelForm):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, group_list, *args, **kwargs):
+        super().__init__()
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.add_input(Submit('submit', 'Зарегистрироваться'))
@@ -19,6 +19,8 @@ class ParticipantRegistrationForm(forms.ModelForm):
         self.fields['team'].required = False
         self.fields['grade'].required = False
 
+        self.group_list = kwargs.get('bla', '2312')
+        self.fields['group_index'] = forms.ChoiceField(choices=tuple([(name, name) for name in group_list]))
 
     class Meta:
         model = Participant
@@ -30,6 +32,8 @@ class ParticipantRegistrationForm(forms.ModelForm):
             'city',
             'team',
             'grade',
+            'group_index',
+            'set_index',
         ]
         labels = {
             'first_name': 'Имя',
@@ -39,6 +43,8 @@ class ParticipantRegistrationForm(forms.ModelForm):
             'city': 'Город',
             'team': 'Команда',
             'grade': 'Спортивный разряд',
+            'group_index': 'Категория',
+            'set_index': 'Сет',
         }
 
 
@@ -85,6 +91,10 @@ class EventAdminSettingsForm(forms.ModelForm):
             'score_type',
             'flash_points',
             'redpoint_points',
+            'group_num',
+            'group_list',
+            'set_num',
+            'set_list',
         ]
         labels = {
             'routes_num': 'Количество трасс',
@@ -97,6 +107,10 @@ class EventAdminSettingsForm(forms.ModelForm):
             'score_type': 'Тип подсчёта результатов',
             'flash_points': 'Очки за Flash',
             'redpoint_points': 'Очки за Redpoint',
+            'group_num': 'Количество групп участников',
+            'group_list': 'Список групп через запятую',
+            'set_num': 'Количество сетов',
+            'set_list': 'Список сетов через запятую',
         }
 
 

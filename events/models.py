@@ -25,6 +25,10 @@ class Event(models.Model):
     score_type = models.CharField(max_length=4, choices=SCORE_TYPE, default=SCORE_SIMPLE_SUM)
     flash_points = models.IntegerField(default=100)
     redpoint_points = models.IntegerField(default=80)
+    group_num = models.IntegerField(default=1)
+    group_list = models.CharField(max_length=200, default='')
+    set_num = models.IntegerField(default=1)
+    set_list = models.CharField(max_length=200, default='')
 
 
 class Participant(models.Model):
@@ -68,6 +72,8 @@ class Participant(models.Model):
     pin = models.PositiveSmallIntegerField(null=True)
     score = models.FloatField(default=0)
     is_entered_result = models.BooleanField(default=False)
+    group_index = models.IntegerField(default=0)
+    set_index = models.IntegerField(default=0)
 
     def __str__(self):
         return f'<Part-t: Name={self.last_name}, PIN={self.pin}, Score={self.score}>'

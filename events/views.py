@@ -138,6 +138,10 @@ class EventAdminSettingsView(views.View):
                 score_type=cd['score_type'],
                 flash_points=cd['flash_points'],
                 redpoint_points=cd['redpoint_points'],
+                group_num=cd['group_num'],
+                group_list=cd['group_list'],
+                set_num=cd['set_num'],
+                set_list=cd['set_list'],
             )
             return redirect('event_admin_settings', event_id)
         else:
@@ -244,7 +248,7 @@ class EventRegistrationView(views.View):
             template_name='events/event-registration.html',
             context={
                 'event': event,
-                'form': ParticipantRegistrationForm(),
+                'form': ParticipantRegistrationForm(['12', '23']),
             }
         )
 
