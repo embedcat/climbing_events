@@ -243,19 +243,27 @@ class EventRegistrationView(views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
+        group_list = services.get_group_list(event=event)
+        set_list = services.get_set_list(event=event)
         return render(
             request=request,
             template_name='events/event-registration.html',
             context={
                 'event': event,
-                'form': ParticipantRegistrationForm(['12', '23']),
+                'form': ParticipantRegistrationForm(group_list=group_list,
+                                                    set_list=set_list)
             }
         )
 
     @staticmethod
     def post(request, event_id):
-        form = ParticipantRegistrationForm(request.POST, request.FILES)
         event = Event.objects.get(id=event_id)
+        group_list = services.get_group_list(event=event)
+        set_list = services.get_set_list(event=event)
+        form = ParticipantRegistrationForm(request.POST,
+                                           request.FILES,
+                                           group_list=group_list,
+                                           set_list=set_list)
         if form.is_valid():
             participant = services.create_participant_with_default_accents(
                 event=event,
@@ -266,6 +274,8 @@ class EventRegistrationView(views.View):
                 city=form.cleaned_data['city'],
                 team=form.cleaned_data['team'],
                 grade=form.cleaned_data['grade'],
+                group_index=group_list.index(form.cleaned_data['group_index']),
+                set_index=set_list.index(form.cleaned_data['set_index']),
             )
             return redirect('event_registration_ok', event_id=event_id, participant_id=participant.id)
         return render(

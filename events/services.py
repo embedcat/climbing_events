@@ -37,6 +37,8 @@ def create_participant_with_default_accents(event: Event, first_name: str, last_
                                             gender: Participant.gender = Participant.GENDER_MALE,
                                             birth_year: int = 2000, city: str = '', team: str = '',
                                             grade: Participant.GRADES = Participant.GRADE_BR,
+                                            group_index: int = 0,
+                                            set_index: int = 0,
                                             ) -> Participant:
     participant = Participant.objects.create(
         first_name=first_name,
@@ -48,6 +50,8 @@ def create_participant_with_default_accents(event: Event, first_name: str, last_
         grade=grade,
         event=event,
         pin=random.randint(1000, 9999),
+        group_index=group_index,
+        set_index=set_index,
     )
 
     create_default_accents(event=event, participant=participant)
@@ -104,3 +108,11 @@ def get_sorted_participants_scores_by_gender(event: Event, gender: Participant.G
     for i, p in enumerate(sorted_participants):
         data.append({'p': p, 'a': sorted_accents[i]})
     return data
+
+
+def get_group_list(event: Event) -> list:
+    return [item.strip() for item in event.group_list.split(',')] if event.group_num > 1 else []
+
+
+def get_set_list(event: Event) -> list:
+    return [item.strip() for item in event.set_list.split(',')] if event.set_num > 1 else []

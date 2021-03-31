@@ -7,8 +7,10 @@ from events.models import Participant, Event, Accent
 
 
 class ParticipantRegistrationForm(forms.ModelForm):
-    def __init__(self, group_list, *args, **kwargs):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        group_list = kwargs.pop('group_list')
+        set_list = kwargs.pop('set_list')
+        super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.add_input(Submit('submit', 'Зарегистрироваться'))
@@ -19,8 +21,12 @@ class ParticipantRegistrationForm(forms.ModelForm):
         self.fields['team'].required = False
         self.fields['grade'].required = False
 
-        self.group_list = kwargs.get('bla', '2312')
-        self.fields['group_index'] = forms.ChoiceField(choices=tuple([(name, name) for name in group_list]))
+        if group_list:
+            self.fields['group_index'] = forms.ChoiceField(choices=tuple([(name, name) for name in group_list]),
+                                                           label='Категория')
+        if set_list:
+            self.fields['set_index'] = forms.ChoiceField(choices=tuple([(name, name) for name in set_list]),
+                                                         label='Сет')
 
     class Meta:
         model = Participant
@@ -32,8 +38,6 @@ class ParticipantRegistrationForm(forms.ModelForm):
             'city',
             'team',
             'grade',
-            'group_index',
-            'set_index',
         ]
         labels = {
             'first_name': 'Имя',
@@ -43,8 +47,6 @@ class ParticipantRegistrationForm(forms.ModelForm):
             'city': 'Город',
             'team': 'Команда',
             'grade': 'Спортивный разряд',
-            'group_index': 'Категория',
-            'set_index': 'Сет',
         }
 
 
