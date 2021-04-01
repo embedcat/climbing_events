@@ -53,6 +53,10 @@ def create_participant_with_default_accents(event: Event, first_name: str, last_
                                             group_index: int = 0,
                                             set_index: int = 0,
                                             ) -> Participant:
+
+    pin = 1111
+    while event.participant.filter(pin=pin).count() != 0:
+        pin = random.randint(1000, 9999)
     participant = Participant.objects.create(
         first_name=first_name,
         last_name=last_name,
@@ -62,13 +66,10 @@ def create_participant_with_default_accents(event: Event, first_name: str, last_
         team=team,
         grade=grade,
         event=event,
-        pin=random.randint(1000, 9999),
+        pin=pin,
         group_index=group_index,
         set_index=set_index,
     )
-
-    # create_default_accents(event=event, participant=participant)
-
     return participant
 
 
