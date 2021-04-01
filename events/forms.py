@@ -1,9 +1,9 @@
-from crispy_forms.bootstrap import FormActions, TabHolder, Tab
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit, Layout, Button
 from django import forms
 
 from events.models import Participant, Event, Accent
+from tinymce.widgets import TinyMCE
 
 
 class ParticipantRegistrationForm(forms.ModelForm):
@@ -57,19 +57,20 @@ class EventAdminDescriptionForm(forms.ModelForm):
         self.helper.form_method = 'post'
         self.helper.add_input(Submit('submit', 'Сохранить'))
 
+        self.fields['description'] = forms.CharField(widget=TinyMCE(attrs={'cols': 80, 'rows': 30}),
+                                                     label='Описание')
+
     class Meta:
         model = Event
         fields = [
             'title',
             'date',
             'poster',
-            'description',
         ]
         labels = {
             'title': 'Название',
             'date': 'Дата (YYYY-MM-DD)',
             'poster': 'Афиша',
-            'description': 'Описание',
         }
 
 

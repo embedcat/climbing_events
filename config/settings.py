@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'active_link',
     'crispy_forms',
     'debug_toolbar',
+    'tinymce',
 
     'events',
 ]

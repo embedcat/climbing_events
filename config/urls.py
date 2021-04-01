@@ -22,6 +22,7 @@ from config import settings
 urlpatterns = [
     path('', include('events.urls')),
     path('admin/', admin.site.urls),
+    path('tinymce/', include('tinymce.urls')),
 ]
 
 if settings.DEBUG:

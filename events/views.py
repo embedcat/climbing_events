@@ -154,6 +154,7 @@ class EventAdminSettingsView(views.View):
                 }
             )
 
+
 class EventEnterView(views.View):
     @staticmethod
     def get(request, event_id):

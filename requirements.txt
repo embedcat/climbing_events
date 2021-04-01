@@ -5,6 +5,7 @@ django-active-link==0.1.6
 django-crispy-forms==1.9.2
 django-debug-toolbar==3.1.1
 django-heroku==0.3.1
+django-tinymce==3.3.0
 flake8==3.8.4
 gunicorn==20.0.4
 mccabe==0.6.1
