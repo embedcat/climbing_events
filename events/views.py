@@ -56,16 +56,17 @@ class EventAdminView(views.View):
         if 'clear_event' in request.POST:
             services.clear_event(event=event)
         elif 'create_participant' in request.POST:
-            services.create_participant_with_default_accents(
-                event=event,
-                first_name=services.get_random_string(4),
-                last_name=services.get_random_string(6)
-            )
+            services.debug_create_participants(event=event, num=5)
         elif 'create_routes' in request.POST:
             services.create_event_routes(event=event)
+            services.create_default_accents_for_all(event=event)
         elif 'update_score' in request.POST:
             services.update_routes_points(event=event)
             services.update_participants_score(event=event)
+        elif 'clear_participants' in request.POST:
+            services.clear_participnts(event=event)
+        elif 'clear_routes' in request.POST:
+            services.clear_routes(event=event)
         else:
             pass
         return redirect('event_admin', event_id)
@@ -228,15 +229,13 @@ class EventParticipantsView(views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
-        participants_male = Participant.objects.filter(event__id=event_id, gender='MALE')
-        participants_female = Participant.objects.filter(event__id=event_id, gender='FEMALE')
+        participants = Participant.objects.filter(event__id=event_id)
         return render(
             request=request,
             template_name='events/event-participants.html',
             context={
                 'event': event,
-                'participants_male': participants_male,
-                'participants_female': participants_female,
+                'participants': participants,
             }
         )
 

@@ -5,51 +5,47 @@
 
 {% block content %}
 {% if event.is_published %}
-<table cellspacing="0" class="table table-bordered table-hover table-striped table-sm" id="dataTable" width="100%">
+<link href="https://unpkg.com/bootstrap-table@1.18.3/dist/bootstrap-table.min.css" rel="stylesheet">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/bootstrap-table@1.18.3/dist/bootstrap-table.min.js"></script>
+
+<table
+    data-toggle="table"
+    data-sort-name="num"
+    data-sortable="true"
+    id="dataTable" width="100%">
   <thead>
   <tr>
-    <th style="width:10%">#</th>
-    <th>Участник</th>
+    <th data-field="num" data-sortable="true" style="width:10%">#</th>
+    <th data-field="name" data-sortable="true">Участник</th>
     {% if user.is_superuser %}
     <th>Pin</th>
     {% endif %}
-    <th>Пол</th>
-    <th>Год рождения</th>
-    <th>Город</th>
-    <th>Команда</th>
-    <th>Разряд</th>
+    <th data-field="gender" data-sortable="true">Пол</th>
+    <th data-field="bithdate" data-sortable="true">Год рождения</th>
+    <th data-field="city" data-sortable="true">Город</th>
+    <th data-field="team" data-sortable="true">Команда</th>
+    <th data-field="grade" data-sortable="true">Разряд</th>
+    {% if event.set_num > 1 %}<th data-field="set" data-sortable="true">Сет</th>{% endif %}
+    {% if event.group_num > 1 %}<th data-field="group" data-sortable="true">Категория</th>{% endif %}
   </tr>
   </thead>
   <tbody>
-  {% for participant in participants_male %}
+  {% for participant in participants %}
   <tr>
     <td>{{ forloop.counter }}</td>
     <td>{{ participant.first_name }} {{ participant.last_name }}</td>
     {% if user.is_superuser %}
     <td>{{ participant.pin }}</td>
     {% endif %}
-    <td>{{ participant.gender }}</td>
+    <td>{{ participant.get_gender_display }}</td>
     <td>{% if participant.birth_year is not None %}{{ participant.birth_year }}{% endif %}</td>
     <td>{% if participant.city is not None %}{{ participant.city }}{% endif %}</td>
     <td>{% if participant.team is not None %}{{ participant.team }}{% endif %}</td>
     <td>{{ participant.get_grade_display }}</td>
-  </tr>
-  {% endfor %}
-  <tr>
-    <td></td>
-  </tr>
-  {% for participant in participants_female %}
-  <tr>
-    <td>{{ forloop.counter }}</td>
-    <td>{{ participant.first_name }} {{ participant.last_name }}</td>
-    {% if user.is_superuser %}
-    <td>{{ participant.pin }}</td>
-    {% endif %}
-    <td>{{ participant.gender }}</td>
-    <td>{% if participant.birth_year is not None %}{{ participant.birth_year }}{% endif %}</td>
-    <td>{% if participant.city is not None %}{{ participant.city }}{% endif %}</td>
-    <td>{% if participant.team is not None %}{{ participant.team }}{% endif %}</td>
-    <td>{{ participant.get_grade_display }}</td>
+    {% if event.set_num > 1 %}<td>{{ participant.set_index }}</td>{% endif %}
+    {% if event.group_num > 1 %}<td>{{participant.group_index }}</td>{% endif %}
   </tr>
   {% endfor %}
   </tbody>

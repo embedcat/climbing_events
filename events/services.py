@@ -28,9 +28,22 @@ def create_default_accents(event: Event, participant: Participant) -> None:
         )
 
 
-def clear_event(event: Event) -> None:
-    event.participant.all().delete()
+def create_default_accents_for_all(event: Event) -> None:
+    for p in event.participant.all():
+        create_default_accents(event=event, participant=p)
+
+
+def clear_routes(event: Event) -> None:
     event.route.all().delete()
+
+
+def clear_participnts(event: Event) -> None:
+    event.participant.all().delete()
+
+
+def clear_event(event: Event) -> None:
+    clear_participnts(event=event)
+    clear_routes(event=event)
 
 
 def create_participant_with_default_accents(event: Event, first_name: str, last_name: str,
@@ -54,7 +67,7 @@ def create_participant_with_default_accents(event: Event, first_name: str, last_
         set_index=set_index,
     )
 
-    create_default_accents(event=event, participant=participant)
+    # create_default_accents(event=event, participant=participant)
 
     return participant
 
@@ -125,3 +138,19 @@ def get_set_list(event: Event) -> list:
     else:
         set_list = set_list_all
     return set_list
+
+
+def debug_create_participants(event: Event, num: int):
+    for i in range(num):
+        p = create_participant_with_default_accents(
+            event=event,
+            first_name=get_random_string(4),
+            last_name=get_random_string(6),
+            gender=random.choice([g[0] for g in Participant.GENDERS]),
+            birth_year=random.randint(1950, 2020),
+            city=get_random_string(5),
+            team=get_random_string(5),
+            grade=random.choice([g[0] for g in Participant.GRADES]),
+            group_index=random.randrange(event.group_num),
+            set_index=random.randrange(event.set_num),
+            )
