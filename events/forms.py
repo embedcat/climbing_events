@@ -23,10 +23,12 @@ class ParticipantRegistrationForm(forms.ModelForm):
 
         if group_list:
             self.fields['group_index'] = forms.ChoiceField(choices=tuple([(name, name) for name in group_list]),
-                                                           label='Категория')
+                                                           label='Категория',
+                                                           required=False)
         if set_list:
             self.fields['set_index'] = forms.ChoiceField(choices=tuple([(name, name) for name in set_list]),
-                                                         label='Сет')
+                                                         label='Сет',
+                                                         required=False)
 
     class Meta:
         model = Participant
@@ -98,6 +100,7 @@ class EventAdminSettingsForm(forms.ModelForm):
             'group_list',
             'set_num',
             'set_list',
+            'set_max_participants',
         ]
         labels = {
             'routes_num': 'Количество трасс',
@@ -114,6 +117,7 @@ class EventAdminSettingsForm(forms.ModelForm):
             'group_list': 'Список групп через запятую',
             'set_num': 'Количество сетов',
             'set_list': 'Список сетов через запятую',
+            'set_max_participants': 'Максимальное число участников в сете (0 - не ограничено)',
         }
 
 

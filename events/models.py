@@ -29,6 +29,7 @@ class Event(models.Model):
     group_list = models.CharField(max_length=200, default='')
     set_num = models.IntegerField(default=1)
     set_list = models.CharField(max_length=200, default='')
+    set_max_participants = models.IntegerField(default=0)
 
 
 class Participant(models.Model):

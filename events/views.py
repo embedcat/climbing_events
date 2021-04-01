@@ -142,6 +142,7 @@ class EventAdminSettingsView(views.View):
                 group_list=cd['group_list'],
                 set_num=cd['set_num'],
                 set_list=cd['set_list'],
+                set_max_participants=cd['set_max_participants'],
             )
             return redirect('event_admin_settings', event_id)
         else:
@@ -275,8 +276,8 @@ class EventRegistrationView(views.View):
                 city=form.cleaned_data['city'],
                 team=form.cleaned_data['team'],
                 grade=form.cleaned_data['grade'],
-                group_index=group_list.index(form.cleaned_data['group_index']),
-                set_index=set_list.index(form.cleaned_data['set_index']),
+                group_index=group_list.index(form.cleaned_data['group_index']) if 'group_index' in form.cleaned_data else 0,
+                set_index=set_list.index(form.cleaned_data['set_index']) if 'set_index' in form.cleaned_data else 0,
             )
             return redirect('event_registration_ok', event_id=event_id, participant_id=participant.id)
         return render(

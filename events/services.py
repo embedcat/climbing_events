@@ -111,8 +111,17 @@ def get_sorted_participants_scores_by_gender(event: Event, gender: Participant.G
 
 
 def get_group_list(event: Event) -> list:
-    return [item.strip() for item in event.group_list.split(',')] if event.group_num > 1 else []
+    return [item.strip() for item in event.group_list.split(',')][:event.group_num] if event.group_num > 1 else []
 
 
 def get_set_list(event: Event) -> list:
-    return [item.strip() for item in event.set_list.split(',')] if event.set_num > 1 else []
+    set_list_all = [item.strip() for item in event.set_list.split(',')][:event.set_num] if event.set_num > 1 else []
+    set_list = []
+    if event.set_max_participants > 0:
+        for i, item in enumerate(set_list_all):
+            set_participants_num = event.participant.filter(set_index=i).count()
+            if set_participants_num < event.set_max_participants:
+                set_list.append(item)
+    else:
+        set_list = set_list_all
+    return set_list
