@@ -46,14 +46,15 @@ def clear_event(event: Event) -> None:
     clear_routes(event=event)
 
 
-def create_participant_with_default_accents(event: Event, first_name: str, last_name: str,
-                                            gender: Participant.gender = Participant.GENDER_MALE,
-                                            birth_year: int = 2000, city: str = '', team: str = '',
-                                            grade: Participant.GRADES = Participant.GRADE_BR,
-                                            group_index: int = 0,
-                                            set_index: int = 0,
-                                            ) -> Participant:
-
+def create_participant(event: Event, first_name: str, last_name: str,
+                       gender: Participant.gender = Participant.GENDER_MALE,
+                       birth_year: int = 2000, city: str = '', team: str = '',
+                       grade: Participant.GRADES = Participant.GRADE_BR,
+                       group_index: int = 0,
+                       set_index: int = 0,
+                       ) -> Participant or None:
+    if 0 < event.set_max_participants <= event.participant.filter(set_index=set_index).count():
+        return None
     pin = 1111
     while event.participant.filter(pin=pin).count() != 0:
         pin = random.randint(1000, 9999)
@@ -145,21 +146,17 @@ def get_set_list_for_registration_available(event: Event) -> list:
     return set_list
 
 
-def debug_create_participants(event: Event, num: int):
+def debug_create_participants(event: Event, num: int) -> None:
     for i in range(num):
-        set_index = random.randrange(event.set_num)
-        if event.participant.filter(set_index=set_index).count() < event.set_max_participants:
-            print(f"in set #{set_index}:{event.participant.filter(set_index=set_index).count()}")
-            p = create_participant_with_default_accents(
-                event=event,
-                first_name=get_random_string(4),
-                last_name=get_random_string(6),
-                gender=random.choice([g[0] for g in Participant.GENDERS]),
-                birth_year=random.randint(1950, 2020),
-                city=get_random_string(5),
-                team=get_random_string(5),
-                grade=random.choice([g[0] for g in Participant.GRADES]),
-                group_index=random.randrange(event.group_num),
-                set_index=random.randrange(event.set_num),
-                )
-            print(p)
+        create_participant(
+            event=event,
+            first_name=get_random_string(4),
+            last_name=get_random_string(6),
+            gender=random.choice([g[0] for g in Participant.GENDERS]),
+            birth_year=random.randint(1950, 2020),
+            city=get_random_string(5),
+            team=get_random_string(5),
+            grade=random.choice([g[0] for g in Participant.GRADES]),
+            group_index=random.randrange(event.group_num),
+            set_index=random.randrange(event.set_num),
+        )

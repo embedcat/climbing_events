@@ -266,7 +266,7 @@ class EventRegistrationView(views.View):
                                            group_list=group_list,
                                            set_list=set_list)
         if form.is_valid():
-            participant = services.create_participant_with_default_accents(
+            participant = services.create_participant(
                 event=event,
                 first_name=form.cleaned_data['first_name'],
                 last_name=form.cleaned_data['last_name'],
