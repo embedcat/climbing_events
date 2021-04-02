@@ -68,6 +68,7 @@ class EventAdminDescriptionForm(forms.ModelForm):
             'title',
             'date',
             'poster',
+            'description',
         ]
         labels = {
             'title': 'Название',

@@ -1,6 +1,7 @@
+{% load static %}
 <div class="card">
-  <img class="card-img-top" src="..." alt="Card image cap">
   <div class="card-body">
-    <p class="card-text">{{ message }}</p>
+    <img src="{% static '/events/img/warning.png' %}" width="25px" alt="Card image cap" class="mx-2">
+    <span class="card-text">{{ message }}</span>
   </div>
 </div>

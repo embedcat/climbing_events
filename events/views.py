@@ -12,7 +12,7 @@ from events import services
 class MainView(views.View):
     @staticmethod
     def get(request):
-        #return redirect('event', event_id=1)
+        return redirect('event', event_id=1)
         events = Event.objects.all()
         return render(
             request=request,
@@ -313,3 +313,11 @@ def check_pin_code(request):
     except Participant.DoesNotExist:
         response = {'Find': False}
     return JsonResponse(response)
+
+
+def page_not_found_view(request, exception):
+    return render(request=request, template_name='events/error.html', status=404, context={'code': '404'})
+
+
+def error_view(request):
+    return render(request=request, template_name='events/error.html', status=500, context={'code': '500'})

@@ -19,6 +19,9 @@ from django.urls import path, include
 
 from config import settings
 
+handler404 = 'events.views.page_not_found_view'
+handler500 = 'events.views.error_view'
+
 urlpatterns = [
     path('', include('events.urls')),
     path('admin/', admin.site.urls),
