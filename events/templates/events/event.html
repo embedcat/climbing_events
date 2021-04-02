@@ -4,8 +4,7 @@
 {% endblock %}
 {% block content %}
 {% if event.is_published %}
-<p>Дата: {{ event.date }}</p>
-<p>Описание: {{ event.description }}</p>
+{{ event.description|safe }}
 {% else %}
   {% include 'events/snippet-card-banner.html' with message='Событие не опубликовано!' %}
 {% endif %}

@@ -28,16 +28,35 @@ def create_default_accents(event: Event, participant: Participant) -> None:
         )
 
 
-def clear_event(event: Event) -> None:
-    event.participant.all().delete()
+def create_default_accents_for_all(event: Event) -> None:
+    for p in event.participant.all():
+        create_default_accents(event=event, participant=p)
+
+
+def clear_routes(event: Event) -> None:
     event.route.all().delete()
+
+
+def clear_participnts(event: Event) -> None:
+    event.participant.all().delete()
+
+
+def clear_event(event: Event) -> None:
+    clear_participnts(event=event)
+    clear_routes(event=event)
 
 
 def create_participant_with_default_accents(event: Event, first_name: str, last_name: str,
                                             gender: Participant.gender = Participant.GENDER_MALE,
                                             birth_year: int = 2000, city: str = '', team: str = '',
                                             grade: Participant.GRADES = Participant.GRADE_BR,
+                                            group_index: int = 0,
+                                            set_index: int = 0,
                                             ) -> Participant:
+
+    pin = 1111
+    while event.participant.filter(pin=pin).count() != 0:
+        pin = random.randint(1000, 9999)
     participant = Participant.objects.create(
         first_name=first_name,
         last_name=last_name,
@@ -47,11 +66,10 @@ def create_participant_with_default_accents(event: Event, first_name: str, last_
         team=team,
         grade=grade,
         event=event,
-        pin=random.randint(1000, 9999),
+        pin=pin,
+        group_index=group_index,
+        set_index=set_index,
     )
-
-    create_default_accents(event=event, participant=participant)
-
     return participant
 
 
@@ -104,3 +122,36 @@ def get_sorted_participants_scores_by_gender(event: Event, gender: Participant.G
     for i, p in enumerate(sorted_participants):
         data.append({'p': p, 'a': sorted_accents[i]})
     return data
+
+
+def get_group_list(event: Event) -> list:
+    return [item.strip() for item in event.group_list.split(',')][:event.group_num] if event.group_num > 1 else []
+
+
+def get_set_list(event: Event) -> list:
+    set_list_all = [item.strip() for item in event.set_list.split(',')][:event.set_num] if event.set_num > 1 else []
+    set_list = []
+    if event.set_max_participants > 0:
+        for i, item in enumerate(set_list_all):
+            set_participants_num = event.participant.filter(set_index=i).count()
+            if set_participants_num < event.set_max_participants:
+                set_list.append(item)
+    else:
+        set_list = set_list_all
+    return set_list
+
+
+def debug_create_participants(event: Event, num: int):
+    for i in range(num):
+        p = create_participant_with_default_accents(
+            event=event,
+            first_name=get_random_string(4),
+            last_name=get_random_string(6),
+            gender=random.choice([g[0] for g in Participant.GENDERS]),
+            birth_year=random.randint(1950, 2020),
+            city=get_random_string(5),
+            team=get_random_string(5),
+            grade=random.choice([g[0] for g in Participant.GRADES]),
+            group_index=random.randrange(event.group_num),
+            set_index=random.randrange(event.set_num),
+            )

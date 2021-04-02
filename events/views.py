@@ -56,16 +56,17 @@ class EventAdminView(views.View):
         if 'clear_event' in request.POST:
             services.clear_event(event=event)
         elif 'create_participant' in request.POST:
-            services.create_participant_with_default_accents(
-                event=event,
-                first_name=services.get_random_string(4),
-                last_name=services.get_random_string(6)
-            )
+            services.debug_create_participants(event=event, num=5)
         elif 'create_routes' in request.POST:
             services.create_event_routes(event=event)
+            services.create_default_accents_for_all(event=event)
         elif 'update_score' in request.POST:
             services.update_routes_points(event=event)
             services.update_participants_score(event=event)
+        elif 'clear_participants' in request.POST:
+            services.clear_participnts(event=event)
+        elif 'clear_routes' in request.POST:
+            services.clear_routes(event=event)
         else:
             pass
         return redirect('event_admin', event_id)
@@ -138,6 +139,11 @@ class EventAdminSettingsView(views.View):
                 score_type=cd['score_type'],
                 flash_points=cd['flash_points'],
                 redpoint_points=cd['redpoint_points'],
+                group_num=cd['group_num'],
+                group_list=cd['group_list'],
+                set_num=cd['set_num'],
+                set_list=cd['set_list'],
+                set_max_participants=cd['set_max_participants'],
             )
             return redirect('event_admin_settings', event_id)
         else:
@@ -149,6 +155,7 @@ class EventAdminSettingsView(views.View):
                     'form': EventAdminSettingsForm(request.POST),
                 }
             )
+
 
 class EventEnterView(views.View):
     @staticmethod
@@ -177,13 +184,8 @@ class EventEnterView(views.View):
             pin = participant_form.cleaned_data['pin']
             try:
                 participant = Participant.objects.get(pin=int(pin))
-            except Participant.DoesNotExist:
-                pass
-                participant = services.create_participant_with_default_accents(
-                    event=event,
-                    first_name=participant_form.cleaned_data['first_name'],
-                    last_name=participant_form.cleaned_data['last_name'],
-                )
+            except (Participant.DoesNotExist, TypeError):
+                return redirect('event_enter', event_id=event_id)   # TODO: msg for user
             participant_accents = Accent.objects.filter(participant=participant, event=event)
             for index, accent in enumerate(participant_accents):
                 accent.accent = accent_formset.cleaned_data[index]['accent']
@@ -227,15 +229,13 @@ class EventParticipantsView(views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
-        participants_male = Participant.objects.filter(event__id=event_id, gender='MALE')
-        participants_female = Participant.objects.filter(event__id=event_id, gender='FEMALE')
+        participants = Participant.objects.filter(event__id=event_id)
         return render(
             request=request,
             template_name='events/event-participants.html',
             context={
                 'event': event,
-                'participants_male': participants_male,
-                'participants_female': participants_female,
+                'participants': participants,
             }
         )
 
@@ -244,19 +244,27 @@ class EventRegistrationView(views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
+        group_list = services.get_group_list(event=event)
+        set_list = services.get_set_list(event=event)
         return render(
             request=request,
             template_name='events/event-registration.html',
             context={
                 'event': event,
-                'form': ParticipantRegistrationForm(),
+                'form': ParticipantRegistrationForm(group_list=group_list,
+                                                    set_list=set_list)
             }
         )
 
     @staticmethod
     def post(request, event_id):
-        form = ParticipantRegistrationForm(request.POST, request.FILES)
         event = Event.objects.get(id=event_id)
+        group_list = services.get_group_list(event=event)
+        set_list = services.get_set_list(event=event)
+        form = ParticipantRegistrationForm(request.POST,
+                                           request.FILES,
+                                           group_list=group_list,
+                                           set_list=set_list)
         if form.is_valid():
             participant = services.create_participant_with_default_accents(
                 event=event,
@@ -267,6 +275,8 @@ class EventRegistrationView(views.View):
                 city=form.cleaned_data['city'],
                 team=form.cleaned_data['team'],
                 grade=form.cleaned_data['grade'],
+                group_index=group_list.index(form.cleaned_data['group_index']) if 'group_index' in form.cleaned_data else 0,
+                set_index=set_list.index(form.cleaned_data['set_index']) if 'set_index' in form.cleaned_data else 0,
             )
             return redirect('event_registration_ok', event_id=event_id, participant_id=participant.id)
         return render(
@@ -303,3 +313,11 @@ def check_pin_code(request):
     except Participant.DoesNotExist:
         response = {'Find': False}
     return JsonResponse(response)
+
+
+def page_not_found_view(request, exception):
+    return render(request=request, template_name='events/error.html', status=404, context={'code': '404'})
+
+
+def error_view(request):
+    return render(request=request, template_name='events/error.html', status=500, context={'code': '500'})

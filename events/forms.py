@@ -1,13 +1,15 @@
-from crispy_forms.bootstrap import FormActions, TabHolder, Tab
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit, Layout, Button
 from django import forms
 
 from events.models import Participant, Event, Accent
+from tinymce.widgets import TinyMCE
 
 
 class ParticipantRegistrationForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
+        group_list = kwargs.pop('group_list')
+        set_list = kwargs.pop('set_list')
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_method = 'post'
@@ -19,6 +21,14 @@ class ParticipantRegistrationForm(forms.ModelForm):
         self.fields['team'].required = False
         self.fields['grade'].required = False
 
+        if group_list:
+            self.fields['group_index'] = forms.ChoiceField(choices=tuple([(name, name) for name in group_list]),
+                                                           label='Категория',
+                                                           required=False)
+        if set_list:
+            self.fields['set_index'] = forms.ChoiceField(choices=tuple([(name, name) for name in set_list]),
+                                                         label='Сет',
+                                                         required=False)
 
     class Meta:
         model = Participant
@@ -49,6 +59,9 @@ class EventAdminDescriptionForm(forms.ModelForm):
         self.helper.form_method = 'post'
         self.helper.add_input(Submit('submit', 'Сохранить'))
 
+        self.fields['description'] = forms.CharField(widget=TinyMCE(attrs={'cols': 80, 'rows': 30}),
+                                                     label='Описание')
+
     class Meta:
         model = Event
         fields = [
@@ -61,7 +74,6 @@ class EventAdminDescriptionForm(forms.ModelForm):
             'title': 'Название',
             'date': 'Дата (YYYY-MM-DD)',
             'poster': 'Афиша',
-            'description': 'Описание',
         }
 
 
@@ -85,6 +97,11 @@ class EventAdminSettingsForm(forms.ModelForm):
             'score_type',
             'flash_points',
             'redpoint_points',
+            'group_num',
+            'group_list',
+            'set_num',
+            'set_list',
+            'set_max_participants',
         ]
         labels = {
             'routes_num': 'Количество трасс',
@@ -97,6 +114,11 @@ class EventAdminSettingsForm(forms.ModelForm):
             'score_type': 'Тип подсчёта результатов',
             'flash_points': 'Очки за Flash',
             'redpoint_points': 'Очки за Redpoint',
+            'group_num': 'Количество групп участников',
+            'group_list': 'Список групп через запятую',
+            'set_num': 'Количество сетов',
+            'set_list': 'Список сетов через запятую',
+            'set_max_participants': 'Максимальное число участников в сете (0 - не ограничено)',
         }
 
 
