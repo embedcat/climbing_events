@@ -245,7 +245,7 @@ class EventRegistrationView(views.View):
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
         group_list = services.get_group_list(event=event)
-        set_list = services.get_set_list(event=event)
+        set_list = services.get_set_list_for_registration_available(event=event)
         return render(
             request=request,
             template_name='events/event-registration.html',

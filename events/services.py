@@ -129,7 +129,11 @@ def get_group_list(event: Event) -> list:
 
 
 def get_set_list(event: Event) -> list:
-    set_list_all = [item.strip() for item in event.set_list.split(',')][:event.set_num] if event.set_num > 1 else []
+    return [item.strip() for item in event.set_list.split(',')][:event.set_num] if event.set_num > 1 else []
+
+
+def get_set_list_for_registration_available(event: Event) -> list:
+    set_list_all = get_set_list(event=event)
     set_list = []
     if event.set_max_participants > 0:
         for i, item in enumerate(set_list_all):
@@ -143,15 +147,19 @@ def get_set_list(event: Event) -> list:
 
 def debug_create_participants(event: Event, num: int):
     for i in range(num):
-        p = create_participant_with_default_accents(
-            event=event,
-            first_name=get_random_string(4),
-            last_name=get_random_string(6),
-            gender=random.choice([g[0] for g in Participant.GENDERS]),
-            birth_year=random.randint(1950, 2020),
-            city=get_random_string(5),
-            team=get_random_string(5),
-            grade=random.choice([g[0] for g in Participant.GRADES]),
-            group_index=random.randrange(event.group_num),
-            set_index=random.randrange(event.set_num),
-            )
+        set_index = random.randrange(event.set_num)
+        if event.participant.filter(set_index=set_index).count() < event.set_max_participants:
+            print(f"in set #{set_index}:{event.participant.filter(set_index=set_index).count()}")
+            p = create_participant_with_default_accents(
+                event=event,
+                first_name=get_random_string(4),
+                last_name=get_random_string(6),
+                gender=random.choice([g[0] for g in Participant.GENDERS]),
+                birth_year=random.randint(1950, 2020),
+                city=get_random_string(5),
+                team=get_random_string(5),
+                grade=random.choice([g[0] for g in Participant.GRADES]),
+                group_index=random.randrange(event.group_num),
+                set_index=random.randrange(event.set_num),
+                )
+            print(p)
