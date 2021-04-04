@@ -21,6 +21,8 @@
          href="{% url 'event_admin_description' event.id %}">Описание</a>
       <a class="nav-link {% active_link 'event_admin_settings' strict=True event_id=event.id %}"
          href="{% url 'event_admin_settings' event.id %}">Настройки</a>
+      <a class="nav-link {% active_link 'route_editor' strict=True event_id=event.id %}"
+         href="{% url 'route_editor' event.id %}">Трассы</a>
       {% endif %}
     </div>
   </div>

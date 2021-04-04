@@ -24,7 +24,7 @@ handler500 = 'events.views.error_view'
 
 urlpatterns = [
     path('', include('events.urls')),
-    path('admin/', admin.site.urls),
+    path('dja/', admin.site.urls),
     path('tinymce/', include('tinymce.urls')),
 ]
 

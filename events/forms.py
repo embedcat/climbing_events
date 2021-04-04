@@ -2,7 +2,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit, Layout, Button
 from django import forms
 
-from events.models import Participant, Event, Accent
+from events.models import Participant, Event, Accent, Route
 from tinymce.widgets import TinyMCE
 
 
@@ -172,4 +172,26 @@ class AccentParticipantForm(forms.ModelForm):
             'pin': 'PIN-код',
             'first_name': 'Имя',
             'last_name': 'Фамилия',
+        }
+
+
+class RouteEditForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+        self.helper.disable_csrf = True
+        self.helper.form_style  = 'inline'
+        self.fields['grade'].required = False
+        self.fields['color'].required = False
+
+    class Meta:
+        model = Route
+        fields = [
+            'grade',
+            'color',
+        ]
+        labels = {
+            'grade': 'Категория',
+            'color': 'Цвет зацепок',
         }

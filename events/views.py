@@ -1,10 +1,11 @@
 from django import views
-from django.forms import formset_factory
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.forms import formset_factory, modelformset_factory
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 
 from events.forms import ParticipantRegistrationForm, EventAdminDescriptionForm, AccentForm, AccentParticipantForm, \
-    EventAdminServiceForm, EventAdminSettingsForm
+    EventAdminServiceForm, EventAdminSettingsForm, RouteEditForm
 from events.models import Event, Participant, Route, Accent
 from events import services
 
@@ -36,7 +37,7 @@ class EventView(views.View):
         )
 
 
-class EventAdminView(views.View):
+class EventAdminView(LoginRequiredMixin, views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
@@ -72,7 +73,7 @@ class EventAdminView(views.View):
         return redirect('event_admin', event_id)
 
 
-class EventAdminDescriptionView(views.View):
+class EventAdminDescriptionView(LoginRequiredMixin, views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
@@ -109,7 +110,7 @@ class EventAdminDescriptionView(views.View):
             )
 
 
-class EventAdminSettingsView(views.View):
+class EventAdminSettingsView(LoginRequiredMixin, views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
@@ -302,6 +303,43 @@ class EventRegistrationOkView(views.View):
                 'participant': participant,
             }
         )
+
+
+class RouteEditor(LoginRequiredMixin, views.View):
+    @staticmethod
+    def get(request, event_id):
+        event = Event.objects.get(id=event_id)
+        RouteEditFormSet = modelformset_factory(Route, form=RouteEditForm, extra=0)
+        formset = RouteEditFormSet(prefix='routes')
+        return render(
+            request=request,
+            template_name='events/route_editor.html',
+            context={
+                'event': event,
+                'formset': formset,
+            }
+        )
+
+    @staticmethod
+    def post(request, event_id):
+        event = Event.objects.get(id=event_id)
+        RouteEditFormSet = modelformset_factory(Route, form=RouteEditForm, extra=0)
+        formset = RouteEditFormSet(request.POST, prefix='routes')
+        if formset.is_valid():
+            routes = event.route.all()
+            for index, route in enumerate(routes):
+                route.grade = formset.cleaned_data[index]['grade']
+                route.color = formset.cleaned_data[index]['color']
+                route.save()
+            return redirect('route_editor', event_id=event_id)
+        return render(
+                request=request,
+                template_name='events/route_editor.html',
+                context={
+                    'event': event,
+                    'formset': formset,
+                }
+            )
 
 
 def check_pin_code(request):

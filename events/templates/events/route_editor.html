@@ -1,0 +1,33 @@
+{% extends 'events/event-base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}
+Редактор трасс
+{% endblock %}
+{% block content %}
+
+<hr>
+<form action="" method="post">
+  {% csrf_token %}
+  {{ formset.management_form }}
+  <table cellspacing="0" class="table table-bordered table-hover table-striped table-sm" id="dataTable" width="100%">
+    <thead>
+    <tr>
+      <th style="width:10%">Трасса</th>
+      <th>Настройки</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for form in formset %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td>{% crispy form %}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="form-actions">
+    <input class="btn btn-primary" id="submit-save" name="submit" type="submit" value="Сохранить результат">
+  </div>
+</form>
+
+{% endblock %}
