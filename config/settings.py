@@ -126,3 +126,47 @@ MEDIA_ROOT = 'media'
 MEDIA_POSTERS_DIR = 'posters'
 
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
+
+LOGGER = 'EventLogger'
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'console': {
+            'format': '%(name)-12s %(levelname)-8s %(message)s'
+        },
+        'file': {
+            'format': '%(asctime)s %(name)-12s %(levelname)-8s %(message)s'
+        }
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'console'
+        },
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'formatter': 'file',
+            'filename': 'debug.log'
+        },
+        'EventLoggerFile': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'formatter': 'file',
+            'filename': 'EventLogger.log'
+        }
+    },
+    'loggers': {
+        'EventLogger': {
+            'level': 'DEBUG',
+            'handlers': ['EventLoggerFile'],
+            'propagate': False,
+        },
+        '': {
+            'level': 'DEBUG',
+            'handlers': ['file'],
+        }
+
+    }
+}

@@ -1,13 +1,19 @@
+import logging
+
 from django import views
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.forms import formset_factory, modelformset_factory
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 
+from config import settings
 from events.forms import ParticipantRegistrationForm, EventAdminDescriptionForm, AccentForm, AccentParticipantForm, \
     EventAdminServiceForm, EventAdminSettingsForm, RouteEditForm
 from events.models import Event, Participant, Route, Accent
 from events import services
+
+
+logger = logging.getLogger(settings.LOGGER)
 
 
 class MainView(views.View):
@@ -53,7 +59,7 @@ class EventAdminView(LoginRequiredMixin, views.View):
     @staticmethod
     def post(request, event_id):
         event = Event.objects.get(id=event_id)
-        # service_form = EventAdminServiceForm(request.POST, prefix='service_form')
+        logger.info('Admin.Services [POST]')
         if 'clear_event' in request.POST:
             services.clear_event(event=event)
         elif 'create_participant' in request.POST:
@@ -90,6 +96,7 @@ class EventAdminDescriptionView(LoginRequiredMixin, views.View):
     def post(request, event_id):
         event = Event.objects.filter(id=event_id)
         form = EventAdminDescriptionForm(request.POST)
+        logger.info('Admin.Description [POST] ->')
         if form.is_valid():
             cd = form.cleaned_data
             event.update(
@@ -98,8 +105,10 @@ class EventAdminDescriptionView(LoginRequiredMixin, views.View):
                 poster=cd['poster'],
                 description=cd['description'],
             )
+            logger.info(f'-> Event [{event}] update OK')
             return redirect('event_admin_description', event_id)
         else:
+            logger.warning(f'-> Event [{event}] not updated. Form [{form}] is not valid')
             return render(
                 request=request,
                 template_name='events/event-admin-description.html',
@@ -127,6 +136,7 @@ class EventAdminSettingsView(LoginRequiredMixin, views.View):
     def post(request, event_id):
         event = Event.objects.filter(id=event_id)
         form = EventAdminSettingsForm(request.POST)
+        logger.info('Admin.Settings [POST] ->')
         if form.is_valid():
             cd = form.cleaned_data
             event.update(
@@ -146,8 +156,10 @@ class EventAdminSettingsView(LoginRequiredMixin, views.View):
                 set_list=cd['set_list'],
                 set_max_participants=cd['set_max_participants'],
             )
+            logger.info(f'-> Event [{event}] update OK')
             return redirect('event_admin_settings', event_id)
         else:
+            logger.warning(f'-> Event [{event}] not updated. Form [{form}] is not valid')
             return render(
                 request=request,
                 template_name='events/event-admin-settings.html',
@@ -181,21 +193,27 @@ class EventEnterView(views.View):
         participant_form = AccentParticipantForm(request.POST, prefix='participant')
         AccentFormSet = formset_factory(AccentForm)
         accent_formset = AccentFormSet(request.POST, prefix='accents')
+        logger.info('Enter Result [POST] ->')
         if participant_form.is_valid() and accent_formset.is_valid():
             pin = participant_form.cleaned_data['pin']
+            logger.info(f'-> pin={pin} ->')
             try:
                 participant = Participant.objects.get(pin=int(pin))
             except (Participant.DoesNotExist, TypeError):
+                logger.warning('-> Participant not found')
                 return redirect('event_enter', event_id=event_id)   # TODO: msg for user
+            logger.info(f'-> participant found: [{participant}] ->')
             participant_accents = Accent.objects.filter(participant=participant, event=event)
             for index, accent in enumerate(participant_accents):
                 accent.accent = accent_formset.cleaned_data[index]['accent']
                 accent.route = Route.objects.get(event=event, number=index + 1)
                 accent.save()
+            logger.info('-> update participant accents')
             services.update_routes_points(event=event)
             services.update_participants_score(event=event)
 
             return redirect('event_results', event_id=event_id)
+        logger.warning(f'-> {participant_form} or {accent_formset} are not valid')
         return render(
             request=request,
             template_name='events/event-enter.html',
@@ -266,6 +284,7 @@ class EventRegistrationView(views.View):
                                            request.FILES,
                                            group_list=group_list,
                                            set_list=set_list)
+        logger.info('Registration [POST] ->')
         if form.is_valid():
             participant = services.create_participant(
                 event=event,
@@ -280,6 +299,7 @@ class EventRegistrationView(views.View):
                 set_index=set_list.index(form.cleaned_data['set_index']) if 'set_index' in form.cleaned_data else 0,
             )
             return redirect('event_registration_ok', event_id=event_id, participant_id=participant.id)
+        logger.warning(f'-> registration failed, [{form}] is not valid')
         return render(
             request=request,
             template_name='events/event-registration.html',
@@ -325,13 +345,16 @@ class RouteEditor(LoginRequiredMixin, views.View):
         event = Event.objects.get(id=event_id)
         RouteEditFormSet = modelformset_factory(Route, form=RouteEditForm, extra=0)
         formset = RouteEditFormSet(request.POST, prefix='routes')
+        logger.info('Route Editor [POST] ->')
         if formset.is_valid():
             routes = event.route.all()
             for index, route in enumerate(routes):
                 route.grade = formset.cleaned_data[index]['grade']
                 route.color = formset.cleaned_data[index]['color']
                 route.save()
+            logger.info(f'-> updated {len(routes)} routes')
             return redirect('route_editor', event_id=event_id)
+        logger.warning(f'-> update failed, [{formset}] is not valid')
         return render(
                 request=request,
                 template_name='events/route_editor.html',
