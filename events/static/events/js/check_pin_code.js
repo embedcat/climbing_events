@@ -13,6 +13,7 @@ function CheckPinCode(event, event_id, pin) {
       if (find_result) {
         document.getElementById('alert-ok').style.display = 'block'
         document.getElementById('alert-ok').innerHTML = 'Найден участник: ' + resp['participant']
+        document.getElementById('enter-result-form').style.display = 'block'
       } else {
           document.getElementById('alert-error').style.display = 'block'
 
