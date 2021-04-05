@@ -72,7 +72,7 @@ class EventAdminView(LoginRequiredMixin, views.View):
             services.update_routes_points(event=event)
             services.update_participants_score(event=event)
         elif 'clear_participants' in request.POST:
-            services.clear_participnts(event=event)
+            services.clear_participants(event=event)
         elif 'clear_routes' in request.POST:
             services.clear_routes(event=event)
         else:
@@ -308,6 +308,7 @@ class EventRegistrationView(views.View):
                 set_index=set_list.index(form.cleaned_data['set_index']) if 'set_index' in form.cleaned_data else 0,
             )
             services.create_default_accents(event=event, participant=participant)
+            services.check_participants_number_to_close_registration(event=event)
             return redirect('event_registration_ok', event_id=event_id, participant_id=participant.id)
         logger.warning(f'-> registration failed, [{form}] is not valid')
         return render(

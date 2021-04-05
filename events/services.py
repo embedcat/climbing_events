@@ -37,12 +37,12 @@ def clear_routes(event: Event) -> None:
     event.route.all().delete()
 
 
-def clear_participnts(event: Event) -> None:
+def clear_participants(event: Event) -> None:
     event.participant.all().delete()
 
 
 def clear_event(event: Event) -> None:
-    clear_participnts(event=event)
+    clear_participants(event=event)
     clear_routes(event=event)
 
 
@@ -149,9 +149,8 @@ def get_set_list_for_registration_available(event: Event) -> list:
     return set_list
 
 
-def debug_create_participants(event: Event, num: int) -> None:
-    for i in range(num):
-        create_participant(
+def debug_create_random_participant(event: Event) -> Participant:
+    return create_participant(
             event=event,
             first_name=get_random_string(4),
             last_name=get_random_string(6),
@@ -163,3 +162,15 @@ def debug_create_participants(event: Event, num: int) -> None:
             group_index=random.randrange(event.group_num),
             set_index=random.randrange(event.set_num),
         )
+
+
+def debug_create_participants(event: Event, num: int) -> None:
+    for i in range(num):
+        debug_create_random_participant(event=event)
+
+
+def check_participants_number_to_close_registration(event: Event) -> None:
+    if event.set_max_participants > 0 \
+            and event.participant.count() >= event.set_max_participants * event.set_num:
+        event.is_registration_open = False
+        event.save()
