@@ -178,6 +178,10 @@ class EventEnterView(views.View):
         initial = [{'label': i} for i in range(event.routes_num)]
         AccentFormSet = formset_factory(AccentForm, extra=0)
         formset = AccentFormSet(initial=initial, prefix='accents')
+        routes = event.route.all().order_by('number')
+        info = zip(formset, routes)
+        for item in info:
+            print(item)
         return render(
             request=request,
             template_name='events/event-enter.html',
@@ -185,6 +189,8 @@ class EventEnterView(views.View):
                 'event': event,
                 'formset': formset,
                 'participant_form': AccentParticipantForm(prefix='participant'),
+                'info': info,
+                'routes': routes
             }
         )
 
@@ -209,6 +215,8 @@ class EventEnterView(views.View):
                 accent.accent = accent_formset.cleaned_data[index]['accent']
                 accent.route = Route.objects.get(event=event, number=index + 1)
                 accent.save()
+            participant.is_entered_result = True
+            participant.save()
             logger.info('-> update participant accents')
             services.update_routes_points(event=event)
             services.update_participants_score(event=event)
@@ -299,6 +307,7 @@ class EventRegistrationView(views.View):
                 group_index=group_list.index(form.cleaned_data['group_index']) if 'group_index' in form.cleaned_data else 0,
                 set_index=set_list.index(form.cleaned_data['set_index']) if 'set_index' in form.cleaned_data else 0,
             )
+            services.create_default_accents(event=event, participant=participant)
             return redirect('event_registration_ok', event_id=event_id, participant_id=participant.id)
         logger.warning(f'-> registration failed, [{form}] is not valid')
         return render(
