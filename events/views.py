@@ -5,6 +5,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.forms import formset_factory, modelformset_factory
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
+from djqscsv import render_to_csv_response
 
 from config import settings
 from events.forms import ParticipantRegistrationForm, EventAdminDescriptionForm, AccentForm, AccentParticipantForm, \
@@ -363,6 +364,13 @@ class RouteEditor(LoginRequiredMixin, views.View):
                     'formset': formset,
                 }
             )
+
+
+class ExportParticipantToCsv(LoginRequiredMixin, views.View):
+    @staticmethod
+    def get(request, event_id):
+        participants = Participant.objects.filter(event__id=event_id)
+        return render_to_csv_response(participants, delimiter=';')
 
 
 def check_pin_code(request):
