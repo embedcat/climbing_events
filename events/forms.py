@@ -16,9 +16,6 @@ class ParticipantRegistrationForm(forms.ModelForm):
         self.helper.add_input(Submit('submit', 'Зарегистрироваться'))
         self.helper.label_class = 'mb-1'
 
-        self.fields['birth_year'].required = False
-        self.fields['city'].required = False
-        self.fields['team'].required = False
         self.fields['grade'].required = False
 
         if group_list:
@@ -33,8 +30,8 @@ class ParticipantRegistrationForm(forms.ModelForm):
     class Meta:
         model = Participant
         fields = [
-            'first_name',
             'last_name',
+            'first_name',
             'gender',
             'birth_year',
             'city',
@@ -42,8 +39,8 @@ class ParticipantRegistrationForm(forms.ModelForm):
             'grade',
         ]
         labels = {
-            'first_name': 'Имя',
             'last_name': 'Фамилия',
+            'first_name': 'Имя',
             'gender': 'Пол',
             'birth_year': 'Год рождения',
             'city': 'Город',
