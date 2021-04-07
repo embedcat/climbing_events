@@ -115,6 +115,7 @@ def get_participant_score(event: Event, participant: Participant) -> float:
         base_points = event.flash_points if accent.accent == Accent.ACCENT_FLASH else event.redpoint_points
         if event.score_type == Event.SCORE_SIMPLE_SUM:
             score += base_points
+            continue
 
         route_points = get_route_point(event=event, route=accent.route)
         accent_points = route_points['male'] if participant.gender == Participant.GENDER_MALE else route_points[
@@ -143,7 +144,7 @@ def update_participants_score(event: Event) -> None:
         participant.save()
 
 
-def get_sorted_participants_results(event: Event, participants: list[Participant]) -> list:
+def get_sorted_participants_results(event: Event, participants: list) -> list:
     data = []
     for participant in participants:
         if (not event.is_count_only_entered_results) or participant.is_entered_result:
