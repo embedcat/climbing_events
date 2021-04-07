@@ -104,3 +104,78 @@ class Test(TestCase):
         services.create_participant(event=self.event, first_name='test', last_name='test', set_index=1)
         services.check_participants_number_to_close_registration(self.event)
         self.assertFalse(self.event.is_registration_open)
+
+    def test_get_route_points(self):
+        services.create_event_routes(self.event)
+        route = self.event.route.get(number=1)
+        # no participants:
+        self.assertDictEqual(services.get_route_point(self.event, route), {'male': 1, 'female': 1})
+
+        # simple score:
+        self.event.score_type = Event.SCORE_SIMPLE_SUM
+        self.assertDictEqual(services.get_route_point(self.event, route), {'male': 1, 'female': 1})
+        self.event.score_type = Event.SCORE_PROPORTIONAL
+
+        # no accents:
+        pm = services.create_participant(event=self.event, first_name='test', last_name='test', gender=Participant.GENDER_MALE)
+        pf = services.create_participant(event=self.event, first_name='test', last_name='test', gender=Participant.GENDER_FEMALE)
+        self.assertDictEqual(services.get_route_point(self.event, route), {'male': 1, 'female': 1})
+
+        # no results
+        services.create_default_accents(self.event, pm)
+        services.create_default_accents(self.event, pf)
+        self.assertDictEqual(services.get_route_point(self.event, route), {'male': 1, 'female': 1})
+
+        # 1 accent:
+        pma = Accent.objects.filter(participant=pm, event=self.event)[0]
+        services.save_accent(pma, Accent.ACCENT_FLASH, route)
+        pfa = Accent.objects.filter(participant=pf, event=self.event)[0]
+        services.save_accent(pfa, Accent.ACCENT_REDPOINT, route)
+        self.assertDictEqual(services.get_route_point(self.event, route), {'male': 1, 'female': 1})
+
+        # 2 accents:
+        pm2 = services.create_participant(event=self.event, first_name='test', last_name='test', gender=Participant.GENDER_MALE)
+        pf2 = services.create_participant(event=self.event, first_name='test', last_name='test', gender=Participant.GENDER_FEMALE)
+        services.create_default_accents(self.event, pm2)
+        services.create_default_accents(self.event, pf2)
+        pm2a = Accent.objects.filter(participant=pm2, event=self.event)[0]
+        services.save_accent(pm2a, Accent.ACCENT_REDPOINT, route)
+        pf2a = Accent.objects.filter(participant=pf2, event=self.event)[0]
+        services.save_accent(pf2a, Accent.ACCENT_FLASH, route)
+        self.assertDictEqual(services.get_route_point(self.event, route), {'male': 0.5, 'female': 0.5})
+
+    def test_get_participant_score(self):
+        self.event.score_type = Event.SCORE_PROPORTIONAL
+        services.create_event_routes(self.event)
+        pm = services.create_participant(event=self.event, first_name='test', last_name='test', gender=Participant.GENDER_MALE)
+        pf = services.create_participant(event=self.event, first_name='test', last_name='test', gender=Participant.GENDER_FEMALE)
+
+        # no accents:
+        self.assertEqual(services.get_participant_score(self.event, pm), 0)
+        self.assertEqual(services.get_participant_score(self.event, pf), 0)
+
+        # all accents:
+        services.create_default_accents(self.event, pm)
+        services.create_default_accents(self.event, pf)
+        for index, accent in enumerate(Accent.objects.filter(participant=pm, event=self.event)):
+            services.save_accent(accent, Accent.ACCENT_FLASH, Route.objects.get(event=self.event, number=index + 1))
+        for index, accent in enumerate(Accent.objects.filter(participant=pf, event=self.event)):
+            services.save_accent(accent, Accent.ACCENT_REDPOINT, Route.objects.get(event=self.event, number=index + 1))
+        self.assertEqual(services.get_participant_score(self.event, pm), self.event.routes_num * self.event.flash_points)
+        self.assertEqual(services.get_participant_score(self.event, pf), self.event.routes_num * self.event.redpoint_points)
+
+        # 2 participants, all accents:
+        pm2 = services.create_participant(event=self.event, first_name='test', last_name='test', gender=Participant.GENDER_MALE)
+        pf2 = services.create_participant(event=self.event, first_name='test', last_name='test', gender=Participant.GENDER_FEMALE)
+        services.create_default_accents(self.event, pm2)
+        services.create_default_accents(self.event, pf2)
+        for index, accent in enumerate(Accent.objects.filter(participant=pm2, event=self.event)):
+            services.save_accent(accent, Accent.ACCENT_FLASH, Route.objects.get(event=self.event, number=index + 1))
+        for index, accent in enumerate(Accent.objects.filter(participant=pf2, event=self.event)):
+            services.save_accent(accent, Accent.ACCENT_REDPOINT, Route.objects.get(event=self.event, number=index + 1))
+        self.event.score_type = Event.SCORE_SIMPLE_SUM
+        self.assertEqual(services.get_participant_score(self.event, pm), self.event.routes_num * self.event.flash_points)
+        self.assertEqual(services.get_participant_score(self.event, pf), self.event.routes_num * self.event.redpoint_points)
+        self.event.score_type = Event.SCORE_PROPORTIONAL
+        self.assertEqual(services.get_participant_score(self.event, pm), self.event.routes_num * self.event.flash_points / 2)
+        self.assertEqual(services.get_participant_score(self.event, pf), self.event.routes_num * self.event.redpoint_points / 2)

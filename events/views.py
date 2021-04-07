@@ -212,15 +212,12 @@ class EventEnterView(views.View):
             logger.info(f'-> participant found: [{participant}] ->')
             participant_accents = Accent.objects.filter(participant=participant, event=event)
             for index, accent in enumerate(participant_accents):
-                accent.accent = accent_formset.cleaned_data[index]['accent']
-                accent.route = Route.objects.get(event=event, number=index + 1)
-                accent.save()
+                services.save_accent(accent=accent,
+                                     result=accent_formset.cleaned_data[index]['accent'],
+                                     route=Route.objects.get(event=event, number=index + 1))
             participant.is_entered_result = True
             participant.save()
             logger.info('-> update participant accents')
-            services.update_routes_points(event=event)
-            services.update_participants_score(event=event)
-
             return redirect('event_results', event_id=event_id)
         logger.warning(f'-> {participant_form} or {accent_formset} are not valid')
         return render(
@@ -238,17 +235,22 @@ class EventResultsView(views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
-        data_male = services.get_sorted_participants_scores_by_gender(event=event, gender=Participant.GENDER_MALE)
-        data_female = services.get_sorted_participants_scores_by_gender(event=event, gender=Participant.GENDER_FEMALE)
+        data_male = services.get_sorted_participants_results(
+            event=event,
+            participants=event.participant.filter(gender=Participant.GENDER_MALE))
+        data_female = services.get_sorted_participants_results(
+            event=event,
+            participants=event.participant.filter(gender=Participant.GENDER_FEMALE))
         return render(
             request=request,
             template_name='events/event-results.html',
             context={
                 'event': event,
-                'participants': event.participant.order_by('-score'),
                 'routes': range(1, event.routes_num + 1),
                 'sorted_male': data_male,
                 'sorted_female': data_female,
+                'routes_score_male': [services.get_route_point(event=event, route=r)['male'] for r in event.route.all()],
+                'routes_score_female': [services.get_route_point(event=event, route=r)['female'] for r in event.route.all()],
             }
         )
 

@@ -74,6 +74,21 @@ def create_participant(event: Event, first_name: str, last_name: str,
     return participant
 
 
+def get_route_point(event: Event, route: Route) -> dict:
+    points = {'male': 1, 'female': 1}
+    if event.score_type == Event.SCORE_PROPORTIONAL:
+        accents_male = len(event.accent.filter(route=route, participant__gender=Participant.GENDER_MALE).exclude(
+            accent=Accent.ACCENT_NO))
+        accents_female = len(
+            event.accent.filter(route=route, participant__gender=Participant.GENDER_FEMALE).exclude(
+                accent=Accent.ACCENT_NO))
+        if accents_male != 0:
+            points.update({'male': round(1 / accents_male, 2)})
+        if accents_female != 0:
+            points.update({'female': round(1 / accents_female, 2)})
+    return points
+
+
 def update_routes_points(event: Event) -> None:
     for route in event.route.all():
         if event.score_type == Event.SCORE_PROPORTIONAL:
@@ -90,6 +105,22 @@ def update_routes_points(event: Event) -> None:
             route.points_male = 1
             route.points_female = 1
         route.save()
+
+
+def get_participant_score(event: Event, participant: Participant) -> float:
+    score = 0
+    for index, accent in enumerate(participant.accent.all()):
+        if accent.accent == Accent.ACCENT_NO:
+            continue
+        base_points = event.flash_points if accent.accent == Accent.ACCENT_FLASH else event.redpoint_points
+        if event.score_type == Event.SCORE_SIMPLE_SUM:
+            score += base_points
+
+        route_points = get_route_point(event=event, route=accent.route)
+        accent_points = route_points['male'] if participant.gender == Participant.GENDER_MALE else route_points[
+            'female']
+        score += base_points * accent_points
+    return round(score, 2)
 
 
 def update_participants_score(event: Event) -> None:
@@ -110,6 +141,16 @@ def update_participants_score(event: Event) -> None:
                     participant.score += event.redpoint_points * accent_points
         participant.score = round(participant.score, 2)
         participant.save()
+
+
+def get_sorted_participants_results(event: Event, participants: list[Participant]) -> list:
+    data = []
+    for participant in participants:
+        if (not event.is_count_only_entered_results) or participant.is_entered_result:
+            data.append(dict(participant=participant,
+                             accents=Accent.objects.filter(participant=participant),
+                             score=get_participant_score(event=event, participant=participant)))
+    return sorted(data, key=lambda k: k['score'], reverse=True)
 
 
 def get_sorted_participants_scores_by_gender(event: Event, gender: Participant.GENDERS) -> list:
@@ -151,17 +192,17 @@ def get_set_list_for_registration_available(event: Event) -> list:
 
 def debug_create_random_participant(event: Event) -> Participant:
     return create_participant(
-            event=event,
-            first_name=get_random_string(4),
-            last_name=get_random_string(6),
-            gender=random.choice([g[0] for g in Participant.GENDERS]),
-            birth_year=random.randint(1950, 2020),
-            city=get_random_string(5),
-            team=get_random_string(5),
-            grade=random.choice([g[0] for g in Participant.GRADES]),
-            group_index=random.randrange(event.group_num),
-            set_index=random.randrange(event.set_num),
-        )
+        event=event,
+        first_name=get_random_string(4),
+        last_name=get_random_string(6),
+        gender=random.choice([g[0] for g in Participant.GENDERS]),
+        birth_year=random.randint(1950, 2020),
+        city=get_random_string(5),
+        team=get_random_string(5),
+        grade=random.choice([g[0] for g in Participant.GRADES]),
+        group_index=random.randrange(event.group_num),
+        set_index=random.randrange(event.set_num),
+    )
 
 
 def debug_create_participants(event: Event, num: int) -> None:
@@ -174,3 +215,9 @@ def check_participants_number_to_close_registration(event: Event) -> None:
             and event.participant.count() >= event.set_max_participants * event.set_num:
         event.is_registration_open = False
         event.save()
+
+
+def save_accent(accent: Accent, result: Accent.ACCENT_TYPE, route: Route) -> None:
+    accent.accent = result
+    accent.route = route
+    accent.save()
