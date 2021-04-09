@@ -10,7 +10,10 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/bootstrap-table@1.18.3/dist/bootstrap-table.min.js"></script>
-
+{% if user.is_superuser %}
+<a href="{% url 'export_participants_to_csv' event.id %}">Export to .*csv</a>
+<hr>
+{% endif %}
 <table
     data-toggle="table"
     data-sort-name="num"

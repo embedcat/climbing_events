@@ -1,5 +1,6 @@
 {% extends 'events/event-base.html' %}
 {% load crispy_forms_tags %}
+{% load events_tags %}
 {% block title %}
 Ввод результатов
 {% endblock %}
@@ -18,7 +19,8 @@
                                           event,
                                           {{ event.id }},
                                           this.value)"
-                         type="number"></div>
+                         type="text"
+                         maxlength="4"></div>
   </div>
   <div class="alert alert-success" id="alert-ok" role="alert" style="display: none;">
     Найден участник:
@@ -26,18 +28,23 @@
   <div class="alert alert-danger" id="alert-error" role="alert" style="display: none;">
     Участник не найден. Проверьте PIN-код, или <a href="{% url 'event_registration' event.id %}">зарегистрируйтесь</a>
   </div>
+  <div id="enter-result-form" style="display:none">
   {{ formset.management_form }}
   <table cellspacing="0" class="table table-bordered table-hover table-striped table-sm" id="dataTable" width="100%">
     <thead>
     <tr>
-      <th style="width:10%">Трасса</th>
-      <th>Результат</th>
+      <th style="width:1%">#</th>
+      <th style="width:10"></th>
+      <th></th>
+      <th></th>
     </tr>
     </thead>
     <tbody>
-    {% for form in formset %}
+    {% for form, route in formset|zip:routes %}
     <tr>
-      <td>{{ forloop.counter }}</td>
+      <td>{{ route.number }}</td>
+      <td bgcolor="{{ route.color }}"></td>
+      <td>{{ route.grade }}</td>
       <td>{% crispy form %}</td>
     </tr>
     {% endfor %}
@@ -46,12 +53,11 @@
   <div class="form-actions">
     <input class="btn btn-primary" id="submit-save" name="submit" type="submit" value="Сохранить результат">
   </div>
+  </div>
 </form>
 
 <script src="/static/events/js/check_pin_code.js" type="text/javascript"></script>
-<hr>
 
-<hr>
 {% else %}
 {% include 'events/snippet-card-banner.html' with message='Ввод результатов закрыт' %}
 {% endif %}

@@ -16,3 +16,8 @@ def set_label(index, event):
 def group_label(index, event):
     group_list = services.get_group_list(event=event)
     return group_list[index]
+
+
+@register.filter(name='zip')
+def zip_lists(a, b):
+    return zip(a, b)

@@ -1,3 +1,4 @@
+from colorfield.fields import ColorField
 from django.db import models
 
 from config import settings
@@ -77,7 +78,7 @@ class Participant(models.Model):
     set_index = models.IntegerField(default=0)
 
     def __str__(self):
-        return f'<Part-t: Name={self.last_name}, PIN={self.pin}, Score={self.score}>'
+        return f'<Part-t: Name={self.last_name}, PIN={self.pin}, Score={self.score}, set={self.set_index}>'
 
 
 class Route(models.Model):
@@ -85,6 +86,51 @@ class Route(models.Model):
     points_female = models.FloatField(default=1)
     number = models.IntegerField()
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='route')
+
+    GRADE_5 = '5'
+    GRADE_6A = '6A'
+    GRADE_6Ap = '6A+'
+    GRADE_6B = '6B'
+    GRADE_6Bp = '6B+'
+    GRADE_6C = '6C'
+    GRADE_6Cp = '6C+'
+    GRADE_7A = '7A'
+    GRADE_7Ap = '7A+'
+    GRADE_7B = '7B'
+    GRADE_7Bp = '7B+'
+    GRADE_7C = '7C'
+    GRADE_7Cp = '7C+'
+    GRADE_8A = '8A'
+    GRADE_8Ap = '8A+'
+    GRADE_8B = '8B'
+    GRADE_8Bp = '8B+'
+    GRADE_8C = '8C'
+    GRADE_8Cp = '8C+'
+
+    GRADES = [
+        (GRADE_5, '5'),
+        (GRADE_6A, '6A'),
+        (GRADE_6Ap, '6A+'),
+        (GRADE_6B, '6B'),
+        (GRADE_6Bp, '6B+'),
+        (GRADE_6C, '6C'),
+        (GRADE_6Cp, '6C+'),
+        (GRADE_7A, '7A'),
+        (GRADE_7Ap, '7A+'),
+        (GRADE_7B, '7B'),
+        (GRADE_7Bp, '7B+'),
+        (GRADE_7C, '7C'),
+        (GRADE_7Cp, '7C+'),
+        (GRADE_8A, '8A'),
+        (GRADE_8Ap, '8A+'),
+        (GRADE_8B, '8B'),
+        (GRADE_8Bp, '8B+'),
+        (GRADE_8C, '8C'),
+        (GRADE_8Cp, '8C+'),
+    ]
+
+    grade = models.CharField(max_length=3, choices=GRADES, default=GRADE_5)
+    color = ColorField(default='#FF0000')
 
     def __str__(self):
         return f'<Route: N={self.number}, P_m={self.points_male}, P_f={self.points_female}>'

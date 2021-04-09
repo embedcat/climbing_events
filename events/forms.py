@@ -2,7 +2,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit, Layout, Button
 from django import forms
 
-from events.models import Participant, Event, Accent
+from events.models import Participant, Event, Accent, Route
 from tinymce.widgets import TinyMCE
 
 
@@ -16,9 +16,6 @@ class ParticipantRegistrationForm(forms.ModelForm):
         self.helper.add_input(Submit('submit', 'Зарегистрироваться'))
         self.helper.label_class = 'mb-1'
 
-        self.fields['birth_year'].required = False
-        self.fields['city'].required = False
-        self.fields['team'].required = False
         self.fields['grade'].required = False
 
         if group_list:
@@ -33,8 +30,8 @@ class ParticipantRegistrationForm(forms.ModelForm):
     class Meta:
         model = Participant
         fields = [
-            'first_name',
             'last_name',
+            'first_name',
             'gender',
             'birth_year',
             'city',
@@ -42,8 +39,8 @@ class ParticipantRegistrationForm(forms.ModelForm):
             'grade',
         ]
         labels = {
-            'first_name': 'Имя',
             'last_name': 'Фамилия',
+            'first_name': 'Имя',
             'gender': 'Пол',
             'birth_year': 'Год рождения',
             'city': 'Город',
@@ -172,4 +169,26 @@ class AccentParticipantForm(forms.ModelForm):
             'pin': 'PIN-код',
             'first_name': 'Имя',
             'last_name': 'Фамилия',
+        }
+
+
+class RouteEditForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+        self.helper.disable_csrf = True
+        self.helper.form_style  = 'inline'
+        self.fields['grade'].required = False
+        self.fields['color'].required = False
+
+    class Meta:
+        model = Route
+        fields = [
+            'grade',
+            'color',
+        ]
+        labels = {
+            'grade': 'Категория',
+            'color': 'Цвет зацепок',
         }

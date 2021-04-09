@@ -11,26 +11,21 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 """
 import os
 from pathlib import Path
-import dj_database_url
-import dotenv
+import local_params
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-dotenv_file = os.path.join(BASE_DIR, ".env")
-if os.path.isfile(dotenv_file):
-    dotenv.load_dotenv(dotenv_file)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '5#p-+wt$kvc7oh5lo!sm=^99d%f3)68v-+t(4=mpg*l-s4f)$n'
+SECRET_KEY = local_params.token
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = bool(os.environ.get('DEBUG', True))
+DEBUG = local_params.debug
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = local_params.allowed_hosts
 
 # Application definition
 
@@ -46,6 +41,7 @@ INSTALLED_APPS = [
     'crispy_forms',
     'debug_toolbar',
     'tinymce',
+    'colorfield',
 
     'events',
 ]
@@ -85,9 +81,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
-DATABASES = {}
-DATABASES['default'] = dj_database_url.config(conn_max_age=600)
-
+DATABASES = local_params.database
 
 # Password validation
 # https://docs.djangoproject.com/en/3.1/ref/settings/#auth-password-validators
@@ -133,8 +127,46 @@ MEDIA_POSTERS_DIR = 'posters'
 
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
-# Configure Django App for Heroku.
-import django_heroku
-django_heroku.settings(locals())
-options = DATABASES['default'].get('OPTIONS', {})
-options.pop('sslmode', None)
+LOGGER = 'EventLogger'
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'console': {
+            'format': '%(name)-12s %(levelname)-8s %(message)s'
+        },
+        'file': {
+            'format': '%(asctime)s %(name)-12s %(levelname)-8s %(message)s'
+        }
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'console'
+        },
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'formatter': 'file',
+            'filename': 'debug.log'
+        },
+        'EventLoggerFile': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'formatter': 'file',
+            'filename': 'EventLogger.log'
+        }
+    },
+    'loggers': {
+        'EventLogger': {
+            'level': 'DEBUG',
+            'handlers': ['EventLoggerFile'],
+            'propagate': False,
+        },
+        '': {
+            'level': 'DEBUG',
+            'handlers': ['file'],
+        }
+
+    }
+}
