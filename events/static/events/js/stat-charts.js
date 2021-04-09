@@ -2,19 +2,47 @@
 Chart.defaults.global.defaultFontFamily = '-apple-system,system-ui,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif';
 Chart.defaults.global.defaultFontColor = '#292b2c';
 
-// Pie Chart Example
+backgroundColors = ['#0d6efd', '#ffc107', '#dc3545', '#198754', '#d63384', '#6f42c1', '#0dcaf0', '#fd7e14', '#20c997', '#6610f2'];
 
-function drawPieChart(id, data) {
-    //console.log(data)
+function drawBarChart(id, data) {
     var ctx = document.getElementById(id);
-    var myPieChart = new Chart(ctx, {
-      type: 'pie',
+    var myLineChart = new Chart(ctx, {
+      type: 'bar',
       data: {
-        labels: ["Blue", "Red", "Yellow", "Green"],
+        labels: data.labels,
         datasets: [{
-          data: [12.21, 15.58, 11.25, 8.32],
-          backgroundColor: ['#007bff', '#dc3545', '#ffc107', '#28a745'],
+          backgroundColor: backgroundColors,
+          borderColor: "rgba(2,117,216,1)",
+          data: data.data,
         }],
       },
+      options: {
+        scales: {
+          yAxes: [{
+            ticks: {
+              min: 0,
+            },
+          }],
+        },
+        legend: {
+          display: false
+        }
+      }
     });
+};
+
+function drawDoughnutChart(id, data) {
+  var ctx = document.getElementById(id);
+  var myPieChart = new Chart(ctx, {
+  type: 'doughnut',
+  data: {
+    labels: data.labels,
+    datasets: [{
+      data: data.data,
+      backgroundColor: backgroundColors,
+    }],
+  },
+  options: {
+  }
+});
 };

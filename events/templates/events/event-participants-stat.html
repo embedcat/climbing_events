@@ -18,14 +18,22 @@
     <a class="nav-link active" aria-current="page" href="{% url 'event_participants_stat' event.id %}">Статистика</a>
   </li>
 </ul>
+<div class="d-flex justify-content-center my-2">Распределение по сетам</div>
+<div class="card-body"><canvas id="setChart" width="100%"></canvas></div>
+<hr>
+<div class="d-flex justify-content-center my-2">Распределение по группам</div>
+<div class="card-body"><canvas id="groupChart" width="100%"></canvas></div>
+<hr>
+<div class="d-flex justify-content-center my-2">Распределение по городам</div>
+<div class="card-body"><canvas id="cityChart" width="100%"></canvas></div>
 
-<div class="card-body"><canvas id="myPieChart" width="100%" height="50"></canvas></div>
-
-{{ chart_set_data }}
 <script>
-var data = JSON.parse("{{ chart_set_data|escapejs }}");
-console.log(data);
-drawPieChart("myPieChart", data);
+var set_data = JSON.parse("{{ chart_set_data|escapejs }}");
+drawBarChart("setChart", set_data);
+var group_data = JSON.parse("{{ chart_group_data|escapejs }}");
+drawDoughnutChart("groupChart", group_data);
+var city_data = JSON.parse("{{ chart_city_data|escapejs }}");
+drawDoughnutChart("cityChart", city_data);
 </script>
 
 {% else %}
