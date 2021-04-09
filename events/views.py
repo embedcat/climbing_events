@@ -1,3 +1,4 @@
+import json
 import logging
 
 from django import views
@@ -266,6 +267,26 @@ class EventParticipantsView(views.View):
             context={
                 'event': event,
                 'participants': participants,
+            }
+        )
+
+
+class EventParticipantsStatView(views.View):
+    @staticmethod
+    def get(request, event_id):
+        event = Event.objects.get(id=event_id)
+        participants = Participant.objects.filter(event__id=event_id)
+        chart_set_data = {'labels': ['1', '2', '3', '4'],
+                          'data': [1, 2, 3, 4],
+                          }
+
+
+        return render(
+            request=request,
+            template_name='events/event-participants-stat.html',
+            context={
+                'event': event,
+                'chart_set_data': json.dumps(chart_set_data),
             }
         )
 

@@ -6,14 +6,23 @@
 {% block content %}
 {% if event.is_published %}
 {% load events_tags %}
+
+
+
 <link href="https://unpkg.com/bootstrap-table@1.18.3/dist/bootstrap-table.min.css" rel="stylesheet">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/bootstrap-table@1.18.3/dist/bootstrap-table.min.js"></script>
-{% if user.is_superuser %}
-<a href="{% url 'export_participants_to_csv' event.id %}">Export to .*csv</a>
-<hr>
-{% endif %}
+
+<ul class="nav nav-tabs">
+  <li class="nav-item">
+    <a class="nav-link active" aria-current="page" href="{% url 'event_participants' event.id %}">Список</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="{% url 'event_participants_stat' event.id %}">Статистика</a>
+  </li>
+</ul>
+
 <table
     data-toggle="table"
     data-sort-name="num"
@@ -54,7 +63,10 @@
   {% endfor %}
   </tbody>
 </table>
-
+{% if user.is_superuser %}
+<a href="{% url 'export_participants_to_csv' event.id %}">Export to .*csv</a>
+<hr>
+{% endif %}
 {% else %}
 {% include 'events/snippet-card-banner.html' with message='Событие не опубликовано' %}
 {% endif %}
