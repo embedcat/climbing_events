@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    'maintenance_mode',
     'active_link',
     'crispy_forms',
     'debug_toolbar',
@@ -56,6 +57,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
+    'maintenance_mode.middleware.MaintenanceModeMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -71,6 +73,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'maintenance_mode.context_processors.maintenance_mode',
             ],
         },
     },
@@ -170,3 +173,12 @@ LOGGING = {
 
     }
 }
+
+# the template that will be shown by the maintenance-mode page
+MAINTENANCE_MODE_TEMPLATE = 'events/error.html'
+# the path of the function that will return the template context -> 'myapp.mymodule.myfunction'
+MAINTENANCE_MODE_GET_TEMPLATE_CONTEXT = 'events.services.get_maintenance_context'
+# if True admin site will not be affected by the maintenance-mode page
+MAINTENANCE_MODE_IGNORE_ADMIN_SITE = True
+# if True the superuser will not see the maintenance-mode page
+MAINTENANCE_MODE_IGNORE_SUPERUSER = False

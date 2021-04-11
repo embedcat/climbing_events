@@ -222,3 +222,7 @@ def save_accent(accent: Accent, result: Accent.ACCENT_TYPE, route: Route) -> Non
     accent.accent = result
     accent.route = route
     accent.save()
+
+
+def get_maintenance_context(request):
+    return {'code': '', 'msg': 'Сервер на обслуживании'}

@@ -9,74 +9,74 @@
 {% if event.is_results_allowed %}
 <link href="https://unpkg.com/bootstrap-table@1.18.3/dist/bootstrap-table.min.css" rel="stylesheet">
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"
+        integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg=="
+        crossorigin="anonymous"></script>
 <script src="https://unpkg.com/bootstrap-table@1.18.3/dist/bootstrap-table.min.js"></script>
 
-<table
-        data-toggle="table">
-<!--        class="table table-bordered table-hover table-striped table-sm" id="dataTable" width="100%" cellspacing="0"-->
-
-    <thead>
-    <tr>
-        <th style="width:10%">Место</th>
-        <th>Участник</th>
-        {% if event.is_view_full_results %}
-        {% for i in routes %}
-        <th>T#{{i}}</th>
-        {% endfor %}
-        {% endif %}
-        <th>Результат</th>
-    </tr>
-    </thead>
-    <tbody>
-    {% for d in sorted_male %}
-    <tr>
-        <td>{{ forloop.counter }}</td>
-        <td>{{ d.participant.first_name }} {{ d.participant.last_name }}</td>
-        {% if event.is_view_full_results %}
-        {% for accent in d.accents %}
-        <td>{{ accent.accent }}</td>
-        {% endfor %}
-        {% endif %}
-        <td>{{ d.score }}</td>
-    </tr>
+<table class="table table-sm table-striped"
+       data-toggle="table">
+  <thead class="table-dark">
+  <tr>
+    <th style="width:10%">Место</th>
+    <th>Участник</th>
+    {% if event.is_view_full_results %}
+    {% for i in routes %}
+    <th>T#{{i}}</th>
     {% endfor %}
-    <tr>
-        <td></td>
-        <td></td>
-        {% if event.is_view_full_results %}
-        {% for score in routes_score_male %}
-        <td>{{ score }}</td>
-        {% endfor %}
-        {% endif %}
-        <td></td>
-    </tr>
-    <tr>
-        <td></td>
-    </tr>
-    {% for d in sorted_female %}
-    <tr>
-        <td>{{ forloop.counter }}</td>
-        <td>{{ d.participant.first_name }} {{ d.participant.last_name }}</td>
-        {% if event.is_view_full_results %}
-        {% for accent in d.accents %}
-        <td>{{ accent.accent }}</td>
-        {% endfor %}
-        {% endif %}
-        <td>{{ d.participant.score }}</td>
-    </tr>
+    {% endif %}
+    <th>Результат</th>
+  </tr>
+  </thead>
+  <tbody>
+  {% for d in sorted_male %}
+  <tr>
+    <td>{{ forloop.counter }}</td>
+    <td>{{ d.participant.first_name }} {{ d.participant.last_name }}</td>
+    {% if event.is_view_full_results %}
+    {% for accent in d.accents %}
+    <td>{{ accent.accent }}</td>
     {% endfor %}
-    <tr>
-        <td></td>
-        <td></td>
-        {% if event.is_view_full_results %}
-        {% for score in routes_score_female %}
-        <td>{{ score }}</td>
-        {% endfor %}
-        {% endif %}
-        <td></td>
-    </tr>
-    </tbody>
+    {% endif %}
+    <td>{{ d.score }}</td>
+  </tr>
+  {% endfor %}
+  <tr>
+    <td></td>
+    <td></td>
+    {% if event.is_view_full_results %}
+    {% for score in routes_score_male %}
+    <td>{{ score }}</td>
+    {% endfor %}
+    {% endif %}
+    <td></td>
+  </tr>
+  <tr>
+    <td></td>
+  </tr>
+  {% for d in sorted_female %}
+  <tr>
+    <td>{{ forloop.counter }}</td>
+    <td>{{ d.participant.first_name }} {{ d.participant.last_name }}</td>
+    {% if event.is_view_full_results %}
+    {% for accent in d.accents %}
+    <td>{{ accent.accent }}</td>
+    {% endfor %}
+    {% endif %}
+    <td>{{ d.participant.score }}</td>
+  </tr>
+  {% endfor %}
+  <tr>
+    <td></td>
+    <td></td>
+    {% if event.is_view_full_results %}
+    {% for score in routes_score_female %}
+    <td>{{ score }}</td>
+    {% endfor %}
+    {% endif %}
+    <td></td>
+  </tr>
+  </tbody>
 </table>
 
 {% else %}

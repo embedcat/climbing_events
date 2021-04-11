@@ -6,11 +6,15 @@ django-colorfield==0.4.1
 django-crispy-forms==1.9.2
 django-debug-toolbar==3.1.1
 django-heroku==0.3.1
+django-maintenance-mode==0.16.0
 django-queryset-csv==1.1.0
 django-tinymce==3.3.0
+et-xmlfile==1.0.1
 flake8==3.8.4
 gunicorn==20.0.4
+jdcal==1.4.1
 mccabe==0.6.1
+openpyxl==3.0.6
 Pillow==8.0.1
 psycopg2==2.8.6
 pycodestyle==2.6.0
