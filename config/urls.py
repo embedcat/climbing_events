@@ -13,6 +13,7 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+from django.conf.urls import url
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
@@ -26,6 +27,7 @@ urlpatterns = [
     path('', include('events.urls')),
     path('dja/', admin.site.urls),
     path('tinymce/', include('tinymce.urls')),
+    url(r'^maintenance-mode/', include('maintenance_mode.urls')),
 ]
 
 if settings.DEBUG:
