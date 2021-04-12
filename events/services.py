@@ -1,6 +1,9 @@
 import random
 import string
 
+from django.http import HttpResponse
+
+from events import xl_tools
 from events.models import Event, Route, Accent, Participant
 
 
@@ -226,3 +229,11 @@ def save_accent(accent: Accent, result: Accent.ACCENT_TYPE, route: Route) -> Non
 
 def get_maintenance_context(request):
     return {'code': '', 'msg': 'Сервер на обслуживании'}
+
+
+def get_startlist_response(event: Event) -> HttpResponse:
+    book = xl_tools.export_participants_to_start_list(event=event)
+    response = HttpResponse(content=book,
+                            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=startlist.xlsx'
+    return response

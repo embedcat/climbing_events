@@ -5,7 +5,7 @@ from django import views
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count
 from django.forms import formset_factory, modelformset_factory
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect
 from djqscsv import render_to_csv_response
 
@@ -77,6 +77,8 @@ class EventAdminView(LoginRequiredMixin, views.View):
             services.clear_participants(event=event)
         elif 'clear_routes' in request.POST:
             services.clear_routes(event=event)
+        elif 'export_startlist' in request.POST:
+            return services.get_startlist_response(event=event)
         else:
             pass
         return redirect('event_admin', event_id)

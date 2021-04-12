@@ -134,3 +134,4 @@ local_params.py
 /.idea/
 /db.sqlite3
 /static/
+/config/maintenance_mode_state.txt
