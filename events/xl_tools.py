@@ -18,7 +18,9 @@ def export_participants_to_start_list(event: Event):
     sheet = book.active
     sheet.cell(row=1, column=1).value = 'Скалодром "МАССИВ"'
     sheet.cell(row=2, column=1).value = event.title
-    sheet.cell(row=3, column=7).value = event.date
+    sheet.merge_cells(start_row=3, start_column=6, end_row=3, end_column=8)
+    sheet.cell(row=3, column=6).value = event.date
+
     for set_no in range(event.set_num):
         sheet = book.copy_worksheet(book.worksheets[0])
         sheet.title = f'Сет {set_no + 1}'
@@ -27,11 +29,12 @@ def export_participants_to_start_list(event: Event):
             sheet.cell(row=ROW_OFFSET + index, column=1).value = index + 1
             sheet.cell(row=ROW_OFFSET + index, column=2).value = f'{p.last_name} {p.first_name}'
             sheet.cell(row=ROW_OFFSET + index, column=3).value = p.birth_year
-            sheet.cell(row=ROW_OFFSET + index, column=4).value = p.gender
+            sheet.cell(row=ROW_OFFSET + index, column=4).value = p.get_gender_display()
             sheet.cell(row=ROW_OFFSET + index, column=5).value = p.city
-            sheet.cell(row=ROW_OFFSET + index, column=6).value = p.team
+            sheet.cell(row=ROW_OFFSET + index, column=6).value = p.get_grade_display()
+            sheet.cell(row=ROW_OFFSET + index, column=7).value = p.team
             group_list = services.get_group_list(event=event)
-            sheet.cell(row=ROW_OFFSET + index, column=7).value = group_list[p.group_index] if group_list != [] else ''
+            sheet.cell(row=ROW_OFFSET + index, column=8).value = group_list[p.group_index] if group_list != [] else ''
     # book.save(filename='startlist.xlsx')
     book.remove(book.worksheets[0])
     book.close()
