@@ -32,7 +32,7 @@
   {% for d in sorted_male %}
   <tr>
     <td>{{ forloop.counter }}</td>
-    <td>{{ d.participant.first_name }} {{ d.participant.last_name }}</td>
+    <td>{{ d.participant.last_name }} {{ d.participant.first_name }}</td>
     {% if event.is_view_full_results %}
     {% for accent in d.accents %}
     <td>{{ accent.accent }}</td>
