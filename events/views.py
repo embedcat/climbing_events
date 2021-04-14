@@ -209,12 +209,12 @@ class EventEnterView(views.View):
             pin = participant_form.cleaned_data['pin']
             logger.info(f'-> pin={pin} ->')
             try:
-                participant = Participant.objects.get(pin=int(pin))
+                participant = event.participant.get(pin=int(pin))
             except (Participant.DoesNotExist, TypeError):
                 logger.warning('-> Participant not found')
                 return redirect('event_enter', event_id=event_id)   # TODO: msg for user
             logger.info(f'-> participant found: [{participant}] ->')
-            participant_accents = Accent.objects.filter(participant=participant, event=event)
+            participant_accents = event.accent.filter(participant=participant)
             for index, accent in enumerate(participant_accents):
                 services.save_accent(accent=accent,
                                      result=accent_formset.cleaned_data[index]['accent'],
@@ -416,7 +416,8 @@ class RouteEditor(LoginRequiredMixin, views.View):
 class ExportParticipantToCsv(LoginRequiredMixin, views.View):
     @staticmethod
     def get(request, event_id):
-        participants = Participant.objects.filter(event__id=event_id)
+        event = Event.objects.get(id=event_id)
+        participants = event.participant.all()
         return render_to_csv_response(participants, delimiter=';')
 
 
