@@ -5,7 +5,7 @@ from django import views
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count
 from django.forms import formset_factory, modelformset_factory
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect
 from djqscsv import render_to_csv_response
 
@@ -77,6 +77,8 @@ class EventAdminView(LoginRequiredMixin, views.View):
             services.clear_participants(event=event)
         elif 'clear_routes' in request.POST:
             services.clear_routes(event=event)
+        elif 'export_startlist' in request.POST:
+            return services.get_startlist_response(event=event)
         else:
             pass
         return redirect('event_admin', event_id)
@@ -207,12 +209,12 @@ class EventEnterView(views.View):
             pin = participant_form.cleaned_data['pin']
             logger.info(f'-> pin={pin} ->')
             try:
-                participant = Participant.objects.get(pin=int(pin))
+                participant = event.participant.get(pin=int(pin))
             except (Participant.DoesNotExist, TypeError):
                 logger.warning('-> Participant not found')
                 return redirect('event_enter', event_id=event_id)   # TODO: msg for user
             logger.info(f'-> participant found: [{participant}] ->')
-            participant_accents = Accent.objects.filter(participant=participant, event=event)
+            participant_accents = event.accent.filter(participant=participant)
             for index, accent in enumerate(participant_accents):
                 services.save_accent(accent=accent,
                                      result=accent_formset.cleaned_data[index]['accent'],
@@ -414,7 +416,8 @@ class RouteEditor(LoginRequiredMixin, views.View):
 class ExportParticipantToCsv(LoginRequiredMixin, views.View):
     @staticmethod
     def get(request, event_id):
-        participants = Participant.objects.filter(event__id=event_id)
+        event = Event.objects.get(id=event_id)
+        participants = event.participant.all()
         return render_to_csv_response(participants, delimiter=';')
 
 
