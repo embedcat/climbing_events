@@ -378,7 +378,7 @@ class RouteEditor(LoginRequiredMixin, views.View):
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
         RouteEditFormSet = modelformset_factory(Route, form=RouteEditForm, extra=0)
-        formset = RouteEditFormSet(prefix='routes')
+        formset = RouteEditFormSet(queryset=event.route.all(), prefix='routes')
         return render(
             request=request,
             template_name='events/route_editor.html',
