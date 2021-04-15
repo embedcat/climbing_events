@@ -130,7 +130,6 @@ dmypy.json
 
 /staticfiles/
 local_params.py
-/events/static/
 /.idea/
 /db.sqlite3
 /static/
