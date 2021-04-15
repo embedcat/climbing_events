@@ -160,6 +160,8 @@ class EventAdminSettingsView(LoginRequiredMixin, views.View):
                 set_num=cd['set_num'],
                 set_list=cd['set_list'],
                 set_max_participants=cd['set_max_participants'],
+                registration_fields=cd['registration_fields'],
+                required_fields=cd['required_fields'],
             )
             logger.info(f'-> Event [{event}] update OK')
             return redirect('event_admin_settings', event_id)
@@ -317,7 +319,9 @@ class EventRegistrationView(views.View):
             context={
                 'event': event,
                 'form': ParticipantRegistrationForm(group_list=group_list,
-                                                    set_list=set_list)
+                                                    set_list=set_list,
+                                                    registration_fields=event.registration_fields,
+                                                    required_fields=event.required_fields)
             }
         )
 
@@ -329,20 +333,23 @@ class EventRegistrationView(views.View):
         form = ParticipantRegistrationForm(request.POST,
                                            request.FILES,
                                            group_list=group_list,
-                                           set_list=set_list)
+                                           set_list=set_list,
+                                           registration_fields=event.registration_fields,
+                                           required_fields=event.required_fields)
         logger.info('Registration [POST] ->')
         if form.is_valid():
+            cd = form.cleaned_data
             participant = services.create_participant(
                 event=event,
-                first_name=form.cleaned_data['first_name'],
-                last_name=form.cleaned_data['last_name'],
-                gender=form.cleaned_data['gender'],
-                birth_year=form.cleaned_data['birth_year'],
-                city=form.cleaned_data['city'],
-                team=form.cleaned_data['team'],
-                grade=form.cleaned_data['grade'],
-                group_index=group_list.index(form.cleaned_data['group_index']) if 'group_index' in form.cleaned_data else 0,
-                set_index=set_list.index(form.cleaned_data['set_index']) if 'set_index' in form.cleaned_data else 0,
+                first_name=cd['first_name'],
+                last_name=cd['last_name'],
+                gender=cd[Event.FIELD_GENDER] if Event.FIELD_GENDER in cd else None,
+                birth_year=cd[Event.FIELD_BIRTH_YEAR] if Event.FIELD_BIRTH_YEAR in cd else 0,
+                city=cd[Event.FIELD_CITY] if Event.FIELD_CITY in cd else '',
+                team=cd[Event.FIELD_TEAM] if Event.FIELD_TEAM in cd else '',
+                grade=cd[Event.FIELD_GRADE] if Event.FIELD_GRADE in cd else None,
+                group_index=group_list.index(cd['group_index']) if 'group_index' in cd else 0,
+                set_index=set_list.index(cd['set_index']) if 'set_index' in cd else 0,
             )
             services.create_default_accents(event=event, participant=participant)
             services.check_participants_number_to_close_registration(event=event)
