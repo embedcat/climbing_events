@@ -165,6 +165,7 @@ class EventAdminSettingsView(LoginRequiredMixin, views.View):
                 set_max_participants=cd['set_max_participants'],
                 registration_fields=cd['registration_fields'],
                 required_fields=cd['required_fields'],
+                is_without_registration=cd['is_without_registration'],
             )
             logger.info(f'-> Event [{event}] update OK')
             return redirect('event_admin_settings', event_id)
@@ -184,10 +185,11 @@ class EventEnterView(views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
+        if event.is_without_registration:
+            return redirect('event_enter_wo_reg', event_id=event_id)
         initial = [{'label': i} for i in range(event.routes_num)]
         AccentFormSet = formset_factory(AccentForm, extra=0)
         formset = AccentFormSet(initial=initial, prefix='accents')
-        routes = event.route.all().order_by('number')
         return render(
             request=request,
             template_name='events/event-enter.html',
@@ -195,7 +197,7 @@ class EventEnterView(views.View):
                 'event': event,
                 'formset': formset,
                 'participant_form': AccentParticipantForm(prefix='participant'),
-                'routes': routes
+                'routes': event.route.all().order_by('number'),
             }
         )
 
@@ -232,6 +234,70 @@ class EventEnterView(views.View):
                 'event': event,
                 'formset': accent_formset,
                 'participant_form': participant_form,
+                'routes': event.route.all().order_by('number'),
+            }
+        )
+
+
+class EventEnterWithoutReg(views.View):
+    @staticmethod
+    def get(request, event_id):
+        event = Event.objects.get(id=event_id)
+        initial = [{'label': i} for i in range(event.routes_num)]
+        AccentFormSet = formset_factory(AccentForm, extra=0)
+        formset = AccentFormSet(initial=initial, prefix='accents')
+        routes = event.route.all().order_by('number')
+        group_list = services.get_group_list(event=event)
+        set_list = services.get_set_list_for_registration_available(event=event)
+        return render(
+            request=request,
+            template_name='events/event-enter-wo-reg.html',
+            context={
+                'event': event,
+                'formset': formset,
+                'routes': routes,
+                'form': ParticipantRegistrationForm(group_list=group_list,
+                                                    set_list=set_list,
+                                                    registration_fields=event.registration_fields,
+                                                    required_fields=event.required_fields,
+                                                    is_enter_form=True)
+
+            }
+        )
+
+    @staticmethod
+    def post(request, event_id):
+        event = Event.objects.get(id=event_id)
+        group_list = services.get_group_list(event=event)
+        set_list = services.get_set_list(event=event)
+        form = ParticipantRegistrationForm(request.POST,
+                                           request.FILES,
+                                           group_list=group_list,
+                                           set_list=set_list,
+                                           registration_fields=event.registration_fields,
+                                           required_fields=event.required_fields,
+                                           is_enter_form=True)
+        AccentFormSet = formset_factory(AccentForm)
+        accent_formset = AccentFormSet(request.POST, prefix='accents')
+        if form.is_valid() and accent_formset.is_valid():
+            print(form.cleaned_data)
+            print(accent_formset.cleaned_data)
+            participant = services.register_participant(event=event, cd=form.cleaned_data)
+            participant_accents = event.accent.filter(participant=participant)
+            for index, accent in enumerate(participant_accents):
+                services.save_accent(accent=accent,
+                                     result=accent_formset.cleaned_data[index]['accent'],
+                                     route=Route.objects.get(event=event, number=index + 1))
+            participant.is_entered_result = True
+            participant.save()
+            return redirect('event_results', event_id=event_id)
+        return render(
+            request=request,
+            template_name='events/event-enter-wo-reg.html',
+            context={
+                'event': event,
+                'formset': accent_formset,
+                'participant_form': form,
             }
         )
 
@@ -246,11 +312,11 @@ class EventResultsView(views.View):
         data_female = services.get_sorted_participants_results(
             event=event,
             participants=event.participant.filter(gender=Participant.GENDER_FEMALE))
-        routes_score_male = [f"{services.get_route_point(event=event, route=r)['male'] * event.flash_points}/"
-                             f"{services.get_route_point(event=event, route=r)['male'] * event.redpoint_points}"
+        routes_score_male = [f"{round(services.get_route_point(event=event, route=r)['male'] * event.flash_points, 2)}/"
+                             f"{round(services.get_route_point(event=event, route=r)['male'] * event.redpoint_points, 2)}"
                              for r in event.route.all()]
-        routes_score_female = [f"{services.get_route_point(event=event, route=r)['female'] * event.flash_points}/"
-                               f"{services.get_route_point(event=event, route=r)['female'] * event.redpoint_points}"
+        routes_score_female = [f"{round(services.get_route_point(event=event, route=r)['female'] * event.flash_points, 2)}/"
+                               f"{round(services.get_route_point(event=event, route=r)['female'] * event.redpoint_points, 2)}"
                                for r in event.route.all()]
         return render(
             request=request,
@@ -316,6 +382,8 @@ class EventRegistrationView(views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
+        if event.is_without_registration:
+            return redirect('event_enter', event_id=event_id)
         group_list = services.get_group_list(event=event)
         set_list = services.get_set_list_for_registration_available(event=event)
         return render(
@@ -326,7 +394,8 @@ class EventRegistrationView(views.View):
                 'form': ParticipantRegistrationForm(group_list=group_list,
                                                     set_list=set_list,
                                                     registration_fields=event.registration_fields,
-                                                    required_fields=event.required_fields)
+                                                    required_fields=event.required_fields,
+                                                    is_enter_form=False)
             }
         )
 
@@ -340,24 +409,11 @@ class EventRegistrationView(views.View):
                                            group_list=group_list,
                                            set_list=set_list,
                                            registration_fields=event.registration_fields,
-                                           required_fields=event.required_fields)
+                                           required_fields=event.required_fields,
+                                           is_enter_form=False)
         logger.info('Registration [POST] ->')
         if form.is_valid():
-            cd = form.cleaned_data
-            participant = services.create_participant(
-                event=event,
-                first_name=cd['first_name'],
-                last_name=cd['last_name'],
-                gender=cd[Event.FIELD_GENDER] if Event.FIELD_GENDER in cd else Participant.GENDER_MALE,
-                birth_year=cd[Event.FIELD_BIRTH_YEAR] if Event.FIELD_BIRTH_YEAR in cd else 0,
-                city=cd[Event.FIELD_CITY] if Event.FIELD_CITY in cd else '',
-                team=cd[Event.FIELD_TEAM] if Event.FIELD_TEAM in cd else '',
-                grade=cd[Event.FIELD_GRADE] if Event.FIELD_GRADE in cd else Participant.GRADE_BR,
-                group_index=group_list.index(cd['group_index']) if 'group_index' in cd else 0,
-                set_index=set_list.index(cd['set_index']) if 'set_index' in cd else 0,
-            )
-            services.create_default_accents(event=event, participant=participant)
-            services.check_participants_number_to_close_registration(event=event)
+            participant = services.register_participant(event=event, cd=form.cleaned_data)
             return redirect('event_registration_ok', event_id=event_id, participant_id=participant.id)
         logger.warning(f'-> registration failed, [{form}] is not valid')
         return render(

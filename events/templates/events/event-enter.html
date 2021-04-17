@@ -1,6 +1,6 @@
 {% extends 'events/event-base.html' %}
 {% load crispy_forms_tags %}
-{% load events_tags %}
+
 {% block title %}
 Ввод результатов
 {% endblock %}
@@ -30,33 +30,7 @@
   </div>
   <div id="enter-result-form" style="display:none">
   {{ formset.management_form }}
-  <table cellspacing="0"
-         class="table table-bordered table-hover table-striped table-sm align-middle"
-         id="dataTable" width="100%" style="text-align: center;">
-    <thead>
-    <tr>
-      <th style="width:1%">#</th>
-      {% if event.is_view_route_color %}<th style="width:1%">Цвет</th>{% endif %}
-      {% if event.is_view_route_grade %}<th style="width:1%">Кат.</th>{% endif %}
-      <th>Результат</th>
-    </tr>
-    </thead>
-    <tbody>
-    {% for form, route in formset|zip:routes %}
-    <tr>
-      <td>{{ route.number }}</td>
-      {% if event.is_view_route_color %}<td>
-          <span style="width: 25px; height: 25px; margin:auto; display: inline-block; border: 1px solid gray; vertical-align: middle; border-radius: 4px; background:{{ route.color }}"></span>
-      </td>{% endif %}
-      {% if event.is_view_route_grade %}<td>{{ route.grade }}</td>{% endif %}
-      <td>{% crispy form %}</td>
-    </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  <div class="form-actions">
-    <input class="btn btn-primary" id="submit-save" name="submit" type="submit" value="Сохранить результат">
-  </div>
+  {% include 'events/snippet-enter-form.html' %}
   </div>
 </form>
 
