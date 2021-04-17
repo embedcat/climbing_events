@@ -342,11 +342,11 @@ class EventRegistrationView(views.View):
                 event=event,
                 first_name=cd['first_name'],
                 last_name=cd['last_name'],
-                gender=cd[Event.FIELD_GENDER] if Event.FIELD_GENDER in cd else None,
+                gender=cd[Event.FIELD_GENDER] if Event.FIELD_GENDER in cd else Participant.GENDER_MALE,
                 birth_year=cd[Event.FIELD_BIRTH_YEAR] if Event.FIELD_BIRTH_YEAR in cd else 0,
                 city=cd[Event.FIELD_CITY] if Event.FIELD_CITY in cd else '',
                 team=cd[Event.FIELD_TEAM] if Event.FIELD_TEAM in cd else '',
-                grade=cd[Event.FIELD_GRADE] if Event.FIELD_GRADE in cd else None,
+                grade=cd[Event.FIELD_GRADE] if Event.FIELD_GRADE in cd else Participant.GRADE_BR,
                 group_index=group_list.index(cd['group_index']) if 'group_index' in cd else 0,
                 set_index=set_list.index(cd['set_index']) if 'set_index' in cd else 0,
             )
