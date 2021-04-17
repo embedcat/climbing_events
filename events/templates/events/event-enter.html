@@ -30,21 +30,25 @@
   </div>
   <div id="enter-result-form" style="display:none">
   {{ formset.management_form }}
-  <table cellspacing="0" class="table table-bordered table-hover table-striped table-sm" id="dataTable" width="100%">
+  <table cellspacing="0"
+         class="table table-bordered table-hover table-striped table-sm align-middle"
+         id="dataTable" width="100%" style="text-align: center;">
     <thead>
     <tr>
       <th style="width:1%">#</th>
-      <th style="width:10"></th>
-      <th></th>
-      <th></th>
+      {% if event.is_view_route_color %}<th style="width:1%">Цвет</th>{% endif %}
+      {% if event.is_view_route_grade %}<th style="width:1%">Кат.</th>{% endif %}
+      <th>Результат</th>
     </tr>
     </thead>
     <tbody>
     {% for form, route in formset|zip:routes %}
     <tr>
       <td>{{ route.number }}</td>
-      <td bgcolor="{{ route.color }}"></td>
-      <td>{{ route.grade }}</td>
+      {% if event.is_view_route_color %}<td>
+          <span style="width: 25px; height: 25px; margin:auto; display: inline-block; border: 1px solid gray; vertical-align: middle; border-radius: 4px; background:{{ route.color }}"></span>
+      </td>{% endif %}
+      {% if event.is_view_route_grade %}<td>{{ route.grade }}</td>{% endif %}
       <td>{% crispy form %}</td>
     </tr>
     {% endfor %}

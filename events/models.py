@@ -17,6 +17,9 @@ class Event(models.Model):
     is_enter_result_allowed = models.BooleanField(default=False)
     is_count_only_entered_results = models.BooleanField(default=False)
     is_view_full_results = models.BooleanField(default=False)
+    is_view_route_color = models.BooleanField(default=False)
+    is_view_route_grade = models.BooleanField(default=False)
+    is_view_route_score = models.BooleanField(default=False)
 
     SCORE_SIMPLE_SUM = 'SUM'
     SCORE_PROPORTIONAL = 'PROP'
@@ -163,7 +166,7 @@ class Accent(models.Model):
     ACCENT_FLASH = 'FL'
     ACCENT_REDPOINT = 'RP'
     ACCENT_TYPE = [
-        (ACCENT_NO, '-'),
+        (ACCENT_NO, 'NO'),
         (ACCENT_FLASH, 'FLASH'),
         (ACCENT_REDPOINT, 'REDPOINT'),
     ]

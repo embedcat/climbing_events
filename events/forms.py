@@ -1,5 +1,6 @@
+from crispy_forms.bootstrap import InlineRadios
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Submit, Layout, Button
+from crispy_forms.layout import Submit, Layout, Div
 from django import forms
 
 from events.models import Participant, Event, Accent, Route
@@ -102,6 +103,9 @@ class EventAdminSettingsForm(forms.ModelForm):
             'is_enter_result_allowed',
             'is_count_only_entered_results',
             'is_view_full_results',
+            'is_view_route_color',
+            'is_view_route_grade',
+            'is_view_route_score',
             'score_type',
             'flash_points',
             'redpoint_points',
@@ -121,6 +125,9 @@ class EventAdminSettingsForm(forms.ModelForm):
             'is_enter_result_allowed': 'Ввод результатов разрешён',
             'is_count_only_entered_results': 'Учитывать только введённые результаты',
             'is_view_full_results': 'Показывать полные результаты',
+            'is_view_route_color': 'Показывать цвет трассы',
+            'is_view_route_grade': 'Показывать ктегорию трассы',
+            'is_view_route_score': 'Показывать стоимость трассы',
             'score_type': 'Тип подсчёта результатов',
             'flash_points': 'Очки за Flash',
             'redpoint_points': 'Очки за Redpoint',
@@ -145,23 +152,21 @@ class EventAdminServiceForm(forms.Form):
         self.helper.add_input(Submit('update_score', 'Посчтитать рузультаты', css_class='btn-primary'))
 
 
-class AccentForm(forms.Form):
+class AccentForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
-        # self.helper.form_method = 'post'
-        # self.helper.add_input(Submit("submit", "Save"))
         self.helper.form_tag = False
         self.helper.disable_csrf = True
-        self.helper.field_class = 'form-check form-check-inline'
+        self.helper.layout = Layout(
+            InlineRadios('accent', template='events/form-accent.html'),
+        )
 
-    accent = forms.TypedChoiceField(
-        label='',
-        choices=Accent.ACCENT_TYPE,
-        widget=forms.RadioSelect,
-        initial=Accent.ACCENT_NO,
-        required=True,
-    )
+    class Meta:
+        model = Accent
+        fields = [
+            'accent',
+        ]
 
 
 class AccentParticipantForm(forms.ModelForm):

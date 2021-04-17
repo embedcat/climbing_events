@@ -152,6 +152,9 @@ class EventAdminSettingsView(LoginRequiredMixin, views.View):
                 is_results_allowed=cd['is_results_allowed'],
                 is_count_only_entered_results=cd['is_count_only_entered_results'],
                 is_view_full_results=cd['is_view_full_results'],
+                is_view_route_color=cd['is_view_route_color'],
+                is_view_route_grade=cd['is_view_route_grade'],
+                is_view_route_score=cd['is_view_route_score'],
                 score_type=cd['score_type'],
                 flash_points=cd['flash_points'],
                 redpoint_points=cd['redpoint_points'],
@@ -185,9 +188,6 @@ class EventEnterView(views.View):
         AccentFormSet = formset_factory(AccentForm, extra=0)
         formset = AccentFormSet(initial=initial, prefix='accents')
         routes = event.route.all().order_by('number')
-        info = zip(formset, routes)
-        for item in info:
-            print(item)
         return render(
             request=request,
             template_name='events/event-enter.html',
@@ -195,7 +195,6 @@ class EventEnterView(views.View):
                 'event': event,
                 'formset': formset,
                 'participant_form': AccentParticipantForm(prefix='participant'),
-                'info': info,
                 'routes': routes
             }
         )
