@@ -1,5 +1,6 @@
+from crispy_forms.bootstrap import InlineRadios
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Submit, Layout, Button
+from crispy_forms.layout import Submit, Layout, Div
 from django import forms
 
 from events.models import Participant, Event, Accent, Route
@@ -10,13 +11,29 @@ class ParticipantRegistrationForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         group_list = kwargs.pop('group_list')
         set_list = kwargs.pop('set_list')
+        registration_fields = kwargs.pop('registration_fields')
+        required_fields = kwargs.pop('required_fields')
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.add_input(Submit('submit', 'Зарегистрироваться'))
         self.helper.label_class = 'mb-1'
 
-        self.fields['grade'].required = False
+        if Event.FIELD_GENDER in registration_fields:
+            self.fields[Event.FIELD_GENDER] = forms.ChoiceField(choices=Participant.GENDERS, label='Пол',
+                                                                required=False)
+        if Event.FIELD_BIRTH_YEAR in registration_fields:
+            self.fields[Event.FIELD_BIRTH_YEAR] = forms.IntegerField(label='Год рождения',
+                                                                     required=Event.FIELD_BIRTH_YEAR in required_fields)
+        if Event.FIELD_CITY in registration_fields:
+            self.fields[Event.FIELD_CITY] = forms.CharField(label='Город',
+                                                            required=Event.FIELD_CITY in required_fields)
+        if Event.FIELD_TEAM in registration_fields:
+            self.fields[Event.FIELD_TEAM] = forms.CharField(label='Команда',
+                                                            required=Event.FIELD_TEAM in required_fields)
+        if Event.FIELD_GRADE in registration_fields:
+            self.fields[Event.FIELD_GRADE] = forms.ChoiceField(choices=Participant.GRADES, label='Разряд',
+                                                               required=False)
 
         if group_list:
             self.fields['group_index'] = forms.ChoiceField(choices=tuple([(name, name) for name in group_list]),
@@ -32,11 +49,6 @@ class ParticipantRegistrationForm(forms.ModelForm):
         fields = [
             'last_name',
             'first_name',
-            'gender',
-            'birth_year',
-            'city',
-            'team',
-            'grade',
         ]
         labels = {
             'last_name': 'Фамилия',
@@ -91,6 +103,9 @@ class EventAdminSettingsForm(forms.ModelForm):
             'is_enter_result_allowed',
             'is_count_only_entered_results',
             'is_view_full_results',
+            'is_view_route_color',
+            'is_view_route_grade',
+            'is_view_route_score',
             'score_type',
             'flash_points',
             'redpoint_points',
@@ -99,6 +114,8 @@ class EventAdminSettingsForm(forms.ModelForm):
             'set_num',
             'set_list',
             'set_max_participants',
+            'registration_fields',
+            'required_fields',
         ]
         labels = {
             'routes_num': 'Количество трасс',
@@ -108,6 +125,9 @@ class EventAdminSettingsForm(forms.ModelForm):
             'is_enter_result_allowed': 'Ввод результатов разрешён',
             'is_count_only_entered_results': 'Учитывать только введённые результаты',
             'is_view_full_results': 'Показывать полные результаты',
+            'is_view_route_color': 'Показывать цвет трассы',
+            'is_view_route_grade': 'Показывать ктегорию трассы',
+            'is_view_route_score': 'Показывать стоимость трассы',
             'score_type': 'Тип подсчёта результатов',
             'flash_points': 'Очки за Flash',
             'redpoint_points': 'Очки за Redpoint',
@@ -116,6 +136,8 @@ class EventAdminSettingsForm(forms.ModelForm):
             'set_num': 'Количество сетов',
             'set_list': 'Список сетов через запятую',
             'set_max_participants': 'Максимальное число участников в сете (0 - не ограничено)',
+            'registration_fields': 'Дополнительные поля формы регистрации',
+            'required_fields': 'Обязательные поля при регистрации',
         }
 
 
@@ -130,23 +152,21 @@ class EventAdminServiceForm(forms.Form):
         self.helper.add_input(Submit('update_score', 'Посчтитать рузультаты', css_class='btn-primary'))
 
 
-class AccentForm(forms.Form):
+class AccentForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
-        # self.helper.form_method = 'post'
-        # self.helper.add_input(Submit("submit", "Save"))
         self.helper.form_tag = False
         self.helper.disable_csrf = True
-        self.helper.field_class = 'form-check form-check-inline'
+        self.helper.layout = Layout(
+            InlineRadios('accent', template='events/form-accent.html'),
+        )
 
-    accent = forms.TypedChoiceField(
-        label='',
-        choices=Accent.ACCENT_TYPE,
-        widget=forms.RadioSelect,
-        initial=Accent.ACCENT_NO,
-        required=True,
-    )
+    class Meta:
+        model = Accent
+        fields = [
+            'accent',
+        ]
 
 
 class AccentParticipantForm(forms.ModelForm):
@@ -178,7 +198,7 @@ class RouteEditForm(forms.ModelForm):
         self.helper = FormHelper()
         self.helper.form_tag = False
         self.helper.disable_csrf = True
-        self.helper.form_style  = 'inline'
+        self.helper.form_style = 'inline'
         self.fields['grade'].required = False
         self.fields['color'].required = False
 

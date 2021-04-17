@@ -1,5 +1,6 @@
 from colorfield.fields import ColorField
 from django.db import models
+from multiselectfield import MultiSelectField
 
 from config import settings
 
@@ -16,6 +17,9 @@ class Event(models.Model):
     is_enter_result_allowed = models.BooleanField(default=False)
     is_count_only_entered_results = models.BooleanField(default=False)
     is_view_full_results = models.BooleanField(default=False)
+    is_view_route_color = models.BooleanField(default=False)
+    is_view_route_grade = models.BooleanField(default=False)
+    is_view_route_score = models.BooleanField(default=False)
 
     SCORE_SIMPLE_SUM = 'SUM'
     SCORE_PROPORTIONAL = 'PROP'
@@ -31,6 +35,27 @@ class Event(models.Model):
     set_num = models.IntegerField(default=1)
     set_list = models.CharField(max_length=200, default='')
     set_max_participants = models.IntegerField(default=0)
+    FIELD_BIRTH_YEAR = 'birth_year'
+    FIELD_CITY = 'city'
+    FIELD_TEAM = 'team'
+    FIELD_GENDER = 'gender'
+    FIELD_GRADE = 'grade'
+    REQUIRED_FIELDS = [
+        (FIELD_BIRTH_YEAR, 'Год рождения'),
+        (FIELD_CITY, 'Город'),
+        (FIELD_TEAM, 'Команда'),
+    ]
+    REGISTRATION_FIELDS = [
+        (FIELD_GENDER, 'Пол'),
+        (FIELD_BIRTH_YEAR, 'Год рождения'),
+        (FIELD_CITY, 'Город'),
+        (FIELD_TEAM, 'Команда'),
+        (FIELD_GRADE, 'Разряд'),
+    ]
+    registration_fields = MultiSelectField(choices=REGISTRATION_FIELDS,
+                                           default=f'{FIELD_GENDER},{FIELD_BIRTH_YEAR},{FIELD_CITY},{FIELD_TEAM}',
+                                           null=True, blank=True)
+    required_fields = MultiSelectField(choices=REQUIRED_FIELDS, default=None, null=True, blank=True)
 
 
 class Participant(models.Model):
@@ -141,7 +166,7 @@ class Accent(models.Model):
     ACCENT_FLASH = 'FL'
     ACCENT_REDPOINT = 'RP'
     ACCENT_TYPE = [
-        (ACCENT_NO, '-'),
+        (ACCENT_NO, 'NO'),
         (ACCENT_FLASH, 'FLASH'),
         (ACCENT_REDPOINT, 'REDPOINT'),
     ]
