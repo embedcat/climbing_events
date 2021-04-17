@@ -10,6 +10,7 @@ urlpatterns = [
          name='event_admin_description'),
     path('e/<int:event_id>/admin_settings/', views.EventAdminSettingsView.as_view(), name='event_admin_settings'),
     path('e/<int:event_id>/enter/', views.EventEnterView.as_view(), name='event_enter'),
+    path('e/<int:event_id>/enter_wo_reg/', views.EventEnterWithoutReg.as_view(), name='event_enter_wo_reg'),
     path('e/<int:event_id>/results/', views.EventResultsView.as_view(), name='event_results'),
     path('e/<int:event_id>/participants/', views.EventParticipantsView.as_view(), name='event_participants'),
     path('e/<int:event_id>/participants/stat/', views.EventParticipantsStatView.as_view(), name='event_participants_stat'),

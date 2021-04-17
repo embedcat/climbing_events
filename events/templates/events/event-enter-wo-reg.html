@@ -1,0 +1,31 @@
+{% extends 'events/event-base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+Ввод результатов
+{% endblock %}
+{% block content %}
+
+{% if event.is_published %}
+{% if event.is_enter_result_allowed %}
+
+<form action="" method="post">
+  {% csrf_token %}
+  {% crispy form %}
+
+  <div id="enter-result-form" style="display:block">
+  {{ formset.management_form }}
+  {% include 'events/snippet-enter-form.html' %}
+  </div>
+</form>
+
+{% else %}
+{% include 'events/snippet-card-banner.html' with message='Ввод результатов закрыт' %}
+{% endif %}
+{% else %}
+{% include 'events/snippet-card-banner.html' with message='Событие не опубликовано' %}
+{% endif %}
+
+
+{% endblock %}
+

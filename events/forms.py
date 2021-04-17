@@ -13,10 +13,15 @@ class ParticipantRegistrationForm(forms.ModelForm):
         set_list = kwargs.pop('set_list')
         registration_fields = kwargs.pop('registration_fields')
         required_fields = kwargs.pop('required_fields')
+        is_enter_form = kwargs.pop('is_enter_form')
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_method = 'post'
-        self.helper.add_input(Submit('submit', 'Зарегистрироваться'))
+        if is_enter_form:
+            self.helper.form_tag = False
+            self.helper.disable_csrf = True
+        else:
+            self.helper.add_input(Submit('submit', 'Зарегистрироваться'))
         self.helper.label_class = 'mb-1'
 
         if Event.FIELD_GENDER in registration_fields:
@@ -116,6 +121,7 @@ class EventAdminSettingsForm(forms.ModelForm):
             'set_max_participants',
             'registration_fields',
             'required_fields',
+            'is_without_registration',
         ]
         labels = {
             'routes_num': 'Количество трасс',
@@ -138,6 +144,7 @@ class EventAdminSettingsForm(forms.ModelForm):
             'set_max_participants': 'Максимальное число участников в сете (0 - не ограничено)',
             'registration_fields': 'Дополнительные поля формы регистрации',
             'required_fields': 'Обязательные поля при регистрации',
+            'is_without_registration': 'Ввод результатов без регистрации',
         }
 
 

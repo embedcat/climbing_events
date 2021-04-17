@@ -56,6 +56,7 @@ class Event(models.Model):
                                            default=f'{FIELD_GENDER},{FIELD_BIRTH_YEAR},{FIELD_CITY},{FIELD_TEAM}',
                                            null=True, blank=True)
     required_fields = MultiSelectField(choices=REQUIRED_FIELDS, default=None, null=True, blank=True)
+    is_without_registration = models.BooleanField(default=False)
 
 
 class Participant(models.Model):

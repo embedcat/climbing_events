@@ -237,3 +237,21 @@ def get_startlist_response(event: Event) -> HttpResponse:
                             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = 'attachment; filename=startlist.xlsx'
     return response
+
+
+def register_participant(event: Event, cd: dict) -> Participant:
+    participant = create_participant(
+        event=event,
+        first_name=cd['first_name'],
+        last_name=cd['last_name'],
+        gender=cd[Event.FIELD_GENDER] if Event.FIELD_GENDER in cd else Participant.GENDER_MALE,
+        birth_year=cd[Event.FIELD_BIRTH_YEAR] if Event.FIELD_BIRTH_YEAR in cd else 0,
+        city=cd[Event.FIELD_CITY] if Event.FIELD_CITY in cd else '',
+        team=cd[Event.FIELD_TEAM] if Event.FIELD_TEAM in cd else '',
+        grade=cd[Event.FIELD_GRADE] if Event.FIELD_GRADE in cd else Participant.GRADE_BR,
+        group_index=get_group_list(event=event).index(cd['group_index']) if 'group_index' in cd else 0,
+        set_index=get_set_list(event=event).index(cd['set_index']) if 'set_index' in cd else 0,
+    )
+    create_default_accents(event=event, participant=participant)
+    check_participants_number_to_close_registration(event=event)
+    return participant
