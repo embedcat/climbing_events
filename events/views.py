@@ -246,6 +246,12 @@ class EventResultsView(views.View):
         data_female = services.get_sorted_participants_results(
             event=event,
             participants=event.participant.filter(gender=Participant.GENDER_FEMALE))
+        routes_score_male = [f"{services.get_route_point(event=event, route=r)['male'] * event.flash_points}/"
+                             f"{services.get_route_point(event=event, route=r)['male'] * event.redpoint_points}"
+                             for r in event.route.all()]
+        routes_score_female = [f"{services.get_route_point(event=event, route=r)['female'] * event.flash_points}/"
+                               f"{services.get_route_point(event=event, route=r)['female'] * event.redpoint_points}"
+                               for r in event.route.all()]
         return render(
             request=request,
             template_name='events/event-results.html',
@@ -254,8 +260,8 @@ class EventResultsView(views.View):
                 'routes': range(1, event.routes_num + 1),
                 'sorted_male': data_male,
                 'sorted_female': data_female,
-                'routes_score_male': [services.get_route_point(event=event, route=r)['male'] for r in event.route.all()],
-                'routes_score_female': [services.get_route_point(event=event, route=r)['female'] for r in event.route.all()],
+                'routes_score_male': routes_score_male,
+                'routes_score_female': routes_score_female,
             }
         )
 

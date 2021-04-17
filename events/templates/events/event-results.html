@@ -44,10 +44,10 @@
   <tr>
     <td></td>
     <td></td>
-    {% if event.is_view_full_results %}
-    {% for score in routes_score_male %}
-    <td>{{ score }}</td>
-    {% endfor %}
+    {% if event.is_view_full_results and event.is_view_route_score %}
+      {% for score in routes_score_male %}
+      <td>{{ score }}</td>
+      {% endfor %}
     {% endif %}
     <td></td>
   </tr>
@@ -57,22 +57,22 @@
   {% for d in sorted_female %}
   <tr>
     <td>{{ forloop.counter }}</td>
-    <td>{{ d.participant.first_name }} {{ d.participant.last_name }}</td>
+    <td>{{ d.participant.last_name }} {{ d.participant.first_name }}</td>
     {% if event.is_view_full_results %}
     {% for accent in d.accents %}
     <td>{{ accent.accent }}</td>
     {% endfor %}
     {% endif %}
-    <td>{{ d.participant.score }}</td>
+    <td>{{ d.score }}</td>
   </tr>
   {% endfor %}
   <tr>
     <td></td>
     <td></td>
-    {% if event.is_view_full_results %}
-    {% for score in routes_score_female %}
-    <td>{{ score }}</td>
-    {% endfor %}
+    {% if event.is_view_full_results and event.is_view_route_score %}
+      {% for score in routes_score_female %}
+      <td>{{ score }}</td>
+      {% endfor %}
     {% endif %}
     <td></td>
   </tr>
