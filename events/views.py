@@ -217,7 +217,7 @@ class EventEnterView(views.View):
                 logger.warning('-> Participant not found')
                 return redirect('event_enter', event_id=event_id)   # TODO: msg for user
             logger.info(f'-> participant found: [{participant}] ->')
-            participant_accents = event.accent.filter(participant=participant)
+            participant_accents = event.accent.filter(participant=participant).order_by('route__number')
             for index, accent in enumerate(participant_accents):
                 services.save_accent(accent=accent,
                                      result=accent_formset.cleaned_data[index]['accent'],
@@ -280,10 +280,8 @@ class EventEnterWithoutReg(views.View):
         AccentFormSet = formset_factory(AccentForm)
         accent_formset = AccentFormSet(request.POST, prefix='accents')
         if form.is_valid() and accent_formset.is_valid():
-            print(form.cleaned_data)
-            print(accent_formset.cleaned_data)
             participant = services.register_participant(event=event, cd=form.cleaned_data)
-            participant_accents = event.accent.filter(participant=participant)
+            participant_accents = event.accent.filter(participant=participant).order_by('route__number')
             for index, accent in enumerate(participant_accents):
                 services.save_accent(accent=accent,
                                      result=accent_formset.cleaned_data[index]['accent'],

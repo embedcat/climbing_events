@@ -152,7 +152,7 @@ def get_sorted_participants_results(event: Event, participants: list) -> list:
     for participant in participants:
         if (not event.is_count_only_entered_results) or participant.is_entered_result:
             data.append(dict(participant=participant,
-                             accents=Accent.objects.filter(participant=participant),
+                             accents=Accent.objects.filter(participant=participant).order_by('route__number'),
                              score=get_participant_score(event=event, participant=participant)))
     return sorted(data, key=lambda k: k['score'], reverse=True)
 
