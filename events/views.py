@@ -304,12 +304,22 @@ class EventResultsView(views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
-        data_male = services.get_sorted_participants_results(
-            event=event,
-            participants=event.participant.filter(gender=Participant.GENDER_MALE))
-        data_female = services.get_sorted_participants_results(
-            event=event,
-            participants=event.participant.filter(gender=Participant.GENDER_FEMALE))
+        male, female = [], []
+        for group in services.get_group_list(event=event):
+            male.append(dict(name=group,
+                             data=services.get_sorted_participants_results(
+                                 event=event,
+                                 participants=event.participant.filter(gender=Participant.GENDER_MALE,
+                                                                       group_index=services.get_group_list(
+                                                                           event=event).index(group)))))
+        for group in services.get_group_list(event=event):
+            female.append(dict(name=group,
+                               data=services.get_sorted_participants_results(
+                                   event=event,
+                                   participants=event.participant.filter(gender=Participant.GENDER_FEMALE,
+                                                                         group_index=services.get_group_list(
+                                                                             event=event).index(group)))))
+
         routes_score_male = [f"{round(services.get_route_point(event=event, route=r)['male'] * event.flash_points, 2)}/"
                              f"{round(services.get_route_point(event=event, route=r)['male'] * event.redpoint_points, 2)}"
                              for r in event.route.all()]
@@ -322,10 +332,10 @@ class EventResultsView(views.View):
             context={
                 'event': event,
                 'routes': range(1, event.routes_num + 1),
-                'sorted_male': data_male,
-                'sorted_female': data_female,
                 'routes_score_male': routes_score_male,
                 'routes_score_female': routes_score_female,
+                'male': male,
+                'female': female,
             }
         )
 

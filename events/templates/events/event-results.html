@@ -7,77 +7,29 @@
 
 {% if event.is_published %}
 {% if event.is_results_allowed %}
-<link href="https://unpkg.com/bootstrap-table@1.18.3/dist/bootstrap-table.min.css" rel="stylesheet">
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"
-        integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg=="
-        crossorigin="anonymous"></script>
-<script src="https://unpkg.com/bootstrap-table@1.18.3/dist/bootstrap-table.min.js"></script>
-
-<table class="table table-sm table-striped"
-       data-toggle="table">
-  <thead class="table-dark">
-  <tr>
-    <th style="width:10%">Место</th>
-    <th>Участник</th>
-    {% if event.is_view_full_results %}
-    {% for i in routes %}
-    <th>T#{{i}}</th>
+<ul class="nav nav-tabs" id="myTab" role="tablist">
+  <li class="nav-item" role="presentation">
+    <a class="nav-link active" id="male-tab" data-toggle="tab" href="#tabResultMale" role="tab"
+       aria-controls="tabResultMale" aria-selected="true">Мужчины</a>
+  </li>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" id="female-tab" data-toggle="tab" href="#tabResultFemale" role="tab"
+       aria-controls="tabResultFemale" aria-selected="false">Женщины</a>
+  </li>
+</ul>
+<div class="tab-content" id="myTabContent">
+  <div class="tab-pane fade show active" id="tabResultMale" role="tabpanel" aria-labelledby="male-tab">
+    {% for group in male %}
+      {% include 'events/snippet-result-table.html' with event=event routes=routes sorted_bunch=group.data routes_score=routes_score_male caption=group.name %}
     {% endfor %}
-    {% endif %}
-    <th>Результат</th>
-  </tr>
-  </thead>
-  <tbody>
-  {% for d in sorted_male %}
-  <tr>
-    <td>{{ forloop.counter }}</td>
-    <td>{{ d.participant.last_name }} {{ d.participant.first_name }}</td>
-    {% if event.is_view_full_results %}
-    {% for accent in d.accents %}
-    <td>{{ accent.accent }}</td>
+  </div>
+  <div class="tab-pane fade" id="tabResultFemale" role="tabpanel" aria-labelledby="female-tab">
+    {% for group in female %}
+      {% include 'events/snippet-result-table.html' with event=event routes=routes sorted_bunch=group.data routes_score=routes_score_female caption=group.name %}
     {% endfor %}
-    {% endif %}
-    <td>{{ d.score }}</td>
-  </tr>
-  {% endfor %}
-  <tr>
-    <td></td>
-    <td></td>
-    {% if event.is_view_full_results and event.is_view_route_score %}
-      {% for score in routes_score_male %}
-      <td>{{ score }}</td>
-      {% endfor %}
-    {% endif %}
-    <td></td>
-  </tr>
-  <tr>
-    <td></td>
-  </tr>
-  {% for d in sorted_female %}
-  <tr>
-    <td>{{ forloop.counter }}</td>
-    <td>{{ d.participant.last_name }} {{ d.participant.first_name }}</td>
-    {% if event.is_view_full_results %}
-    {% for accent in d.accents %}
-    <td>{{ accent.accent }}</td>
-    {% endfor %}
-    {% endif %}
-    <td>{{ d.score }}</td>
-  </tr>
-  {% endfor %}
-  <tr>
-    <td></td>
-    <td></td>
-    {% if event.is_view_full_results and event.is_view_route_score %}
-      {% for score in routes_score_female %}
-      <td>{{ score }}</td>
-      {% endfor %}
-    {% endif %}
-    <td></td>
-  </tr>
-  </tbody>
-</table>
+  </div>
+</div>
 
 {% else %}
 {% include 'events/snippet-card-banner.html' with message='Просмотр результатов закрыт' %}
