@@ -78,6 +78,7 @@
         </table>
         {% if user.is_superuser %}
         <a href="{% url 'export_participants_to_csv' event.id %}">Export to .*csv</a>
+        {% endif %}
     </div>
     <div class="tab-pane fade" id="tabStat" role="tabpanel" aria-labelledby="stat-tab">
         <div class="d-flex justify-content-center my-2">Распределение по сетам</div>
@@ -108,8 +109,6 @@ drawDoughnutChart("cityChart", city_data);
     </div>
 </div>
 
-
-{% endif %}
 {% else %}
 {% include 'events/snippet-card-banner.html' with message='Событие не опубликовано' %}
 {% endif %}
