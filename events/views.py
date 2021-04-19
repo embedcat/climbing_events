@@ -305,20 +305,20 @@ class EventResultsView(views.View):
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
         male, female = [], []
-        for group in services.get_group_list(event=event):
+        group_list = services.get_group_list(event=event) if len(services.get_group_list(event=event)) else ['']
+
+        for group_index, group in enumerate(group_list):
             male.append(dict(name=group,
                              data=services.get_sorted_participants_results(
                                  event=event,
                                  participants=event.participant.filter(gender=Participant.GENDER_MALE,
-                                                                       group_index=services.get_group_list(
-                                                                           event=event).index(group)))))
-        for group in services.get_group_list(event=event):
+                                                                       group_index=group_index))))
+        for group_index, group in enumerate(group_list):
             female.append(dict(name=group,
                                data=services.get_sorted_participants_results(
                                    event=event,
                                    participants=event.participant.filter(gender=Participant.GENDER_FEMALE,
-                                                                         group_index=services.get_group_list(
-                                                                             event=event).index(group)))))
+                                                                         group_index=group_index))))
 
         routes_score_male = [f"{round(services.get_route_point(event=event, route=r)['male'] * event.flash_points, 2)}/"
                              f"{round(services.get_route_point(event=event, route=r)['male'] * event.redpoint_points, 2)}"
