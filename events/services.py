@@ -154,7 +154,7 @@ def get_sorted_participants_results(event: Event, participants: list) -> list:
             data.append(dict(participant=participant,
                              accents=Accent.objects.filter(participant=participant).order_by('route__number'),
                              score=get_participant_score(event=event, participant=participant)))
-    return sorted(data, key=lambda k: k['score'], reverse=True)
+    return sorted(data, key=lambda k: (-k['score'], k['participant'].last_name), reverse=False)
 
 
 def get_sorted_participants_scores_by_gender(event: Event, gender: Participant.GENDERS) -> list:
