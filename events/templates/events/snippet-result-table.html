@@ -1,0 +1,39 @@
+<h4>{{ caption }}</h4>
+<table class="table table-sm table-striped table-bordered">
+  <thead class="table-dark">
+  <tr>
+    <th style="width:10%">Место</th>
+    <th>Участник</th>
+    {% if event.is_view_full_results %}
+    {% for i in routes %}
+    <th>T#{{i}}</th>
+    {% endfor %}
+    {% endif %}
+    <th>Результат</th>
+  </tr>
+  </thead>
+  <tbody>
+  {% for d in sorted_bunch %}
+  <tr>
+    <td>{{ forloop.counter }}</td>
+    <td>{{ d.participant.last_name }} {{ d.participant.first_name }}</td>
+    {% if event.is_view_full_results %}
+    {% for accent in d.accents %}
+    <td>{{ accent.accent }}</td>
+    {% endfor %}
+    {% endif %}
+    <td>{{ d.score }}</td>
+  </tr>
+  {% endfor %}
+  {% if event.is_view_full_results and event.is_view_route_score %}
+  <tr>
+    <td></td>
+    <td>FL/RP:</td>
+    {% for score in routes_score %}
+    <td>{{ score }}</td>
+    {% endfor %}
+    <td></td>
+  </tr>
+  {% endif %}
+  </tbody>
+</table>
