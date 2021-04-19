@@ -345,40 +345,28 @@ class EventParticipantsView(views.View):
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
         participants = Participant.objects.filter(event__id=event_id)
-        return render(
-            request=request,
-            template_name='events/event-participants.html',
-            context={
-                'event': event,
-                'participants': participants,
-            }
-        )
-
-
-class EventParticipantsStatView(views.View):
-    @staticmethod
-    def get(request, event_id):
-        event = Event.objects.get(id=event_id)
         set_list = services.get_set_list(event=event)
         chart_set_data = {
             'labels': set_list,
             'data': [event.participant.filter(set_index=index).count() for index in range(len(set_list))],
-            }
+        }
         group_list = services.get_group_list(event=event)
         chart_group_data = {
             'labels': group_list,
             'data': [event.participant.filter(group_index=index).count() for index in range(len(group_list))],
         }
-        cities = Participant.objects.filter(event__id=event_id).values('city').order_by('-city').annotate(num=Count('city'))
+        cities = Participant.objects.filter(event__id=event_id).values('city').order_by('-city').annotate(
+            num=Count('city'))
         chart_city_data = {
             'labels': [str(city['city']) for city in cities],
             'data': [city['num'] for city in cities],
         }
         return render(
             request=request,
-            template_name='events/event-participants-stat.html',
+            template_name='events/event-participants.html',
             context={
                 'event': event,
+                'participants': participants,
                 'chart_set_data': json.dumps(chart_set_data),
                 'chart_group_data': json.dumps(chart_group_data),
                 'chart_city_data': json.dumps(chart_city_data),
