@@ -442,7 +442,7 @@ class RouteEditor(LoginRequiredMixin, views.View):
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
         RouteEditFormSet = modelformset_factory(Route, form=RouteEditForm, extra=0)
-        formset = RouteEditFormSet(queryset=event.route.all(), prefix='routes')
+        formset = RouteEditFormSet(queryset=event.route.all().order_by('number'), prefix='routes')
         return render(
             request=request,
             template_name='events/route_editor.html',
@@ -459,7 +459,7 @@ class RouteEditor(LoginRequiredMixin, views.View):
         formset = RouteEditFormSet(request.POST, prefix='routes')
         logger.info('Route Editor [POST] ->')
         if formset.is_valid():
-            routes = event.route.all()
+            routes = event.route.all().order_by('number')
             for index, route in enumerate(routes):
                 route.grade = formset.cleaned_data[index]['grade']
                 route.color = formset.cleaned_data[index]['color']
