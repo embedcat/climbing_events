@@ -11,7 +11,7 @@ from djqscsv import render_to_csv_response
 
 from config import settings
 from events.forms import ParticipantRegistrationForm, EventAdminDescriptionForm, AccentForm, AccentParticipantForm, \
-    EventAdminServiceForm, EventAdminSettingsForm, RouteEditForm
+    EventAdminServiceForm, EventAdminSettingsForm, RouteEditForm, ParticipantForm
 from events.models import Event, Participant, Route, Accent
 from events import services
 
@@ -483,6 +483,52 @@ class ExportParticipantToCsv(LoginRequiredMixin, views.View):
         event = Event.objects.get(id=event_id)
         participants = event.participant.all()
         return render_to_csv_response(participants, delimiter=';')
+
+
+class ParticipantView(LoginRequiredMixin, views.View):
+    @staticmethod
+    def get(request, event_id, p_id):
+        event = Event.objects.get(id=event_id)
+        participant = Participant.objects.get(id=p_id)
+        return render(
+            request=request,
+            template_name='events/participant.html',
+            context={
+                'event': event,
+                'participant': participant,
+                'form': ParticipantForm(instance=participant,
+                                        registration_fields=event.registration_fields,
+                                        required_fields=event.required_fields,
+                                        ),
+            }
+        )
+
+    @staticmethod
+    def post(request, event_id, p_id):
+        event = Event.objects.get(id=event_id)
+        participant = Participant.objects.get(id=p_id)
+        form = ParticipantForm(request.POST,
+                               request.FILES,
+                               registration_fields=event.registration_fields,
+                               required_fields=event.required_fields, )
+        if form.is_valid():
+            services.update_participant(event=event, participant=participant, cd=form.cleaned_data)
+            return redirect('participant', event_id, p_id)
+        else:
+            return render(
+                request=request,
+                template_name='events/participant.html',
+                context={
+                    'event': event,
+                    'form': ParticipantForm(request.POST,
+                                            registration_fields=event.registration_fields,
+                                            required_fields=event.required_fields,
+                                            ),
+                }
+            )
+
+
+
 
 
 def check_pin_code(request):

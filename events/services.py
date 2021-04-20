@@ -239,6 +239,21 @@ def get_startlist_response(event: Event) -> HttpResponse:
     return response
 
 
+def update_participant(event: Event, participant: Participant, cd: dict) -> Participant:
+    participant.event = event
+    participant.first_name = cd['first_name']
+    participant.last_name = cd['last_name']
+    participant.gender = cd[Event.FIELD_GENDER] if Event.FIELD_GENDER in cd else Participant.GENDER_MALE
+    participant.birth_year = cd[Event.FIELD_BIRTH_YEAR] if Event.FIELD_BIRTH_YEAR in cd else 0
+    participant.city = cd[Event.FIELD_CITY] if Event.FIELD_CITY in cd else ''
+    participant.team = cd[Event.FIELD_TEAM] if Event.FIELD_TEAM in cd else ''
+    participant.grade = cd[Event.FIELD_GRADE] if Event.FIELD_GRADE in cd else Participant.GRADE_BR
+    participant.group_index = get_group_list(event=event).index(cd['group_index']) if 'group_index' in cd else 0
+    participant.set_index = get_set_list(event=event).index(cd['set_index']) if 'set_index' in cd else 0
+    participant.save()
+    return participant
+
+
 def register_participant(event: Event, cd: dict) -> Participant:
     participant = create_participant(
         event=event,

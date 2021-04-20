@@ -18,6 +18,7 @@ urlpatterns = [
          name='event_registration_ok'),
     path('e/<int:event_id>/route_editor/', views.RouteEditor.as_view(), name='route_editor'),
     path('e/<int:event_id>/participants/export', views.ExportParticipantToCsv.as_view(), name='export_participants_to_csv'),
+    path('e/<int:event_id>/p/<int:p_id>/', views.ParticipantView.as_view(), name='participant'),
 
 
     path('ajax/check_pin_code/', views.check_pin_code, name='check_pin_code'),
