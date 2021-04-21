@@ -1,0 +1,28 @@
+{% extends 'events/event-base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+{% block title %}
+{{ title }}
+{% endblock %}
+
+{% block content %}
+<ul class="nav nav-tabs" id="myTab" role="tablist">
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" id="tab1" href="{% url 'participant' event.id participant.id %}"
+       role="tab" aria-selected="false">Участник</a>
+  </li>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link active" id="tab2" data-toggle="tab" href="{% url 'participant_routes' event.id participant.id %}"
+       role="tab" aria-selected="true">Результаты</a>
+  </li>
+</ul>
+<br>
+<form action="" method="post">
+  {% csrf_token %}
+  <div id="enter-result-form" >
+  {{ formset.management_form }}
+  {% include 'events/snippet-enter-form.html' %}
+  </div>
+</form>
+
+{% endblock %}

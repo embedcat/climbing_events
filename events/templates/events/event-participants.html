@@ -58,10 +58,9 @@
             <tr>
                 <td>{{ forloop.counter }}</td>
                 <td>
-                    {% if user.is_superuser %}
-                    <a href="{% url 'participant' event.id participant.id %}">{{ participant.last_name }} {{ participant.first_name }}</a>
-                    {% else %}
                     {{ participant.last_name }} {{ participant.first_name }}
+                    {% if user.is_superuser %}
+                    <span class="small"><em><a href="{% url 'participant' event.id participant.id %}">(ред.)</a></em></span>
                     {% endif %}
                 </td>
                 {% if user.is_superuser %}

@@ -223,8 +223,8 @@ class RouteEditForm(forms.ModelForm):
 
 class ParticipantForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
-        registration_fields = kwargs.pop('registration_fields')
-        required_fields = kwargs.pop('required_fields')
+        group_list = kwargs.pop('group_list')
+        set_list = kwargs.pop('set_list')
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_method = 'post'
@@ -235,6 +235,14 @@ class ParticipantForm(forms.ModelForm):
         self.fields[Event.FIELD_CITY].required = False
         self.fields[Event.FIELD_TEAM].required = False
         self.fields[Event.FIELD_GRADE].required = False
+        if group_list:
+            self.fields['group_index'] = forms.ChoiceField(choices=tuple([(name, name) for name in group_list]),
+                                                           label='Категория',
+                                                           required=False)
+        if set_list:
+            self.fields['set_index'] = forms.ChoiceField(choices=tuple([(name, name) for name in set_list]),
+                                                         label='Сет',
+                                                         required=False)
 
     class Meta:
         model = Participant
