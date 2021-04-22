@@ -35,6 +35,7 @@ def export_participants_to_start_list(event: Event):
             sheet.cell(row=ROW_OFFSET + index, column=7).value = p.team
             group_list = services.get_group_list(event=event)
             sheet.cell(row=ROW_OFFSET + index, column=8).value = group_list[p.group_index] if group_list != [] else ''
+            sheet.cell(row=ROW_OFFSET + index, column=9).value = p.pin
     # book.save(filename='startlist.xlsx')
     book.remove(book.worksheets[0])
     book.close()

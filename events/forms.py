@@ -219,3 +219,40 @@ class RouteEditForm(forms.ModelForm):
             'grade': 'Категория',
             'color': 'Цвет зацепок',
         }
+
+
+class ParticipantForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        group_list = kwargs.pop('group_list')
+        set_list = kwargs.pop('set_list')
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.add_input(Submit('submit', 'Сохранить'))
+        self.fields['pin'].widget.attrs['readonly'] = True
+        self.fields[Event.FIELD_GENDER].required = False
+        self.fields[Event.FIELD_BIRTH_YEAR].required = False
+        self.fields[Event.FIELD_CITY].required = False
+        self.fields[Event.FIELD_TEAM].required = False
+        self.fields[Event.FIELD_GRADE].required = False
+        if group_list:
+            self.fields['group_index'] = forms.ChoiceField(choices=tuple([(name, name) for name in group_list]),
+                                                           label='Категория',
+                                                           required=False)
+        if set_list:
+            self.fields['set_index'] = forms.ChoiceField(choices=tuple([(name, name) for name in set_list]),
+                                                         label='Сет',
+                                                         required=False)
+
+    class Meta:
+        model = Participant
+        fields = [
+            'last_name',
+            'first_name',
+            'pin',
+            Event.FIELD_GENDER,
+            Event.FIELD_BIRTH_YEAR,
+            Event.FIELD_CITY,
+            Event.FIELD_TEAM,
+            Event.FIELD_GRADE,
+        ]

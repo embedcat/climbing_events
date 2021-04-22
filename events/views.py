@@ -11,10 +11,9 @@ from djqscsv import render_to_csv_response
 
 from config import settings
 from events.forms import ParticipantRegistrationForm, EventAdminDescriptionForm, AccentForm, AccentParticipantForm, \
-    EventAdminServiceForm, EventAdminSettingsForm, RouteEditForm
+    EventAdminServiceForm, EventAdminSettingsForm, RouteEditForm, ParticipantForm
 from events.models import Event, Participant, Route, Accent
 from events import services
-
 
 logger = logging.getLogger(settings.LOGGER)
 
@@ -215,7 +214,7 @@ class EventEnterView(views.View):
                 participant = event.participant.get(pin=int(pin))
             except (Participant.DoesNotExist, TypeError):
                 logger.warning('-> Participant not found')
-                return redirect('event_enter', event_id=event_id)   # TODO: msg for user
+                return redirect('event_enter', event_id=event_id)
             logger.info(f'-> participant found: [{participant}] ->')
             participant_accents = event.accent.filter(participant=participant).order_by('route__number')
             for index, accent in enumerate(participant_accents):
@@ -323,9 +322,10 @@ class EventResultsView(views.View):
         routes_score_male = [f"{round(services.get_route_point(event=event, route=r)['male'] * event.flash_points, 2)}/"
                              f"{round(services.get_route_point(event=event, route=r)['male'] * event.redpoint_points, 2)}"
                              for r in event.route.all()]
-        routes_score_female = [f"{round(services.get_route_point(event=event, route=r)['female'] * event.flash_points, 2)}/"
-                               f"{round(services.get_route_point(event=event, route=r)['female'] * event.redpoint_points, 2)}"
-                               for r in event.route.all()]
+        routes_score_female = [
+            f"{round(services.get_route_point(event=event, route=r)['female'] * event.flash_points, 2)}/"
+            f"{round(services.get_route_point(event=event, route=r)['female'] * event.redpoint_points, 2)}"
+            for r in event.route.all()]
         return render(
             request=request,
             template_name='events/event-results.html',
@@ -468,13 +468,13 @@ class RouteEditor(LoginRequiredMixin, views.View):
             return redirect('route_editor', event_id=event_id)
         logger.warning(f'-> update failed, [{formset}] is not valid')
         return render(
-                request=request,
-                template_name='events/route_editor.html',
-                context={
-                    'event': event,
-                    'formset': formset,
-                }
-            )
+            request=request,
+            template_name='events/route_editor.html',
+            context={
+                'event': event,
+                'formset': formset,
+            }
+        )
 
 
 class ExportParticipantToCsv(LoginRequiredMixin, views.View):
@@ -483,6 +483,99 @@ class ExportParticipantToCsv(LoginRequiredMixin, views.View):
         event = Event.objects.get(id=event_id)
         participants = event.participant.all()
         return render_to_csv_response(participants, delimiter=';')
+
+
+class ParticipantView(LoginRequiredMixin, views.View):
+    @staticmethod
+    def get(request, event_id, p_id):
+        event = Event.objects.get(id=event_id)
+        participant = Participant.objects.get(id=p_id)
+        return render(
+            request=request,
+            template_name='events/participant.html',
+            context={
+                'title': f'{participant.last_name} {participant.first_name}',
+                'event': event,
+                'participant': participant,
+                'form': ParticipantForm(instance=participant,
+                                        group_list=services.get_group_list(event=event),
+                                        set_list=services.get_set_list_for_registration_available(event=event),
+                                        ),
+            }
+        )
+
+    @staticmethod
+    def post(request, event_id, p_id):
+        event = Event.objects.get(id=event_id)
+        participant = Participant.objects.get(id=p_id)
+        form = ParticipantForm(request.POST,
+                               request.FILES,
+                               group_list=services.get_group_list(event=event),
+                               set_list=services.get_set_list_for_registration_available(event=event),
+                               )
+        if form.is_valid():
+            services.update_participant(event=event, participant=participant, cd=form.cleaned_data)
+            return redirect('participant', event_id, p_id)
+        else:
+            return render(
+                request=request,
+                template_name='events/participant.html',
+                context={
+                    'title': f'{participant.last_name} {participant.first_name}',
+                    'event': event,
+                    'form': ParticipantForm(request.POST,
+                                            group_list=services.get_group_list(event=event),
+                                            set_list=services.get_set_list_for_registration_available(event=event),
+                                            ),
+                }
+            )
+
+
+class ParticipantRoutesView(LoginRequiredMixin, views.View):
+    @staticmethod
+    def get(request, event_id, p_id):
+        event = Event.objects.get(id=event_id)
+        participant = Participant.objects.get(id=p_id)
+        AccentFormSet = modelformset_factory(Accent, form=AccentForm, extra=0)
+        formset = AccentFormSet(queryset=participant.accent.all(), prefix='accents')
+        return render(
+            request=request,
+            template_name='events/participant-routes.html',
+            context={
+                'title': f'{participant.last_name} {participant.first_name}',
+                'event': event,
+                'participant': participant,
+                'formset': formset,
+                'routes': event.route.all().order_by('number'),
+            }
+        )
+
+    @staticmethod
+    def post(request, event_id, p_id):
+        event = Event.objects.get(id=event_id)
+        participant = Participant.objects.get(id=p_id)
+        AccentFormSet = formset_factory(form=AccentForm, extra=0)
+        formset = AccentFormSet(request.POST, request.FILES, prefix='accents')
+        if formset.is_valid():
+            participant_accents = event.accent.filter(participant=participant).order_by('route__number')
+            for index, accent in enumerate(participant_accents):
+                services.save_accent(accent=accent,
+                                     result=formset.cleaned_data[index]['accent'],
+                                     route=Route.objects.get(event=event, number=index + 1))
+            participant.is_entered_result = True
+            participant.save()
+            return redirect('event_results', event_id=event_id)
+        return render(
+            request=request,
+            template_name='events/participant-routes.html',
+            context={
+                'title': f'{participant.last_name} {participant.first_name}',
+                'event': event,
+                'participant': participant,
+                'formset': formset,
+                'routes': event.route.all().order_by('number'),
+            }
+        )
 
 
 def check_pin_code(request):
