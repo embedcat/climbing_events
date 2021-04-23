@@ -78,6 +78,8 @@ class EventAdminView(LoginRequiredMixin, views.View):
             services.clear_routes(event=event)
         elif 'export_startlist' in request.POST:
             return services.get_startlist_response(event=event)
+        elif 'export_result' in request.POST:
+            return services.get_result_response(event=event)
         else:
             pass
         return redirect('event_admin', event_id)
@@ -303,39 +305,18 @@ class EventResultsView(views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
-        male, female = [], []
-        group_list = services.get_group_list(event=event) if len(services.get_group_list(event=event)) else ['']
+        results = services.get_results(event=event)
 
-        for group_index, group in enumerate(group_list):
-            male.append(dict(name=group,
-                             data=services.get_sorted_participants_results(
-                                 event=event,
-                                 participants=event.participant.filter(gender=Participant.GENDER_MALE,
-                                                                       group_index=group_index))))
-        for group_index, group in enumerate(group_list):
-            female.append(dict(name=group,
-                               data=services.get_sorted_participants_results(
-                                   event=event,
-                                   participants=event.participant.filter(gender=Participant.GENDER_FEMALE,
-                                                                         group_index=group_index))))
-
-        routes_score_male = [f"{round(services.get_route_point(event=event, route=r)['male'] * event.flash_points, 2)}/"
-                             f"{round(services.get_route_point(event=event, route=r)['male'] * event.redpoint_points, 2)}"
-                             for r in event.route.all()]
-        routes_score_female = [
-            f"{round(services.get_route_point(event=event, route=r)['female'] * event.flash_points, 2)}/"
-            f"{round(services.get_route_point(event=event, route=r)['female'] * event.redpoint_points, 2)}"
-            for r in event.route.all()]
         return render(
             request=request,
             template_name='events/event-results.html',
             context={
                 'event': event,
                 'routes': range(1, event.routes_num + 1),
-                'routes_score_male': routes_score_male,
-                'routes_score_female': routes_score_female,
-                'male': male,
-                'female': female,
+                'routes_score_male': results['routes_score_male'],
+                'routes_score_female': results['routes_score_female'],
+                'male': results['male'],
+                'female': results['female'],
             }
         )
 
