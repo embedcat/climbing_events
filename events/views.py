@@ -226,7 +226,7 @@ class EventEnterView(views.View):
             participant.is_entered_result = True
             participant.save()
             logger.info('-> update participant accents')
-            return redirect('event_results', event_id=event_id)
+            return redirect('event', event_id=event_id)
         logger.warning(f'-> {participant_form} or {accent_formset} are not valid')
         return render(
             request=request,
