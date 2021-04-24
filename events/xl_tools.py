@@ -56,8 +56,8 @@ def export_result(event: Event):
     result = services.get_results(event=event)
     # routes = event.route.all().order_by('number')
 
-    for results, scores, gender in ([result['male'], result['routes_score_male'], 'M'],
-                                    [result['female'], result['routes_score_male'], 'Ж']):
+    for results, scores, gender in ([result['male'], result['routes_score_male'], 'M'],):
+                                    # [result['female'], result['routes_score_male'], 'Ж']):
         for group in results:
             title = f"{group['name']}_{gender}"
             sheet = book.copy_worksheet(book.worksheets[0])

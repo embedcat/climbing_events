@@ -257,12 +257,12 @@ def get_results(event: Event) -> dict:
                              event=event,
                              participants=event.participant.filter(gender=Participant.GENDER_MALE,
                                                                    group_index=group_index))))
-    for group_index, group in enumerate(group_list):
-        female.append(dict(name=group,
-                           data=get_sorted_participants_results(
-                               event=event,
-                               participants=event.participant.filter(gender=Participant.GENDER_FEMALE,
-                                                                     group_index=group_index))))
+    # for group_index, group in enumerate(group_list):
+    #     female.append(dict(name=group,
+    #                        data=get_sorted_participants_results(
+    #                            event=event,
+    #                            participants=event.participant.filter(gender=Participant.GENDER_FEMALE,
+    #                                                                  group_index=group_index))))
 
     # routes_score_male = [f"{round(get_route_point(event=event, route=r)['male'] * event.flash_points, 2)}/"
     #                      f"{round(get_route_point(event=event, route=r)['male'] * event.redpoint_points, 2)}"
@@ -273,7 +273,7 @@ def get_results(event: Event) -> dict:
     #     for r in event.route.all()]
     return {
         'male': male,
-        'female': female,
+        'female': [],
         'routes_score_male': [],
         'routes_score_female': [],
     }
