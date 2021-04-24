@@ -12,7 +12,7 @@ urlpatterns = [
     path('e/<int:event_id>/enter/', views.EventEnterView.as_view(), name='event_enter'),
     path('e/<int:event_id>/enter_wo_reg/', views.EventEnterWithoutReg.as_view(), name='event_enter_wo_reg'),
     path('e/<int:event_id>/results/', views.EventResultsView.as_view(), name='event_results'),
-    # path('e/<int:event_id>/results/', views.EventParticipantsView.as_view(), name='event_results'),
+    path('e/<int:event_id>/res/', views.EventParticipantsView.as_view(), name='event_res'),
     path('e/<int:event_id>/participants/', views.EventParticipantsView.as_view(), name='event_participants'),
     path('e/<int:event_id>/registration/', views.EventRegistrationView.as_view(), name='event_registration'),
     path('e/<int:event_id>/registration_ok/<int:participant_id>', views.EventRegistrationOkView.as_view(),

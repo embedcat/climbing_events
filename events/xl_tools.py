@@ -71,13 +71,13 @@ def export_result(event: Event):
                 sheet.cell(row=ROW_OFFSET + index, column=5).value = p['participant'].get_grade_display()
                 sheet.cell(row=ROW_OFFSET + index, column=6).value = p['participant'].team
                 sheet.cell(row=ROW_OFFSET + index, column=7).value = p['score']
-                for num, accent in enumerate(p['accents']):
-                    sheet.cell(row=HEADS_ROW, column=8 + num).value = f"T#{num + 1}"
-                    sheet.cell(row=HEADS_ROW - 1, column=8 + num).value = routes[num].grade
-                    sheet.cell(row=HEADS_ROW - 2, column=8 + num).value = scores[num]
-                    sheet.cell(row=ROW_OFFSET + index, column=8 + num).value = accent.accent
-                sheet.cell(row=HEADS_ROW, column=8 + len(p['accents'])).value = "Итог"
-                sheet.cell(row=ROW_OFFSET + index, column=8 + len(p['accents'])).value = p['score']
+                # for num, accent in enumerate(p['accents']):
+                #     sheet.cell(row=HEADS_ROW, column=8 + num).value = f"T#{num + 1}"
+                #     sheet.cell(row=HEADS_ROW - 1, column=8 + num).value = routes[num].grade
+                #     sheet.cell(row=HEADS_ROW - 2, column=8 + num).value = scores[num]
+                #     sheet.cell(row=ROW_OFFSET + index, column=8 + num).value = accent.accent
+                # sheet.cell(row=HEADS_ROW, column=8 + len(p['accents'])).value = "Итог"
+                # sheet.cell(row=ROW_OFFSET + index, column=8 + len(p['accents'])).value = p['score']
 
     book.remove(book.worksheets[0])
     return save_virtual_workbook(book)
