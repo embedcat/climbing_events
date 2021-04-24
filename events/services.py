@@ -257,7 +257,7 @@ def get_results(event: Event) -> dict:
         #                      event=event,
         #                      participants=event.participant.filter(gender=Participant.GENDER_MALE,
         #                                                            group_index=group_index))))
-    for group_index, group in enumerate(group_list):
+    for group_index, group in enumerate(group_list[0]):
         female.append(dict(name=group,
                            data=get_sorted_participants_results(
                                event=event,
