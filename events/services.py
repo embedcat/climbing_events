@@ -251,18 +251,18 @@ def get_results(event: Event) -> dict:
     male, female = [], []
     group_list = get_group_list(event=event) if len(get_group_list(event=event)) else ['']
 
-    for group_index, group in enumerate(group_list):
-        male.append(dict(name=group,
-                         data=get_sorted_participants_results(
-                             event=event,
-                             participants=event.participant.filter(gender=Participant.GENDER_MALE,
-                                                                   group_index=group_index))))
     # for group_index, group in enumerate(group_list):
-    #     female.append(dict(name=group,
-    #                        data=get_sorted_participants_results(
-    #                            event=event,
-    #                            participants=event.participant.filter(gender=Participant.GENDER_FEMALE,
-    #                                                                  group_index=group_index))))
+        # male.append(dict(name=group,
+        #                  data=get_sorted_participants_results(
+        #                      event=event,
+        #                      participants=event.participant.filter(gender=Participant.GENDER_MALE,
+        #                                                            group_index=group_index))))
+    for group_index, group in enumerate(group_list):
+        female.append(dict(name=group,
+                           data=get_sorted_participants_results(
+                               event=event,
+                               participants=event.participant.filter(gender=Participant.GENDER_FEMALE,
+                                                                     group_index=group_index))))
 
     # routes_score_male = [f"{round(get_route_point(event=event, route=r)['male'] * event.flash_points, 2)}/"
     #                      f"{round(get_route_point(event=event, route=r)['male'] * event.redpoint_points, 2)}"
@@ -272,8 +272,8 @@ def get_results(event: Event) -> dict:
     #     f"{round(get_route_point(event=event, route=r)['female'] * event.redpoint_points, 2)}"
     #     for r in event.route.all()]
     return {
-        'male': male,
-        'female': [],
+        'male': [],
+        'female': female,
         'routes_score_male': [],
         'routes_score_female': [],
     }
