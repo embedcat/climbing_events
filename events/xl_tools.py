@@ -54,7 +54,7 @@ def export_result(event: Event):
     sheet.cell(row=3, column=6).value = event.date
 
     result = services.get_results(event=event)
-    routes = event.route.all().order_by('number')
+    # routes = event.route.all().order_by('number')
 
     for results, scores, gender in ([result['male'], result['routes_score_male'], 'M'],
                                     [result['female'], result['routes_score_male'], 'Ж']):
@@ -73,8 +73,8 @@ def export_result(event: Event):
                 sheet.cell(row=ROW_OFFSET + index, column=7).value = p['score']
                 for num, accent in enumerate(p['accents']):
                     sheet.cell(row=HEADS_ROW, column=8 + num).value = f"T#{num + 1}"
-                    sheet.cell(row=HEADS_ROW - 1, column=8 + num).value = routes[num].grade
-                    sheet.cell(row=HEADS_ROW - 2, column=8 + num).value = scores[num]
+                    # sheet.cell(row=HEADS_ROW - 1, column=8 + num).value = routes[num].grade
+                    # sheet.cell(row=HEADS_ROW - 2, column=8 + num).value = scores[num]
                     sheet.cell(row=ROW_OFFSET + index, column=8 + num).value = accent.accent
                 sheet.cell(row=HEADS_ROW, column=8 + len(p['accents'])).value = "Итог"
                 sheet.cell(row=ROW_OFFSET + index, column=8 + len(p['accents'])).value = p['score']
