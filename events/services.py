@@ -264,18 +264,18 @@ def get_results(event: Event) -> dict:
                                participants=event.participant.filter(gender=Participant.GENDER_FEMALE,
                                                                      group_index=group_index))))
 
-    routes_score_male = [f"{round(get_route_point(event=event, route=r)['male'] * event.flash_points, 2)}/"
-                         f"{round(get_route_point(event=event, route=r)['male'] * event.redpoint_points, 2)}"
-                         for r in event.route.all()]
-    routes_score_female = [
-        f"{round(get_route_point(event=event, route=r)['female'] * event.flash_points, 2)}/"
-        f"{round(get_route_point(event=event, route=r)['female'] * event.redpoint_points, 2)}"
-        for r in event.route.all()]
+    # routes_score_male = [f"{round(get_route_point(event=event, route=r)['male'] * event.flash_points, 2)}/"
+    #                      f"{round(get_route_point(event=event, route=r)['male'] * event.redpoint_points, 2)}"
+    #                      for r in event.route.all()]
+    # routes_score_female = [
+    #     f"{round(get_route_point(event=event, route=r)['female'] * event.flash_points, 2)}/"
+    #     f"{round(get_route_point(event=event, route=r)['female'] * event.redpoint_points, 2)}"
+    #     for r in event.route.all()]
     return {
         'male': male,
         'female': female,
-        'routes_score_male': routes_score_male,
-        'routes_score_female': routes_score_female,
+        'routes_score_male': [],
+        'routes_score_female': [],
     }
 
 
