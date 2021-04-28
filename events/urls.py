@@ -22,4 +22,6 @@ urlpatterns = [
     path('e/<int:event_id>/p/<int:p_id>/routes', views.ParticipantRoutesView.as_view(), name='participant_routes'),
 
     path('ajax/check_pin_code/', views.check_pin_code, name='check_pin_code'),
+
+    path('test/', views.TestView.as_view(), name='test'),
 ]

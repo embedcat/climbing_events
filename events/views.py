@@ -578,3 +578,23 @@ def page_not_found_view(request, exception):
 def error_view(request):
     return render(request=request, template_name='events/error.html', status=500,
                   context={'code': '', 'msg': 'Ошибка сервера!'})
+
+
+class TestView(views.View):
+    @staticmethod
+    def get(request):
+        event = Event.objects.get(id=1)
+        # route = Route.objects.get(id=101)
+        routes = event.route.all()
+        accents = event.accent.filter(participant__gender=Participant.GENDER_MALE, participant__group_index=0)
+        # participant = Participant.objects.get(id=235)
+        # accents = Accent.objects.filter(participant=participant).order_by('route__number')
+        route_score = services.get_route_score(event=event, routes=routes, accents=accents)
+        # score = services.get_participant_score(event, participant, accents)
+        return render(
+            request=request,
+            template_name='events/test.html',
+            context={
+                'data': route_score,
+            }
+        )

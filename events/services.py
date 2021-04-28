@@ -1,6 +1,8 @@
 import random
 import string
+from typing import List
 
+from django.db.models import QuerySet
 from django.http import HttpResponse
 
 from events import xl_tools
@@ -92,6 +94,16 @@ def get_route_point(event: Event, route: Route) -> dict:
     return points
 
 
+def get_route_score(event: Event, routes: List[Route], accents: QuerySet) -> List[float]:
+    score = [1.0] * len(routes)
+    if event.score_type == Event.SCORE_PROPORTIONAL:
+        for index, route in enumerate(routes):
+            accent_num = accents.filter(route=route).exclude(accent=Accent.ACCENT_NO).count()
+            if accent_num != 0:
+                score[index] = round(1 / accent_num, 2)
+    return score
+
+
 def update_routes_points(event: Event) -> None:
     for route in event.route.all():
         if event.score_type == Event.SCORE_PROPORTIONAL:
@@ -110,9 +122,10 @@ def update_routes_points(event: Event) -> None:
         route.save()
 
 
-def get_participant_score(event: Event, participant: Participant) -> float:
+def get_participant_score(event: Event, participant: Participant, accents: List[Accent],
+                          route_score: List[float]) -> float:
     score = 0
-    for index, accent in enumerate(participant.accent.all()):
+    for index, accent in enumerate(accents):
         if accent.accent == Accent.ACCENT_NO:
             continue
         base_points = event.flash_points if accent.accent == Accent.ACCENT_FLASH else event.redpoint_points
@@ -120,9 +133,10 @@ def get_participant_score(event: Event, participant: Participant) -> float:
             score += base_points
             continue
 
-        route_points = get_route_point(event=event, route=accent.route)
-        accent_points = route_points['male'] if participant.gender == Participant.GENDER_MALE else route_points[
-            'female']
+        # route_points = get_route_point(event=event, route=accent.route)
+        # accent_points = route_points['male'] if participant.gender == Participant.GENDER_MALE else route_points[
+        #     'female']
+        accent_points = route_score[index]
         score += base_points * accent_points
     return round(score, 2)
 
@@ -151,9 +165,10 @@ def get_sorted_participants_results(event: Event, participants: list) -> list:
     data = []
     for participant in participants:
         if (not event.is_count_only_entered_results) or participant.is_entered_result:
+            accents = Accent.objects.filter(participant=participant).order_by('route__number')
             data.append(dict(participant=participant,
-                             accents=Accent.objects.filter(participant=participant).order_by('route__number'),
-                             score=get_participant_score(event=event, participant=participant)))
+                             accents=accents,
+                             score=get_participant_score(event=event, participant=participant, accents=accents)))
     return sorted(data, key=lambda k: (-k['score'], k['participant'].last_name), reverse=False)
 
 
@@ -251,31 +266,33 @@ def get_results(event: Event) -> dict:
     male, female = [], []
     group_list = get_group_list(event=event) if len(get_group_list(event=event)) else ['']
 
+    participants = event.participant.filter(gender=Participant.GENDER_MALE)
+
     for group_index, group in enumerate(group_list):
         male.append(dict(name=group,
                          data=get_sorted_participants_results(
                              event=event,
                              participants=event.participant.filter(gender=Participant.GENDER_MALE,
                                                                    group_index=group_index))))
-    for group_index, group in enumerate(group_list):
-        female.append(dict(name=group,
-                           data=get_sorted_participants_results(
-                               event=event,
-                               participants=event.participant.filter(gender=Participant.GENDER_FEMALE,
-                                                                     group_index=group_index))))
+    # for group_index, group in enumerate(group_list):
+    #     female.append(dict(name=group,
+    #                        data=get_sorted_participants_results(
+    #                            event=event,
+    #                            participants=event.participant.filter(gender=Participant.GENDER_FEMALE,
+    #                                                                  group_index=group_index))))
 
-    routes_score_male = [f"{round(get_route_point(event=event, route=r)['male'] * event.flash_points, 2)}/"
-                         f"{round(get_route_point(event=event, route=r)['male'] * event.redpoint_points, 2)}"
-                         for r in event.route.all()]
-    routes_score_female = [
-        f"{round(get_route_point(event=event, route=r)['female'] * event.flash_points, 2)}/"
-        f"{round(get_route_point(event=event, route=r)['female'] * event.redpoint_points, 2)}"
-        for r in event.route.all()]
+    # routes_score_male = [f"{round(get_route_point(event=event, route=r)['male'] * event.flash_points, 2)}/"
+    #                      f"{round(get_route_point(event=event, route=r)['male'] * event.redpoint_points, 2)}"
+    #                      for r in event.route.all()]
+    # routes_score_female = [
+    #     f"{round(get_route_point(event=event, route=r)['female'] * event.flash_points, 2)}/"
+    #     f"{round(get_route_point(event=event, route=r)['female'] * event.redpoint_points, 2)}"
+    #     for r in event.route.all()]
     return {
         'male': male,
         'female': female,
-        'routes_score_male': routes_score_male,
-        'routes_score_female': routes_score_female,
+        'routes_score_male': [],
+        'routes_score_female': [],
     }
 
 
