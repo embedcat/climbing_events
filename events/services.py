@@ -98,33 +98,25 @@ def get_route_score(event: Event, routes: List[Route], accents: QuerySet) -> Lis
     score = [1.0] * len(routes)
     if event.score_type == Event.SCORE_PROPORTIONAL:
         for index, route in enumerate(routes):
-            accent_num = accents.filter(route=route).exclude(accent=Accent.ACCENT_NO).count()
+            accent_num = len(accents.filter(route=route))
             if accent_num != 0:
                 score[index] = round(1 / accent_num, 2)
     return score
 
 
-def update_routes_points(event: Event) -> None:
-    for route in event.route.all():
-        if event.score_type == Event.SCORE_PROPORTIONAL:
-            accents_male = len(event.accent.filter(route=route, participant__gender=Participant.GENDER_MALE).exclude(
-                accent=Accent.ACCENT_NO))
-            accents_female = len(
-                event.accent.filter(route=route, participant__gender=Participant.GENDER_FEMALE).exclude(
-                    accent=Accent.ACCENT_NO))
-            if accents_male != 0:
-                route.points_male = round(1 / accents_male, 2)
-            if accents_female != 0:
-                route.points_female = round(1 / accents_female, 2)
-        else:
-            route.points_male = 1
-            route.points_female = 1
+def update_route_score(routes: List[Route], scores: List[float], gender_index: int, group_index: int) -> None:
+    for route, score in zip(routes, scores):
+        route.score[gender_index][group_index] = score
         route.save()
 
 
 def get_participant_score(event: Event, participant: Participant, accents: List[Accent],
                           route_score: List[float]) -> float:
     score = 0
+    print(len(route_score))
+    print(len(accents))
+    # pa = accents.filter(participant=participant).exclude(accent=Accent.ACCENT_NO)
+    # print(len(pa))
     for index, accent in enumerate(accents):
         if accent.accent == Accent.ACCENT_NO:
             continue

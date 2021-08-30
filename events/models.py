@@ -1,4 +1,5 @@
 from colorfield.fields import ColorField
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from multiselectfield import MultiSelectField
 
@@ -107,6 +108,10 @@ class Participant(models.Model):
         return f'<Part-t: Name={self.last_name}, PIN={self.pin}, Score={self.score}, set={self.set_index}>'
 
 
+def get_default_scores():
+    return [[1.0] * 5] * 2
+
+
 class Route(models.Model):
     points_male = models.FloatField(default=1)
     points_female = models.FloatField(default=1)
@@ -158,8 +163,10 @@ class Route(models.Model):
     grade = models.CharField(max_length=3, choices=GRADES, default=GRADE_5)
     color = ColorField(default='#FF0000')
 
+    score = ArrayField(ArrayField(models.FloatField(default=1.0), size=5), size=2, blank=True, default=get_default_scores)
+
     def __str__(self):
-        return f'<Route: N={self.number}, P_m={self.points_male}, P_f={self.points_female}>'
+        return f'<Route: N={self.number}, score={self.score}>'
 
 
 class Accent(models.Model):
