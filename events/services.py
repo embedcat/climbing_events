@@ -78,6 +78,12 @@ def create_participant(event: Event, first_name: str, last_name: str,
     )
     return participant
 
+# =========== Routes ===========
+
+
+def get_route_score(route: Route, gender_index: int, group_index: int) -> float:
+    return route.score[gender_index][group_index]
+
 
 def get_route_point(event: Event, route: Route) -> dict:
     points = {'male': 1, 'female': 1}
@@ -94,7 +100,8 @@ def get_route_point(event: Event, route: Route) -> dict:
     return points
 
 
-def get_route_score(event: Event, routes: List[Route], accents: QuerySet) -> List[float]:
+def _calc_route_score(event: Event, routes: List[Route], accents: QuerySet) -> List[float]:
+    """ Вычисляем очки каждой трассы """
     score = [1.0] * len(routes)
     if event.score_type == Event.SCORE_PROPORTIONAL:
         for index, route in enumerate(routes):
@@ -104,80 +111,124 @@ def get_route_score(event: Event, routes: List[Route], accents: QuerySet) -> Lis
     return score
 
 
-def update_route_score(routes: List[Route], scores: List[float], gender_index: int, group_index: int) -> None:
+def update_routes_scores(event: Event) -> None:
+    """ Вычисляем очки всех трасс на основе прохождений и сохраняем """
+    all_accents = event.accent.all()
+    routes = event.route.all()
+    is_separate_scores_by_group = event.is_separate_score_by_groups
+    for group_index, group in enumerate(get_group_list(event=event)) if is_separate_scores_by_group else [(0, "")]:
+        for gender_index, gender in enumerate([Participant.GENDER_MALE, Participant.GENDER_FEMALE]):
+            if is_separate_scores_by_group:
+                accents = all_accents.filter(participant__gender=gender, participant__group_index=group_index).exclude(
+                    accent=Accent.ACCENT_NO)
+            else:
+                accents = all_accents.filter(participant__gender=gender).exclude(accent=Accent.ACCENT_NO)
+            scores = _calc_route_score(event=event, routes=routes, accents=accents)
+            print(f"{group_index=}, {gender=}, {scores=}")
+            _save_routes_score(routes=routes, scores=scores, gender_index=gender_index, group_index=group_index)
+
+
+def _save_routes_score(routes: List[Route], scores: List[float], gender_index: int, group_index: int) -> None:
+    """ Сохраняем очки трасс в route.score """
     for route, score in zip(routes, scores):
         route.score[gender_index][group_index] = score
         route.save()
 
 
-def get_participant_score(event: Event, participant: Participant, accents: List[Accent],
-                          route_score: List[float]) -> float:
+# =========== Participants ============
+
+def update_participant_score(event: Event, participant: Participant) -> None:
+    """ Вычисляем результат учасника, сохраняем его в поле score """
     score = 0
-    print(len(route_score))
-    print(len(accents))
-    # pa = accents.filter(participant=participant).exclude(accent=Accent.ACCENT_NO)
-    # print(len(pa))
-    for index, accent in enumerate(accents):
-        if accent.accent == Accent.ACCENT_NO:
-            continue
+    accents = Accent.objects.filter(participant=participant).exclude(accent=Accent.ACCENT_NO)
+    for accent in accents:
         base_points = event.flash_points if accent.accent == Accent.ACCENT_FLASH else event.redpoint_points
         if event.score_type == Event.SCORE_SIMPLE_SUM:
             score += base_points
-            continue
-
-        # route_points = get_route_point(event=event, route=accent.route)
-        # accent_points = route_points['male'] if participant.gender == Participant.GENDER_MALE else route_points[
-        #     'female']
-        accent_points = route_score[index]
-        score += base_points * accent_points
-    return round(score, 2)
-
-
-def update_participants_score(event: Event) -> None:
-    for participant in event.participant.all():
-        participant.score = 0
-        score_type = event.score_type
-        for index, accent in enumerate(participant.accent.all()):
-            accent_points = accent.route.points_male if participant.gender == Participant.GENDER_MALE else accent.route.points_female
-            if accent.accent == Accent.ACCENT_FLASH:
-                if score_type == Event.SCORE_SIMPLE_SUM:
-                    participant.score += event.flash_points
-                else:
-                    participant.score += event.flash_points * accent_points
-            if accent.accent == Accent.ACCENT_REDPOINT:
-                if score_type == Event.SCORE_SIMPLE_SUM:
-                    participant.score += event.redpoint_points
-                else:
-                    participant.score += event.redpoint_points * accent_points
-        participant.score = round(participant.score, 2)
-        participant.save()
+        else:
+            score += accent.route.score[0 if participant.gender == Participant.GENDER_MALE else 1][
+                         participant.group_index] * base_points
+        score = round(score, 2)
+    participant.score = score
+    participant.save()
+    print(participant)
 
 
-def get_sorted_participants_results(event: Event, participants: list) -> list:
+def update_all_participants_score(event: Event) -> None:
+    """ Вычисляем и сохраняем результаты всех участников """
+    for participant in event.participant.filter(is_entered_result=True):
+        update_participant_score(event=event, participant=participant)
+
+
+def get_participant_score(participant: Participant) -> float:
+    return participant.score
+
+# ======================================
+# ========== Getting results ===========
+
+
+def _get_sorted_participants_results(event: Event, participants: QuerySet, full_results: bool = False) -> list:
+    """ Возвращем сортированный список результатов участников из переданного списка """
     data = []
     for participant in participants:
+        print(participant)
         if (not event.is_count_only_entered_results) or participant.is_entered_result:
-            accents = Accent.objects.filter(participant=participant).order_by('route__number')
+            accents = Accent.objects.filter(participant=participant).order_by(
+                'route__number') if full_results else []
+            print(accents)
             data.append(dict(participant=participant,
                              accents=accents,
-                             score=get_participant_score(event=event, participant=participant, accents=accents)))
+                             score=participant.score))
     return sorted(data, key=lambda k: (-k['score'], k['participant'].last_name), reverse=False)
 
 
-def get_sorted_participants_scores_by_gender(event: Event, gender: Participant.GENDERS) -> list:
-    if event.is_count_only_entered_results:
-        sorted_participants = event.participant.filter(gender=gender, is_entered_result=True).order_by('-score')
-    else:
-        sorted_participants = event.participant.filter(gender=gender).order_by('-score')
-    sorted_accents = []
-    for p in sorted_participants:
-        accents = event.accent.filter(participant=p).order_by('route__number')
-        sorted_accents.append(accents)
+def get_results(event: Event, full_results: bool = False) -> dict:
+    """ Возвращаем словарь с отсортированным списком участников по полу и группам.
+     full_results добавляет информацию о всех прохождениях (очень долго)
+     """
+    male, female = [], []
+    routes_score_male, routes_score_female = [], []
 
-    data = []
-    for i, p in enumerate(sorted_participants):
-        data.append({'p': p, 'a': sorted_accents[i]})
-    return data
+    group_list = get_group_list(event=event) if len(get_group_list(event=event)) else ['']
+
+    for group_index, group in enumerate(group_list):
+        print(group_index, group)
+        male.append(dict(name=group,
+                         data=_get_sorted_participants_results(
+                             event=event,
+                             participants=event.participant.filter(gender=Participant.GENDER_MALE,
+                                                                   group_index=group_index),
+                             full_results=full_results)))
+        if full_results:
+            routes_score_male.append(dict(group_index=group_index,
+                                          scores=[
+                                              f"{round(get_route_score(route=route, gender_index=0, group_index=group_index) * event.flash_points, 2)}/"
+                                              f"{round(get_route_score(route=route, gender_index=0, group_index=group_index) * event.redpoint_points, 2)}"
+                                              for route in event.route.all()]))
+    for group_index, group in enumerate(group_list):
+        female.append(dict(name=group,
+                           data=_get_sorted_participants_results(
+                               event=event,
+                               participants=event.participant.filter(gender=Participant.GENDER_FEMALE,
+                                                                     group_index=group_index),
+                               full_results=full_results)))
+        if full_results:
+            routes_score_female.append(dict(group_index=group_index,
+                                            scores=[
+                                                f"{round(get_route_score(route=route, gender_index=1, group_index=group_index) * event.flash_points, 2)}/"
+                                                f"{round(get_route_score(route=route, gender_index=1, group_index=group_index) * event.redpoint_points, 2)}"
+                                                for route in event.route.all()]))
+    print(routes_score_male)
+    print(routes_score_female)
+
+    return {
+        'male': male,
+        'female': female,
+        'routes_score_male': routes_score_male,
+        'routes_score_female': routes_score_female,
+    }
+
+# ==========================================
 
 
 def get_group_list(event: Event) -> list:
@@ -252,40 +303,6 @@ def get_result_response(event: Event) -> HttpResponse:
                             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = 'attachment; filename=result.xlsx'
     return response
-
-
-def get_results(event: Event) -> dict:
-    male, female = [], []
-    group_list = get_group_list(event=event) if len(get_group_list(event=event)) else ['']
-
-    participants = event.participant.filter(gender=Participant.GENDER_MALE)
-
-    for group_index, group in enumerate(group_list):
-        male.append(dict(name=group,
-                         data=get_sorted_participants_results(
-                             event=event,
-                             participants=event.participant.filter(gender=Participant.GENDER_MALE,
-                                                                   group_index=group_index))))
-    # for group_index, group in enumerate(group_list):
-    #     female.append(dict(name=group,
-    #                        data=get_sorted_participants_results(
-    #                            event=event,
-    #                            participants=event.participant.filter(gender=Participant.GENDER_FEMALE,
-    #                                                                  group_index=group_index))))
-
-    # routes_score_male = [f"{round(get_route_point(event=event, route=r)['male'] * event.flash_points, 2)}/"
-    #                      f"{round(get_route_point(event=event, route=r)['male'] * event.redpoint_points, 2)}"
-    #                      for r in event.route.all()]
-    # routes_score_female = [
-    #     f"{round(get_route_point(event=event, route=r)['female'] * event.flash_points, 2)}/"
-    #     f"{round(get_route_point(event=event, route=r)['female'] * event.redpoint_points, 2)}"
-    #     for r in event.route.all()]
-    return {
-        'male': male,
-        'female': female,
-        'routes_score_male': [],
-        'routes_score_female': [],
-    }
 
 
 def update_participant(event: Event, participant: Participant, cd: dict) -> Participant:

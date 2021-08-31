@@ -3,9 +3,9 @@ import logging
 
 from django import views
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count, prefetch_related_objects
+from django.db.models import Count
 from django.forms import formset_factory, modelformset_factory
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from djqscsv import render_to_csv_response
 
@@ -14,8 +14,6 @@ from events.forms import ParticipantRegistrationForm, EventAdminDescriptionForm,
     EventAdminServiceForm, EventAdminSettingsForm, RouteEditForm, ParticipantForm
 from events.models import Event, Participant, Route, Accent
 from events import services
-
-import time
 
 logger = logging.getLogger(settings.LOGGER)
 
@@ -72,10 +70,7 @@ class EventAdminView(LoginRequiredMixin, views.View):
             services.create_event_routes(event=event)
             services.create_default_accents_for_all(event=event)
         elif 'update_score' in request.POST:
-            services.update_route_score(event.route.all().order_by('number'),
-                                        [0.5]*event.routes_num,
-                                        0,
-                                        0)
+            pass
             # services.update_routes_points(event=event)
             # services.update_participants_score(event=event)
         elif 'clear_participants' in request.POST:
@@ -86,6 +81,8 @@ class EventAdminView(LoginRequiredMixin, views.View):
             return services.get_startlist_response(event=event)
         elif 'export_result' in request.POST:
             return services.get_result_response(event=event)
+        elif 'get_route_score' in request.POST:
+            return services.get_route_score(event=event)
         else:
             pass
         return redirect('event_admin', event_id)
@@ -590,31 +587,13 @@ def error_view(request):
 class TestView(views.View):
     @staticmethod
     def get(request):
-        start = time.time()
         event = Event.objects.get(id=1)
-        # route = Route.objects.get(id=101)
-        participant = Participant.objects.get(id=235)
-        routes = event.route.all()
-        t1 = time.time()
-        print(t1 - start)
-        # accents = event.accent.filter(participant__gender=Participant.GENDER_MALE, participant__group_index=0)
-        accents = event.accent.all()
-        t2 = time.time()
-        print(t2 - t1)
-        accents = accents.filter(participant__gender=Participant.GENDER_MALE, participant__group_index=0)
-        t3 = time.time()
-        print(t3 - t2)
-        # prefetch_related_objects(accents, 'route')
-        route_score = services.get_route_score(event=event, routes=routes, accents=accents)
-        t4 = time.time()
-        print(t4 - t3)
-        score = services.get_participant_score(event, participant, accents.filter(participant=participant).exclude(accent=Accent.ACCENT_NO), route_score)
-        t5 = time.time()
-        print(t5 - t4)
+        # services.update_routes_scores(event=event)
+        score = services.get_results(event=event, full_results=True)
         return render(
             request=request,
             template_name='events/test.html',
             context={
-                'data': [len(accents), route_score, score],
+                'data': [score],
             }
         )

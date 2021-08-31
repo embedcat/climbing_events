@@ -53,7 +53,7 @@ def export_result(event: Event):
     sheet.merge_cells(start_row=3, start_column=6, end_row=3, end_column=8)
     sheet.cell(row=3, column=6).value = event.date
 
-    result = services.get_results(event=event)
+    result = services.get_results(event=event, full_results=True)
     routes = event.route.all().order_by('number')
 
     for results, scores, gender in ([result['male'], result['routes_score_male'], 'M'],
