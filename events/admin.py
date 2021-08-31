@@ -17,7 +17,3 @@ admin.site.register(Event)
 admin.site.register(Participant, ParticipantAdmin)
 admin.site.register(Route, RouteAdmin)
 admin.site.register(Accent)
-
-
-
-

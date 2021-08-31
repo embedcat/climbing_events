@@ -164,6 +164,10 @@ class Route(models.Model):
     grade = models.CharField(max_length=3, choices=GRADES, default=GRADE_5)
     color = ColorField(default='#FF0000')
 
+    #           group
+    #          0  1  2
+    # MALE   |  |  |  | ...
+    # FEMALE |  |  |  | ...
     score = ArrayField(ArrayField(models.FloatField(default=1.0), size=5), size=2, blank=True, default=get_default_scores)
 
     def __str__(self):

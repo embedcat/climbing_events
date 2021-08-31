@@ -1,7 +1,6 @@
 from django import template
 
 from events import services
-from events.models import Event
 
 register = template.Library()
 

@@ -1,6 +1,6 @@
 from crispy_forms.bootstrap import InlineRadios
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Submit, Layout, Div
+from crispy_forms.layout import Submit, Layout
 from django import forms
 
 from events.models import Participant, Event, Accent, Route
@@ -111,6 +111,7 @@ class EventAdminSettingsForm(forms.ModelForm):
             'is_view_route_color',
             'is_view_route_grade',
             'is_view_route_score',
+            'is_separate_score_by_groups',
             'score_type',
             'flash_points',
             'redpoint_points',
@@ -134,6 +135,7 @@ class EventAdminSettingsForm(forms.ModelForm):
             'is_view_route_color': 'Показывать цвет трассы',
             'is_view_route_grade': 'Показывать ктегорию трассы',
             'is_view_route_score': 'Показывать стоимость трассы',
+            'is_separate_score_by_groups': 'Рассчитывать стоимость трассы отдельно по каждой группе',
             'score_type': 'Тип подсчёта результатов',
             'flash_points': 'Очки за Flash',
             'redpoint_points': 'Очки за Redpoint',

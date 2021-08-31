@@ -7,7 +7,7 @@ SET_LIST_STR = 'set1,2set2,      s.et3  ,    сет № 4         ,#set5'
 SET_LIST = ['set1', '2set2', 's.et3', 'сет № 4', '#set5']
 GROUP_NUM = 3
 GROUP_LIST_STR = 'gr1,gr    2   ,      gr3'
-GROUP_LIST = ['gr1','gr    2', 'gr3']
+GROUP_LIST = ['gr1', 'gr    2', 'gr3']
 
 
 class Test(TestCase):
