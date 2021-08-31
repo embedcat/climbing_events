@@ -162,6 +162,7 @@ class EventAdminSettingsView(LoginRequiredMixin, views.View):
                 is_view_route_color=cd['is_view_route_color'],
                 is_view_route_grade=cd['is_view_route_grade'],
                 is_view_route_score=cd['is_view_route_score'],
+                is_separate_score_by_groups=cd['is_separate_score_by_groups'],
                 score_type=cd['score_type'],
                 flash_points=cd['flash_points'],
                 redpoint_points=cd['redpoint_points'],
