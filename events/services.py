@@ -125,7 +125,6 @@ def update_routes_scores(event: Event) -> None:
             else:
                 accents = all_accents.filter(participant__gender=gender).exclude(accent=Accent.ACCENT_NO)
             scores = _calc_route_score(event=event, routes=routes, accents=accents)
-            print(f"{group_index=}, {gender=}, {scores=}")
             _save_routes_score(routes=routes, scores=scores, gender_index=gender_index, group_index=group_index)
 
 
@@ -152,7 +151,6 @@ def update_participant_score(event: Event, participant: Participant) -> None:
         score = round(score, 2)
     participant.score = score
     participant.save()
-    print(participant)
 
 
 def update_all_participants_score(event: Event) -> None:
@@ -172,11 +170,9 @@ def _get_sorted_participants_results(event: Event, participants: QuerySet, full_
     """ Возвращем сортированный список результатов участников из переданного списка """
     data = []
     for participant in participants:
-        print(participant)
         if (not event.is_count_only_entered_results) or participant.is_entered_result:
             accents = Accent.objects.filter(participant=participant).order_by(
                 'route__number') if full_results else []
-            print(accents)
             data.append(dict(participant=participant,
                              accents=accents,
                              score=participant.score))
@@ -193,7 +189,6 @@ def get_results(event: Event, full_results: bool = False) -> dict:
     group_list = get_group_list(event=event) if len(get_group_list(event=event)) else ['']
 
     for group_index, group in enumerate(group_list):
-        print(group_index, group)
         male.append(dict(name=group,
                          data=_get_sorted_participants_results(
                              event=event,
@@ -219,9 +214,6 @@ def get_results(event: Event, full_results: bool = False) -> dict:
                                                 f"{round(get_route_score(route=route, gender_index=1, group_index=group_index) * event.flash_points, 2)}/"
                                                 f"{round(get_route_score(route=route, gender_index=1, group_index=group_index) * event.redpoint_points, 2)}"
                                                 for route in event.route.all()]))
-    print(routes_score_male)
-    print(routes_score_female)
-
     return {
         'male': male,
         'female': female,

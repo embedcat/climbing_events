@@ -66,7 +66,7 @@ class ParticipantRegistrationForm(forms.ModelForm):
         }
 
 
-class EventAdminDescriptionForm(forms.ModelForm):
+class AdminDescriptionForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()

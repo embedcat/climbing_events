@@ -10,7 +10,7 @@ from django.shortcuts import render, redirect
 from djqscsv import render_to_csv_response
 
 from config import settings
-from events.forms import ParticipantRegistrationForm, EventAdminDescriptionForm, AccentForm, AccentParticipantForm, \
+from events.forms import ParticipantRegistrationForm, AdminDescriptionForm, AccentForm, AccentParticipantForm, \
     EventAdminServiceForm, EventAdminSettingsForm, RouteEditForm, ParticipantForm
 from events.models import Event, Participant, Route, Accent
 from events import services
@@ -45,16 +45,15 @@ class EventView(views.View):
         )
 
 
-class EventAdminView(LoginRequiredMixin, views.View):
+class AdminActionsView(LoginRequiredMixin, views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
         return render(
             request=request,
-            template_name='events/event-admin.html',
+            template_name='events/event-admin-actions.html',
             context={
                 'event': event,
-                'form': EventAdminServiceForm(prefix='service_form'),
             }
         )
 
@@ -62,33 +61,52 @@ class EventAdminView(LoginRequiredMixin, views.View):
     def post(request, event_id):
         event = Event.objects.get(id=event_id)
         logger.info('Admin.Services [POST]')
-        if 'clear_event' in request.POST:
-            services.clear_event(event=event)
-        elif 'create_participant' in request.POST:
+        if 'create_participant' in request.POST:
             services.debug_create_participants(event=event, num=5)
         elif 'create_routes' in request.POST:
             services.create_event_routes(event=event)
             services.create_default_accents_for_all(event=event)
         elif 'update_score' in request.POST:
-            pass
-            # services.update_routes_points(event=event)
-            # services.update_participants_score(event=event)
-        elif 'clear_participants' in request.POST:
-            services.clear_participants(event=event)
-        elif 'clear_routes' in request.POST:
-            services.clear_routes(event=event)
+            services.update_routes_scores(event=event)
+            services.update_all_participants_score(event=event)
+            services.update_last_result_time(event=event)
         elif 'export_startlist' in request.POST:
             return services.get_startlist_response(event=event)
         elif 'export_result' in request.POST:
             return services.get_result_response(event=event)
-        elif 'get_route_score' in request.POST:
-            return services.get_route_score(event=event)
         else:
             pass
-        return redirect('event_admin', event_id)
+        return redirect('admin_actions', event_id)
 
 
-class EventAdminDescriptionView(LoginRequiredMixin, views.View):
+class AdminActionsClearView(LoginRequiredMixin, views.View):
+    @staticmethod
+    def get(request, event_id):
+        event = Event.objects.get(id=event_id)
+        return render(
+            request=request,
+            template_name='events/event-admin-actions-clear.html',
+            context={
+                'event': event,
+            }
+        )
+
+    @staticmethod
+    def post(request, event_id):
+        event = Event.objects.get(id=event_id)
+        logger.info('Admin.Settings.Deletions [POST]')
+        if 'clear_event' in request.POST:
+             services.clear_event(event=event)
+        elif 'clear_participants' in request.POST:
+            services.clear_participants(event=event)
+        elif 'clear_routes' in request.POST:
+            services.clear_routes(event=event)
+        else:
+            pass
+        return redirect('admin_actions', event_id)
+
+
+class AdminDescriptionView(LoginRequiredMixin, views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
@@ -97,14 +115,14 @@ class EventAdminDescriptionView(LoginRequiredMixin, views.View):
             template_name='events/event-admin-description.html',
             context={
                 'event': event,
-                'form': EventAdminDescriptionForm(instance=event),
+                'form': AdminDescriptionForm(instance=event),
             }
         )
 
     @staticmethod
     def post(request, event_id):
         event = Event.objects.filter(id=event_id)
-        form = EventAdminDescriptionForm(request.POST)
+        form = AdminDescriptionForm(request.POST)
         logger.info('Admin.Description [POST] ->')
         if form.is_valid():
             cd = form.cleaned_data
@@ -115,7 +133,7 @@ class EventAdminDescriptionView(LoginRequiredMixin, views.View):
                 description=cd['description'],
             )
             logger.info(f'-> Event [{event}] update OK')
-            return redirect('event_admin_description', event_id)
+            return redirect('admin_description', event_id)
         else:
             logger.warning(f'-> Event [{event}] not updated. Form [{form}] is not valid')
             return render(
@@ -123,7 +141,7 @@ class EventAdminDescriptionView(LoginRequiredMixin, views.View):
                 template_name='events/event-admin-description.html',
                 context={
                     'event': event,
-                    'form': EventAdminDescriptionForm(request.POST),
+                    'form': AdminDescriptionForm(request.POST),
                 }
             )
 
@@ -173,7 +191,7 @@ class EventAdminSettingsView(LoginRequiredMixin, views.View):
                 is_without_registration=cd['is_without_registration'],
             )
             logger.info(f'-> Event [{event}] update OK')
-            return redirect('event_admin_settings', event_id)
+            return redirect('admin_settings', event_id)
         else:
             logger.warning(f'-> Event [{event}] not updated. Form [{form}] is not valid')
             return render(
