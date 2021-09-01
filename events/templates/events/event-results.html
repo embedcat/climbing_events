@@ -1,10 +1,12 @@
 {% extends 'events/event-base.html' %}
 {% block title %}
-Просмотр результатов
+Просмотр результатов.
 {% endblock %}
 
 {% block content %}
-
+<div class="alert alert-warning">
+Результаты на {{ event.last_calc_results_time|date:'H:i j-M-Y' }}
+</div>
 {% if event.is_published %}
 {% if event.is_results_allowed %}
 

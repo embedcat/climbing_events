@@ -1,6 +1,7 @@
 from colorfield.fields import ColorField
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
+from django.utils import timezone
 from multiselectfield import MultiSelectField
 
 from config import settings
@@ -59,6 +60,7 @@ class Event(models.Model):
                                            null=True, blank=True)
     required_fields = MultiSelectField(choices=REQUIRED_FIELDS, default=None, null=True, blank=True)
     is_without_registration = models.BooleanField(default=False)
+    last_calc_results_time = models.DateTimeField(default=timezone.now)
 
 
 class Participant(models.Model):

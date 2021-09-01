@@ -4,6 +4,7 @@ from typing import List
 
 from django.db.models import QuerySet
 from django.http import HttpResponse
+from django.utils import timezone
 
 from events import xl_tools
 from events.models import Event, Route, Accent, Participant
@@ -229,6 +230,11 @@ def get_results(event: Event, full_results: bool = False) -> dict:
     }
 
 # ==========================================
+
+
+def update_last_result_time(event: Event) -> None:
+    event.last_calc_results_time = timezone.now()
+    event.save()
 
 
 def get_group_list(event: Event) -> list:
