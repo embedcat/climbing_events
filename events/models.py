@@ -1,10 +1,12 @@
 from colorfield.fields import ColorField
-from django.contrib.postgres.fields import ArrayField
 from django.db import models
-from django.utils import timezone
 from multiselectfield import MultiSelectField
 
 from config import settings
+
+
+def _get_blank_json():
+    return {}
 
 
 class Event(models.Model):
@@ -60,7 +62,6 @@ class Event(models.Model):
                                            null=True, blank=True)
     required_fields = MultiSelectField(choices=REQUIRED_FIELDS, default=None, null=True, blank=True)
     is_without_registration = models.BooleanField(default=False)
-    last_calc_results_time = models.DateTimeField(default=timezone.now)
 
 
 class Participant(models.Model):
@@ -107,12 +108,10 @@ class Participant(models.Model):
     group_index = models.IntegerField(default=0)
     set_index = models.IntegerField(default=0)
 
+    accents = models.JSONField(default=_get_blank_json)
+
     def __str__(self):
         return f'<Part-t: Name={self.last_name}, PIN={self.pin}, Score={self.score}, set={self.set_index}>'
-
-
-def get_default_scores():
-    return [[1.0] * 5] * 2
 
 
 class Route(models.Model):
@@ -166,29 +165,17 @@ class Route(models.Model):
     grade = models.CharField(max_length=3, choices=GRADES, default=GRADE_5)
     color = ColorField(default='#FF0000')
 
-    #           group
-    #          0  1  2
-    # MALE   |  |  |  | ...
-    # FEMALE |  |  |  | ...
-    score = ArrayField(ArrayField(models.FloatField(default=1.0), size=5), size=2, blank=True, default=get_default_scores)
+    score_json = models.JSONField(default=_get_blank_json)
 
     def __str__(self):
-        return f'<Route: N={self.number}, score={self.score}>'
+        return f'N={self.number}, score={self.score_json}'
 
 
-class Accent(models.Model):
-    ACCENT_NO = 'NO'
-    ACCENT_FLASH = 'FL'
-    ACCENT_REDPOINT = 'RP'
-    ACCENT_TYPE = [
-        (ACCENT_NO, 'NO'),
-        (ACCENT_FLASH, 'FLASH'),
-        (ACCENT_REDPOINT, 'REDPOINT'),
-    ]
-    accent = models.CharField(max_length=2, choices=ACCENT_TYPE, default=ACCENT_NO)
-    route = models.ForeignKey(Route, on_delete=models.CASCADE, related_name='accent')
-    participant = models.ForeignKey(Participant, on_delete=models.CASCADE, related_name='accent')
-    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='accent')
-
-    def __str__(self):
-        return f'<Accent: User={self.participant} Route={self.route}, Result={self.accent}>'
+ACCENT_NO = 'NO'
+ACCENT_FLASH = 'FL'
+ACCENT_REDPOINT = 'RP'
+ACCENT_TYPE = [
+    (ACCENT_NO, 'NO'),
+    (ACCENT_FLASH, 'FLASH'),
+    (ACCENT_REDPOINT, 'REDPOINT'),
+]

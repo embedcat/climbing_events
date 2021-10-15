@@ -2,7 +2,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.writer.excel import save_virtual_workbook
 
 from events import services
-from events.models import Event
+from events.models import Event, Participant
 
 
 def load_template(filename: str) -> Workbook or None:
@@ -56,13 +56,15 @@ def export_result(event: Event):
     result = services.get_results(event=event, full_results=True)
     routes = event.route.all().order_by('number')
 
-    for results, scores, gender in ([result['male'], result['routes_score_male'], 'M'],
-                                    [result['female'], result['routes_score_male'], 'Ж']):
-        for group in results:
+    for gender in (Participant.GENDER_MALE, Participant.GENDER_FEMALE):
+        gender_data = result[gender]
+        for group_index, group in enumerate(gender_data):
+            participants = group['data']
+            scores = group['scores']
             title = f"{group['name']}_{gender}"
             sheet = book.copy_worksheet(book.worksheets[0])
             sheet.title = title
-            for index, p in enumerate(group['data']):
+            for index, p in enumerate(participants):
                 sheet.cell(row=ROW_OFFSET + index, column=1).value = index + 1
                 sheet.cell(row=ROW_OFFSET + index,
                            column=2).value = f"{p['participant'].last_name} {p['participant'].first_name}"
@@ -75,7 +77,7 @@ def export_result(event: Event):
                     sheet.cell(row=HEADS_ROW, column=8 + num).value = f"T#{num + 1}"
                     sheet.cell(row=HEADS_ROW - 1, column=8 + num).value = routes[num].grade
                     sheet.cell(row=HEADS_ROW - 2, column=8 + num).value = scores[num]
-                    sheet.cell(row=ROW_OFFSET + index, column=8 + num).value = accent.accent
+                    sheet.cell(row=ROW_OFFSET + index, column=8 + num).value = accent
                 sheet.cell(row=HEADS_ROW, column=8 + len(p['accents'])).value = "Итог"
                 sheet.cell(row=ROW_OFFSET + index, column=8 + len(p['accents'])).value = p['score']
 

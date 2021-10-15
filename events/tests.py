@@ -42,17 +42,17 @@ class Test(TestCase):
         self.assertEqual(Event.objects.count(), 1)
 
     def test_create_participant(self):
-        services.debug_create_random_participant(event=self.event)
+        services._debug_create_random_participant(event=self.event)
         self.assertEqual(self.event.participant.count(), 1)
 
     def test_create_default_accents(self):
-        p = services.debug_create_random_participant(self.event)
+        p = services._debug_create_random_participant(self.event)
         services.create_event_routes(self.event)
         services.create_default_accents(self.event, p)
         self.assertEqual(p.accent.count(), self.event.routes_num)
 
     def test_clear_participants(self):
-        p = services.debug_create_random_participant(self.event)
+        p = services._debug_create_random_participant(self.event)
         services.create_event_routes(self.event)
         services.create_default_accents(self.event, p)
         services.clear_participants(self.event)
@@ -69,40 +69,40 @@ class Test(TestCase):
         self.event.set_max_participants = 0
         self.assertListEqual(SET_LIST, services.get_set_list_for_registration_available(self.event))
         self.event.set_max_participants = 1
-        services.create_participant(event=self.event, first_name='test', last_name='test', set_index=0)
+        services._create_participant(event=self.event, first_name='test', last_name='test', set_index=0)
         self.assertListEqual(SET_LIST[1:], services.get_set_list_for_registration_available(self.event))
         for i in range(self.event.set_num):
-            services.create_participant(event=self.event, first_name='test', last_name='test', set_index=i)
+            services._create_participant(event=self.event, first_name='test', last_name='test', set_index=i)
         self.assertListEqual([], services.get_set_list_for_registration_available(self.event))
 
     def test_check_participants_number_to_close_registration(self):
         self.event.is_registration_open = True
         self.event.set_max_participants = 0
-        services.check_participants_number_to_close_registration(self.event)
+        services._check_participants_number_to_close_registration(self.event)
         self.assertTrue(self.event.is_registration_open)
 
         self.event.set_max_participants = 1
         self.event.set_num = 1
         self.event.is_registration_open = True
-        services.debug_create_random_participant(self.event)
-        services.check_participants_number_to_close_registration(self.event)
+        services._debug_create_random_participant(self.event)
+        services._check_participants_number_to_close_registration(self.event)
         self.assertFalse(self.event.is_registration_open)
 
         services.clear_participants(self.event)
         self.event.set_max_participants = 1
         self.event.set_num = 2
         self.event.is_registration_open = True
-        services.create_participant(event=self.event, first_name='test', last_name='test', set_index=0)
-        services.check_participants_number_to_close_registration(self.event)
+        services._create_participant(event=self.event, first_name='test', last_name='test', set_index=0)
+        services._check_participants_number_to_close_registration(self.event)
         self.assertTrue(self.event.is_registration_open)
 
         services.clear_participants(self.event)
         self.event.set_max_participants = 1
         self.event.set_num = 2
         self.event.is_registration_open = True
-        services.create_participant(event=self.event, first_name='test', last_name='test', set_index=0)
-        services.create_participant(event=self.event, first_name='test', last_name='test', set_index=1)
-        services.check_participants_number_to_close_registration(self.event)
+        services._create_participant(event=self.event, first_name='test', last_name='test', set_index=0)
+        services._create_participant(event=self.event, first_name='test', last_name='test', set_index=1)
+        services._check_participants_number_to_close_registration(self.event)
         self.assertFalse(self.event.is_registration_open)
 
     def test_get_route_points(self):
@@ -117,8 +117,8 @@ class Test(TestCase):
         self.event.score_type = Event.SCORE_PROPORTIONAL
 
         # no accents:
-        pm = services.create_participant(event=self.event, first_name='test', last_name='test', gender=Participant.GENDER_MALE)
-        pf = services.create_participant(event=self.event, first_name='test', last_name='test', gender=Participant.GENDER_FEMALE)
+        pm = services._create_participant(event=self.event, first_name='test', last_name='test', gender=Participant.GENDER_MALE)
+        pf = services._create_participant(event=self.event, first_name='test', last_name='test', gender=Participant.GENDER_FEMALE)
         self.assertDictEqual(services.get_route_point(self.event, route), {'male': 1, 'female': 1})
 
         # no results
@@ -134,8 +134,8 @@ class Test(TestCase):
         self.assertDictEqual(services.get_route_point(self.event, route), {'male': 1, 'female': 1})
 
         # 2 accents:
-        pm2 = services.create_participant(event=self.event, first_name='test', last_name='test', gender=Participant.GENDER_MALE)
-        pf2 = services.create_participant(event=self.event, first_name='test', last_name='test', gender=Participant.GENDER_FEMALE)
+        pm2 = services._create_participant(event=self.event, first_name='test', last_name='test', gender=Participant.GENDER_MALE)
+        pf2 = services._create_participant(event=self.event, first_name='test', last_name='test', gender=Participant.GENDER_FEMALE)
         services.create_default_accents(self.event, pm2)
         services.create_default_accents(self.event, pf2)
         pm2a = Accent.objects.filter(participant=pm2, event=self.event)[0]
@@ -147,8 +147,8 @@ class Test(TestCase):
     def test_get_participant_score(self):
         self.event.score_type = Event.SCORE_PROPORTIONAL
         services.create_event_routes(self.event)
-        pm = services.create_participant(event=self.event, first_name='test', last_name='test', gender=Participant.GENDER_MALE)
-        pf = services.create_participant(event=self.event, first_name='test', last_name='test', gender=Participant.GENDER_FEMALE)
+        pm = services._create_participant(event=self.event, first_name='test', last_name='test', gender=Participant.GENDER_MALE)
+        pf = services._create_participant(event=self.event, first_name='test', last_name='test', gender=Participant.GENDER_FEMALE)
 
         # no accents:
         self.assertEqual(services.get_participant_score(self.event, pm), 0)
@@ -165,8 +165,8 @@ class Test(TestCase):
         self.assertEqual(services.get_participant_score(self.event, pf), self.event.routes_num * self.event.redpoint_points)
 
         # 2 participants, all accents:
-        pm2 = services.create_participant(event=self.event, first_name='test', last_name='test', gender=Participant.GENDER_MALE)
-        pf2 = services.create_participant(event=self.event, first_name='test', last_name='test', gender=Participant.GENDER_FEMALE)
+        pm2 = services._create_participant(event=self.event, first_name='test', last_name='test', gender=Participant.GENDER_MALE)
+        pf2 = services._create_participant(event=self.event, first_name='test', last_name='test', gender=Participant.GENDER_FEMALE)
         services.create_default_accents(self.event, pm2)
         services.create_default_accents(self.event, pf2)
         for index, accent in enumerate(Accent.objects.filter(participant=pm2, event=self.event)):

@@ -3,7 +3,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit, Layout
 from django import forms
 
-from events.models import Participant, Event, Accent, Route
+from events.models import Participant, Event, ACCENT_TYPE, Route
 from tinymce.widgets import TinyMCE
 
 
@@ -161,21 +161,17 @@ class EventAdminServiceForm(forms.Form):
         self.helper.add_input(Submit('update_score', 'Посчтитать рузультаты', css_class='btn-primary'))
 
 
-class AccentForm(forms.ModelForm):
+class AccentForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['accent'] = forms.ChoiceField(widget=forms.RadioSelect, choices=ACCENT_TYPE)
+
         self.helper = FormHelper()
         self.helper.form_tag = False
         self.helper.disable_csrf = True
         self.helper.layout = Layout(
             InlineRadios('accent', template='events/form-accent.html'),
         )
-
-    class Meta:
-        model = Accent
-        fields = [
-            'accent',
-        ]
 
 
 class AccentParticipantForm(forms.ModelForm):

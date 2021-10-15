@@ -15,6 +15,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='route',
             name='score',
-            field=django.contrib.postgres.fields.ArrayField(base_field=django.contrib.postgres.fields.ArrayField(base_field=models.FloatField(default=1.0), size=5), blank=True, default=events.models.get_default_scores, size=2),
+            field=django.contrib.postgres.fields.ArrayField(base_field=django.contrib.postgres.fields.ArrayField(base_field=models.FloatField(default=1.0), size=5), blank=True, default=events.models._get_blank_json, size=2),
         ),
     ]

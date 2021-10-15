@@ -4,9 +4,6 @@
 {% endblock %}
 
 {% block content %}
-<div class="alert alert-warning">
-Результаты на {{ event.last_calc_results_time|date:'H:i j-M-Y' }}
-</div>
 {% if event.is_published %}
 {% if event.is_results_allowed %}
 
@@ -23,12 +20,12 @@
 <div class="tab-content" id="myTabContent">
   <div class="tab-pane fade show active" id="tabResultMale" role="tabpanel" aria-labelledby="male-tab">
     {% for group in male %}
-      {% include 'events/snippet-result-table.html' with event=event routes=routes sorted_bunch=group.data routes_score=routes_score_male caption=group.name %}
+      {% include 'events/snippet-result-table.html' with event=event routes=routes sorted_bunch=group.data routes_score=group.scores caption=group.name %}
     {% endfor %}
   </div>
   <div class="tab-pane fade" id="tabResultFemale" role="tabpanel" aria-labelledby="female-tab">
     {% for group in female %}
-      {% include 'events/snippet-result-table.html' with event=event routes=routes sorted_bunch=group.data routes_score=routes_score_female caption=group.name %}
+      {% include 'events/snippet-result-table.html' with event=event routes=routes sorted_bunch=group.data routes_score=group.scores caption=group.name %}
     {% endfor %}
   </div>
 </div>

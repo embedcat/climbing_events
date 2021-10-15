@@ -2,7 +2,6 @@
 {% load l10n %}
 <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
     {% for choice in field.field.choices %}
-<!--    <div class="custom-control custom-radio">-->
         <input type="radio" class="btn-check custom-control-input" name="{{ field.html_name }}"
                id="id_{{ field.html_name }}_{{ forloop.counter }}" value="{{ choice.0|unlocalize }}" autocomplete="off"
                {% if choice.0|stringformat:"s" == field.value|default_if_none:""|stringformat:"s" %} checked="checked"{% endif %}>
@@ -14,6 +13,5 @@
                ">
             {{ choice.1|unlocalize }}
         </label>
-<!--    </div>-->
     {% endfor %}
 </div>
