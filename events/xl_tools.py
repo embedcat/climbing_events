@@ -1,8 +1,12 @@
+import os
+from datetime import datetime
+
 from openpyxl import Workbook, load_workbook
 from openpyxl.writer.excel import save_virtual_workbook
 
+from config import settings
 from events import services
-from events.models import Event
+from events.models import Event, Participant
 
 
 def load_template(filename: str) -> Workbook or None:
@@ -16,7 +20,7 @@ def export_participants_to_start_list(event: Event):
     ROW_OFFSET = 8
     book = load_workbook(filename='static/events/xl_templates/startlist_template.xlsx')
     sheet = book.active
-    sheet.cell(row=1, column=1).value = 'Скалодром "МАССИВ"'
+    sheet.cell(row=1, column=1).value = event.gym
     sheet.cell(row=2, column=1).value = event.title
     sheet.merge_cells(start_row=3, start_column=6, end_row=3, end_column=8)
     sheet.cell(row=3, column=6).value = event.date
@@ -36,7 +40,6 @@ def export_participants_to_start_list(event: Event):
             group_list = services.get_group_list(event=event)
             sheet.cell(row=ROW_OFFSET + index, column=8).value = group_list[p.group_index] if group_list != [] else ''
             sheet.cell(row=ROW_OFFSET + index, column=9).value = p.pin
-    # book.save(filename='startlist.xlsx')
     book.remove(book.worksheets[0])
     book.close()
 
@@ -48,20 +51,23 @@ def export_result(event: Event):
     HEADS_ROW = 8
     book = load_workbook(filename='static/events/xl_templates/result_template.xlsx')
     sheet = book.active
-    sheet.cell(row=1, column=1).value = 'Скалодром "МАССИВ"'
+    sheet.cell(row=1, column=1).value = event.gym
     sheet.cell(row=2, column=1).value = event.title
     sheet.merge_cells(start_row=3, start_column=6, end_row=3, end_column=8)
     sheet.cell(row=3, column=6).value = event.date
 
-    result = services.get_results(event=event)
-    # routes = event.route.all().order_by('number')
+    result = services.get_results(event=event, full_results=True)
+    routes = event.route.all().order_by('number')
 
-    for results, scores, gender in ([result['female'], result['routes_score_male'], 'Ж'],):
-        for group in results:
+    for gender in (Participant.GENDER_MALE, Participant.GENDER_FEMALE):
+        gender_data = result[gender]
+        for group_index, group in enumerate(gender_data):
+            participants = group['data']
+            scores = group['scores']
             title = f"{group['name']}_{gender}"
             sheet = book.copy_worksheet(book.worksheets[0])
             sheet.title = title
-            for index, p in enumerate(group['data']):
+            for index, p in enumerate(participants):
                 sheet.cell(row=ROW_OFFSET + index, column=1).value = index + 1
                 sheet.cell(row=ROW_OFFSET + index,
                            column=2).value = f"{p['participant'].last_name} {p['participant'].first_name}"
@@ -72,11 +78,12 @@ def export_result(event: Event):
                 sheet.cell(row=ROW_OFFSET + index, column=7).value = p['score']
                 for num, accent in enumerate(p['accents']):
                     sheet.cell(row=HEADS_ROW, column=8 + num).value = f"T#{num + 1}"
-                    # sheet.cell(row=HEADS_ROW - 1, column=8 + num).value = routes[num].grade
-                    # sheet.cell(row=HEADS_ROW - 2, column=8 + num).value = scores[num]
-                    sheet.cell(row=ROW_OFFSET + index, column=8 + num).value = accent.accent
+                    sheet.cell(row=HEADS_ROW - 1, column=8 + num).value = routes[num].grade
+                    sheet.cell(row=HEADS_ROW - 2, column=8 + num).value = scores[num].replace('\n', '/')
+                    sheet.cell(row=ROW_OFFSET + index, column=8 + num).value = accent
                 sheet.cell(row=HEADS_ROW, column=8 + len(p['accents'])).value = "Итог"
                 sheet.cell(row=ROW_OFFSET + index, column=8 + len(p['accents'])).value = p['score']
 
     book.remove(book.worksheets[0])
-    return save_virtual_workbook(book)
+    book.save(os.path.join(settings.PROTOCOLS_PATH, f"results_{datetime.today().strftime('%Y-%m-%d-%H%M%S')}.xlsx"))
+

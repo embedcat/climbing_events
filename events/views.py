@@ -1,19 +1,23 @@
+import asyncio
 import json
 import logging
+from time import sleep
 
+from asgiref.sync import sync_to_async
 from django import views
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count
 from django.forms import formset_factory, modelformset_factory
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from djqscsv import render_to_csv_response
 
 from config import settings
-from events.forms import ParticipantRegistrationForm, EventAdminDescriptionForm, AccentForm, AccentParticipantForm, \
-    EventAdminServiceForm, EventAdminSettingsForm, RouteEditForm, ParticipantForm
-from events.models import Event, Participant, Route, Accent
-from events import services
+from events.forms import ParticipantRegistrationForm, AdminDescriptionForm, AccentForm, AccentParticipantForm, \
+    EventAdminSettingsForm, RouteEditForm, ParticipantForm
+from events.models import Event, Participant, Route
+from events.models import ACCENT_NO
+from events import services, xl_tools
 
 logger = logging.getLogger(settings.LOGGER)
 
@@ -45,16 +49,15 @@ class EventView(views.View):
         )
 
 
-class EventAdminView(LoginRequiredMixin, views.View):
+class AdminActionsView(LoginRequiredMixin, views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
         return render(
             request=request,
-            template_name='events/event-admin.html',
+            template_name='events/event-admin-actions.html',
             context={
                 'event': event,
-                'form': EventAdminServiceForm(prefix='service_form'),
             }
         )
 
@@ -62,30 +65,92 @@ class EventAdminView(LoginRequiredMixin, views.View):
     def post(request, event_id):
         event = Event.objects.get(id=event_id)
         logger.info('Admin.Services [POST]')
-        if 'clear_event' in request.POST:
-            services.clear_event(event=event)
-        elif 'create_participant' in request.POST:
+        if 'create_participant' in request.POST:
             services.debug_create_participants(event=event, num=5)
         elif 'create_routes' in request.POST:
             services.create_event_routes(event=event)
-            services.create_default_accents_for_all(event=event)
         elif 'update_score' in request.POST:
-            services.update_routes_points(event=event)
-            services.update_participants_score(event=event)
-        elif 'clear_participants' in request.POST:
-            services.clear_participants(event=event)
-        elif 'clear_routes' in request.POST:
-            services.clear_routes(event=event)
+            services.update_results(event=event)
         elif 'export_startlist' in request.POST:
             return services.get_startlist_response(event=event)
         elif 'export_result' in request.POST:
             return services.get_result_response(event=event)
         else:
             pass
-        return redirect('event_admin', event_id)
+        return redirect('admin_actions', event_id)
 
 
-class EventAdminDescriptionView(LoginRequiredMixin, views.View):
+class AdminActionsClearView(LoginRequiredMixin, views.View):
+    @staticmethod
+    def get(request, event_id):
+        event = Event.objects.get(id=event_id)
+        return render(
+            request=request,
+            template_name='events/event-admin-actions-clear.html',
+            context={
+                'event': event,
+            }
+        )
+
+    @staticmethod
+    def post(request, event_id):
+        event = Event.objects.get(id=event_id)
+        logger.info('Admin.Settings.Deletions [POST]')
+        if 'clear_event' in request.POST:
+            services.clear_event(event=event)
+        elif 'clear_participants' in request.POST:
+            services.clear_participants(event=event)
+        elif 'clear_routes' in request.POST:
+            services.clear_routes(event=event)
+        else:
+            pass
+        return redirect('admin_actions_clear', event_id)
+
+
+@sync_to_async
+def export_results(event_id: int):
+    event = Event.objects.get(id=event_id)
+    xl_tools.export_result(event=event)
+
+
+async def async_get_results(request, event_id):
+    loop = asyncio.get_event_loop()
+    loop.create_task(export_results(event_id=event_id))
+    return redirect('admin_protocols', event_id)
+
+
+class AdminProtocolsView(LoginRequiredMixin, views.View):
+    @staticmethod
+    def get(request, event_id):
+        event = Event.objects.get(id=event_id)
+        return render(
+            request=request,
+            template_name='events/event-admin-protocols.html',
+            context={
+                'event': event,
+                'items': services.get_list_of_protocols()
+            }
+        )
+
+    @staticmethod
+    def post(request, event_id):
+        event = Event.objects.get(id=event_id)
+        logger.info('Admin.Protocols [POST]')
+        if 'export_startlist' in request.POST:
+            return services.get_startlist_response(event=event)
+        elif 'export_result' in request.POST:
+            return redirect('async_get_results', event_id)
+        else:
+            pass
+        return redirect('admin_protocols', event_id)
+
+class ProtocolDownload(views.View):
+    @staticmethod
+    def get(request, event_id, file):
+        return services.download_xlsx_response(file)
+
+
+class AdminDescriptionView(LoginRequiredMixin, views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
@@ -94,14 +159,14 @@ class EventAdminDescriptionView(LoginRequiredMixin, views.View):
             template_name='events/event-admin-description.html',
             context={
                 'event': event,
-                'form': EventAdminDescriptionForm(instance=event),
+                'form': AdminDescriptionForm(instance=event),
             }
         )
 
     @staticmethod
     def post(request, event_id):
         event = Event.objects.filter(id=event_id)
-        form = EventAdminDescriptionForm(request.POST)
+        form = AdminDescriptionForm(request.POST)
         logger.info('Admin.Description [POST] ->')
         if form.is_valid():
             cd = form.cleaned_data
@@ -112,7 +177,7 @@ class EventAdminDescriptionView(LoginRequiredMixin, views.View):
                 description=cd['description'],
             )
             logger.info(f'-> Event [{event}] update OK')
-            return redirect('event_admin_description', event_id)
+            return redirect('admin_description', event_id)
         else:
             logger.warning(f'-> Event [{event}] not updated. Form [{form}] is not valid')
             return render(
@@ -120,7 +185,7 @@ class EventAdminDescriptionView(LoginRequiredMixin, views.View):
                 template_name='events/event-admin-description.html',
                 context={
                     'event': event,
-                    'form': EventAdminDescriptionForm(request.POST),
+                    'form': AdminDescriptionForm(request.POST),
                 }
             )
 
@@ -156,6 +221,7 @@ class EventAdminSettingsView(LoginRequiredMixin, views.View):
                 is_view_route_color=cd['is_view_route_color'],
                 is_view_route_grade=cd['is_view_route_grade'],
                 is_view_route_score=cd['is_view_route_score'],
+                is_separate_score_by_groups=cd['is_separate_score_by_groups'],
                 score_type=cd['score_type'],
                 flash_points=cd['flash_points'],
                 redpoint_points=cd['redpoint_points'],
@@ -169,7 +235,7 @@ class EventAdminSettingsView(LoginRequiredMixin, views.View):
                 is_without_registration=cd['is_without_registration'],
             )
             logger.info(f'-> Event [{event}] update OK')
-            return redirect('event_admin_settings', event_id)
+            return redirect('admin_settings', event_id)
         else:
             logger.warning(f'-> Event [{event}] not updated. Form [{form}] is not valid')
             return render(
@@ -182,13 +248,13 @@ class EventAdminSettingsView(LoginRequiredMixin, views.View):
             )
 
 
-class EventEnterView(views.View):
+class EnterResultsView(views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
         if event.is_without_registration:
-            return redirect('event_enter_wo_reg', event_id=event_id)
-        initial = [{'label': i} for i in range(event.routes_num)]
+            return redirect('enter_wo_reg', event_id=event_id)
+        initial = [{'label': i, 'accent': ACCENT_NO} for i in range(event.routes_num)]
         AccentFormSet = formset_factory(AccentForm, extra=0)
         formset = AccentFormSet(initial=initial, prefix='accents')
         return render(
@@ -218,15 +284,13 @@ class EventEnterView(views.View):
                 logger.warning('-> Participant not found')
                 return redirect('event_enter', event_id=event_id)
             logger.info(f'-> participant found: [{participant}] ->')
-            participant_accents = event.accent.filter(participant=participant).order_by('route__number')
-            for index, accent in enumerate(participant_accents):
-                services.save_accent(accent=accent,
-                                     result=accent_formset.cleaned_data[index]['accent'],
-                                     route=Route.objects.get(event=event, number=index + 1))
-            participant.is_entered_result = True
-            participant.save()
+
+            services.enter_results(event=event,
+                                   participant=participant,
+                                   accents_cleaned_data=accent_formset.cleaned_data)
+
             logger.info('-> update participant accents')
-            return redirect('event', event_id=event_id)
+            return redirect('event_enter', event_id=event_id)
         logger.warning(f'-> {participant_form} or {accent_formset} are not valid')
         return render(
             request=request,
@@ -240,11 +304,11 @@ class EventEnterView(views.View):
         )
 
 
-class EventEnterWithoutReg(views.View):
+class EnterWithoutReg(views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
-        initial = [{'label': i} for i in range(event.routes_num)]
+        initial = [{'label': i, 'accent': ACCENT_NO} for i in range(event.routes_num)]
         AccentFormSet = formset_factory(AccentForm, extra=0)
         formset = AccentFormSet(initial=initial, prefix='accents')
         routes = event.route.all().order_by('number')
@@ -282,13 +346,9 @@ class EventEnterWithoutReg(views.View):
         accent_formset = AccentFormSet(request.POST, prefix='accents')
         if form.is_valid() and accent_formset.is_valid():
             participant = services.register_participant(event=event, cd=form.cleaned_data)
-            participant_accents = event.accent.filter(participant=participant).order_by('route__number')
-            for index, accent in enumerate(participant_accents):
-                services.save_accent(accent=accent,
-                                     result=accent_formset.cleaned_data[index]['accent'],
-                                     route=Route.objects.get(event=event, number=index + 1))
-            participant.is_entered_result = True
-            participant.save()
+            services.enter_results(event=event,
+                                   participant=participant,
+                                   accents_cleaned_data=accent_formset.cleaned_data)
             return redirect('event_results', event_id=event_id)
         return render(
             request=request,
@@ -301,22 +361,19 @@ class EventEnterWithoutReg(views.View):
         )
 
 
-class EventResultsView(views.View):
+class ResultsView(views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
-        results = services.get_results(event=event)
-
+        results = services.get_results(event=event, full_results=True)
         return render(
             request=request,
             template_name='events/event-results.html',
             context={
                 'event': event,
                 'routes': range(1, event.routes_num + 1),
-                'routes_score_male': results['routes_score_male'],
-                'routes_score_female': results['routes_score_female'],
-                'male': results['male'],
-                'female': results['female'],
+                'male': results[Participant.GENDER_MALE],
+                'female': results[Participant.GENDER_FEMALE],
             }
         )
 
@@ -517,8 +574,9 @@ class ParticipantRoutesView(LoginRequiredMixin, views.View):
     def get(request, event_id, p_id):
         event = Event.objects.get(id=event_id)
         participant = Participant.objects.get(id=p_id)
-        AccentFormSet = modelformset_factory(Accent, form=AccentForm, extra=0)
-        formset = AccentFormSet(queryset=participant.accent.all(), prefix='accents')
+        initial = [{'label': i, 'accent': participant.accents.get(str(i), ACCENT_NO)} for i in range(event.routes_num)]
+        AccentFormSet = formset_factory(form=AccentForm, extra=0)
+        formset = AccentFormSet(initial=initial, prefix='accents')
         return render(
             request=request,
             template_name='events/participant-routes.html',
@@ -536,16 +594,12 @@ class ParticipantRoutesView(LoginRequiredMixin, views.View):
         event = Event.objects.get(id=event_id)
         participant = Participant.objects.get(id=p_id)
         AccentFormSet = formset_factory(form=AccentForm, extra=0)
-        formset = AccentFormSet(request.POST, request.FILES, prefix='accents')
-        if formset.is_valid():
-            participant_accents = event.accent.filter(participant=participant).order_by('route__number')
-            for index, accent in enumerate(participant_accents):
-                services.save_accent(accent=accent,
-                                     result=formset.cleaned_data[index]['accent'],
-                                     route=Route.objects.get(event=event, number=index + 1))
-            participant.is_entered_result = True
-            participant.save()
-            return redirect('event_results', event_id=event_id)
+        accent_formset = AccentFormSet(request.POST, request.FILES, prefix='accents')
+        if accent_formset.is_valid():
+            services.enter_results(event=event,
+                                   participant=participant,
+                                   accents_cleaned_data=accent_formset.cleaned_data)
+            return redirect('participant_routes', event_id=event_id, p_id=p_id)
         return render(
             request=request,
             template_name='events/participant-routes.html',
@@ -553,7 +607,7 @@ class ParticipantRoutesView(LoginRequiredMixin, views.View):
                 'title': f'{participant.last_name} {participant.first_name}',
                 'event': event,
                 'participant': participant,
-                'formset': formset,
+                'formset': accent_formset,
                 'routes': event.route.all().order_by('number'),
             }
         )
@@ -578,3 +632,17 @@ def page_not_found_view(request, exception):
 def error_view(request):
     return render(request=request, template_name='events/error.html', status=500,
                   context={'code': '', 'msg': 'Ошибка сервера!'})
+
+
+class TestView(views.View):
+    @staticmethod
+    def get(request):
+        event = Event.objects.get(id=1)
+        data = services.get_results(event=event, full_results=True)
+        return render(
+            request=request,
+            template_name='events/test.html',
+            context={
+                'data': data,
+            }
+        )

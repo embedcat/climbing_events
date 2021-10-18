@@ -5,8 +5,13 @@ from multiselectfield import MultiSelectField
 from config import settings
 
 
+def _get_blank_json():
+    return {}
+
+
 class Event(models.Model):
     title = models.CharField(max_length=128)
+    gym = models.CharField(max_length=128)
     date = models.DateField(null=True)
     poster = models.ImageField(upload_to=settings.MEDIA_POSTERS_DIR, blank=True, null=True)
     description = models.TextField(null=True)
@@ -20,6 +25,7 @@ class Event(models.Model):
     is_view_route_color = models.BooleanField(default=False)
     is_view_route_grade = models.BooleanField(default=False)
     is_view_route_score = models.BooleanField(default=False)
+    is_separate_score_by_groups = models.BooleanField(default=False)
 
     SCORE_SIMPLE_SUM = 'SUM'
     SCORE_PROPORTIONAL = 'PROP'
@@ -103,6 +109,8 @@ class Participant(models.Model):
     group_index = models.IntegerField(default=0)
     set_index = models.IntegerField(default=0)
 
+    accents = models.JSONField(default=_get_blank_json)
+
     def __str__(self):
         return f'<Part-t: Name={self.last_name}, PIN={self.pin}, Score={self.score}, set={self.set_index}>'
 
@@ -158,23 +166,17 @@ class Route(models.Model):
     grade = models.CharField(max_length=3, choices=GRADES, default=GRADE_5)
     color = ColorField(default='#FF0000')
 
-    def __str__(self):
-        return f'<Route: N={self.number}, P_m={self.points_male}, P_f={self.points_female}>'
-
-
-class Accent(models.Model):
-    ACCENT_NO = 'NO'
-    ACCENT_FLASH = 'FL'
-    ACCENT_REDPOINT = 'RP'
-    ACCENT_TYPE = [
-        (ACCENT_NO, 'NO'),
-        (ACCENT_FLASH, 'FLASH'),
-        (ACCENT_REDPOINT, 'REDPOINT'),
-    ]
-    accent = models.CharField(max_length=2, choices=ACCENT_TYPE, default=ACCENT_NO)
-    route = models.ForeignKey(Route, on_delete=models.CASCADE, related_name='accent')
-    participant = models.ForeignKey(Participant, on_delete=models.CASCADE, related_name='accent')
-    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='accent')
+    score_json = models.JSONField(default=_get_blank_json)
 
     def __str__(self):
-        return f'<Accent: User={self.participant} Route={self.route}, Result={self.accent}>'
+        return f'N={self.number}, score={self.score_json}'
+
+
+ACCENT_NO = 'NO'
+ACCENT_FLASH = 'FL'
+ACCENT_REDPOINT = 'RP'
+ACCENT_TYPE = [
+    (ACCENT_NO, 'NO'),
+    (ACCENT_FLASH, 'FLASH'),
+    (ACCENT_REDPOINT, 'REDPOINT'),
+]

@@ -1,0 +1,64 @@
+{% extends 'events/event-base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}
+Управление
+{% endblock %}
+{% block content %}
+
+
+<form method="post">
+  {% csrf_token %}
+  <table cellspacing="0" class="table table-bordered table-hover" id="dataTable" width="100%">
+    <thead>
+    <tr>
+      <td style="width:20%">Действие</td>
+      <td>Описание</td>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+      <td><input class="btn btn-primary"
+                 id="submit-id-export_startlist"
+                 name="export_startlist"
+                 type="submit"
+                 value="Получить стартовый список"/></td>
+      <td>Получаем стартовые листы по сетам в *.xlsx</td>
+    </tr>
+    <tr>
+      <td><input class="btn btn-primary"
+                 id="submit-id-export_result"
+                 name="export_result"
+                 type="submit"
+                 value="Получить итоговый протокол"/></td>
+      <td>Получаем итоговый протокол в *.xlsx</td>
+    </tr>
+    </tbody>
+  </table>
+</form>
+<hr>
+<h4>Протоколы</h4>
+<table class="table table-sm table-striped table-bordered"
+               data-toggle="table"
+               data-sort-name="no"
+               data-sortable="true"
+               id="dataTableProtocols" width="100%">
+    <thead class="table-dark">
+    <tr>
+        <th data-field="no" data-sortable="true" style="width:5%">#</th>
+        <th data-field="name" data-sortable="true">Logfile</th>
+        <th data-field="size" data-sortable="true">Size</th>
+        <th data-field="date" data-sortable="true">Date</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for item in items %}
+    <tr>
+        <td>{{ forloop.counter }}</td>
+        <td><a href="{% url 'protocol_download' event.id item.name %}">{{ item.name }}</a></td>
+        <td>{{ item.size }}</td>
+        <td>{{ item.mtime|date:'H:i j-M-Y' }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
