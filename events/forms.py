@@ -80,12 +80,14 @@ class AdminDescriptionForm(forms.ModelForm):
         model = Event
         fields = [
             'title',
+            'gym',
             'date',
             'poster',
             'description',
         ]
         labels = {
             'title': 'Название',
+            'gym': 'Скалодром',
             'date': 'Дата (YYYY-MM-DD)',
             'poster': 'Афиша',
         }

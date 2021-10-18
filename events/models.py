@@ -11,6 +11,7 @@ def _get_blank_json():
 
 class Event(models.Model):
     title = models.CharField(max_length=128)
+    gym = models.CharField(max_length=128)
     date = models.DateField(null=True)
     poster = models.ImageField(upload_to=settings.MEDIA_POSTERS_DIR, blank=True, null=True)
     description = models.TextField(null=True)

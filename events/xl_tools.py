@@ -16,7 +16,7 @@ def export_participants_to_start_list(event: Event):
     ROW_OFFSET = 8
     book = load_workbook(filename='static/events/xl_templates/startlist_template.xlsx')
     sheet = book.active
-    sheet.cell(row=1, column=1).value = 'Скалодром "МАССИВ"'
+    sheet.cell(row=1, column=1).value = event.gym
     sheet.cell(row=2, column=1).value = event.title
     sheet.merge_cells(start_row=3, start_column=6, end_row=3, end_column=8)
     sheet.cell(row=3, column=6).value = event.date
@@ -36,7 +36,6 @@ def export_participants_to_start_list(event: Event):
             group_list = services.get_group_list(event=event)
             sheet.cell(row=ROW_OFFSET + index, column=8).value = group_list[p.group_index] if group_list != [] else ''
             sheet.cell(row=ROW_OFFSET + index, column=9).value = p.pin
-    # book.save(filename='startlist.xlsx')
     book.remove(book.worksheets[0])
     book.close()
 
@@ -48,7 +47,7 @@ def export_result(event: Event):
     HEADS_ROW = 8
     book = load_workbook(filename='static/events/xl_templates/result_template.xlsx')
     sheet = book.active
-    sheet.cell(row=1, column=1).value = 'Скалодром "МАССИВ"'
+    sheet.cell(row=1, column=1).value = event.gym
     sheet.cell(row=2, column=1).value = event.title
     sheet.merge_cells(start_row=3, start_column=6, end_row=3, end_column=8)
     sheet.cell(row=3, column=6).value = event.date
