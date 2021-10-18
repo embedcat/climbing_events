@@ -1,6 +1,9 @@
+import asyncio
 import json
 import logging
+from time import sleep
 
+from asgiref.sync import sync_to_async
 from django import views
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count
@@ -14,7 +17,7 @@ from events.forms import ParticipantRegistrationForm, AdminDescriptionForm, Acce
     EventAdminSettingsForm, RouteEditForm, ParticipantForm
 from events.models import Event, Participant, Route
 from events.models import ACCENT_NO
-from events import services
+from events import services, xl_tools
 
 logger = logging.getLogger(settings.LOGGER)
 
@@ -101,7 +104,50 @@ class AdminActionsClearView(LoginRequiredMixin, views.View):
             services.clear_routes(event=event)
         else:
             pass
-        return redirect('admin_actions', event_id)
+        return redirect('admin_actions_clear', event_id)
+
+
+@sync_to_async
+def export_results(event_id: int):
+    event = Event.objects.get(id=event_id)
+    xl_tools.export_result(event=event)
+
+
+async def async_get_results(request, event_id):
+    loop = asyncio.get_event_loop()
+    loop.create_task(export_results(event_id=event_id))
+    return redirect('admin_protocols', event_id)
+
+
+class AdminProtocolsView(LoginRequiredMixin, views.View):
+    @staticmethod
+    def get(request, event_id):
+        event = Event.objects.get(id=event_id)
+        return render(
+            request=request,
+            template_name='events/event-admin-protocols.html',
+            context={
+                'event': event,
+                'items': services.get_list_of_protocols()
+            }
+        )
+
+    @staticmethod
+    def post(request, event_id):
+        event = Event.objects.get(id=event_id)
+        logger.info('Admin.Protocols [POST]')
+        if 'export_startlist' in request.POST:
+            return services.get_startlist_response(event=event)
+        elif 'export_result' in request.POST:
+            return redirect('async_get_results', event_id)
+        else:
+            pass
+        return redirect('admin_protocols', event_id)
+
+class ProtocolDownload(views.View):
+    @staticmethod
+    def get(request, event_id, file):
+        return services.download_xlsx_response(file)
 
 
 class AdminDescriptionView(LoginRequiredMixin, views.View):

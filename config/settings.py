@@ -193,3 +193,5 @@ if local_params.use_djdt:
     DEBUG_TOOLBAR_CONFIG = {
         'INTERCEPT_REDIRECTS': False,
     }
+
+PROTOCOLS_PATH = 'events/protocols'

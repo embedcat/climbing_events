@@ -1,9 +1,12 @@
+import os
 import random
 import string
+from datetime import datetime
 
 from django.db.models import QuerySet
 from django.http import HttpResponse
 
+from config import settings
 from events import xl_tools
 from events.models import Event, Route, Participant
 from events.models import ACCENT_NO, ACCENT_FLASH
@@ -309,3 +312,23 @@ def debug_create_participants(event: Event, num: int) -> None:
 
 def get_maintenance_context(request):
     return {'code': '', 'msg': 'Сервер на обслуживании'}
+
+
+def get_list_of_protocols() -> list:
+    path = settings.PROTOCOLS_PATH
+    if not os.path.exists(path=path):
+        return []
+    files = [f for f in os.scandir(path) if not f.is_dir()]
+    files.sort(key=os.path.getctime, reverse=True)
+    return [{"name": f.name, "size": os.stat(f).st_size, "mtime": datetime.fromtimestamp(os.stat(f).st_mtime)} for f in
+            files]
+
+
+def download_xlsx_response(file: str) -> HttpResponse:
+    path = os.path.join(settings.PROTOCOLS_PATH, str(file))
+    if os.path.exists(path):
+        with open(path, 'rb') as fh:
+            response = HttpResponse(content=fh.read(),
+                                    content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            response['Content-Disposition'] = 'attachment; filename=' + os.path.basename(path)
+            return response

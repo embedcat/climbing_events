@@ -1,6 +1,10 @@
+import os
+from datetime import datetime
+
 from openpyxl import Workbook, load_workbook
 from openpyxl.writer.excel import save_virtual_workbook
 
+from config import settings
 from events import services
 from events.models import Event, Participant
 
@@ -75,10 +79,11 @@ def export_result(event: Event):
                 for num, accent in enumerate(p['accents']):
                     sheet.cell(row=HEADS_ROW, column=8 + num).value = f"T#{num + 1}"
                     sheet.cell(row=HEADS_ROW - 1, column=8 + num).value = routes[num].grade
-                    sheet.cell(row=HEADS_ROW - 2, column=8 + num).value = scores[num]
+                    sheet.cell(row=HEADS_ROW - 2, column=8 + num).value = scores[num].replace('\n', '/')
                     sheet.cell(row=ROW_OFFSET + index, column=8 + num).value = accent
                 sheet.cell(row=HEADS_ROW, column=8 + len(p['accents'])).value = "Итог"
                 sheet.cell(row=ROW_OFFSET + index, column=8 + len(p['accents'])).value = p['score']
 
     book.remove(book.worksheets[0])
-    return save_virtual_workbook(book)
+    book.save(os.path.join(settings.PROTOCOLS_PATH, f"results_{datetime.today().strftime('%Y-%m-%d-%H%M%S')}.xlsx"))
+

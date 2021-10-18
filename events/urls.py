@@ -10,6 +10,9 @@ urlpatterns = [
          name='admin_description'),
     path('e/<int:event_id>/admin_settings/', views.EventAdminSettingsView.as_view(), name='admin_settings'),
     path('e/<int:event_id>/admin_actions_clear', views.AdminActionsClearView.as_view(), name='admin_actions_clear'),
+    path('e/<int:event_id>/admin_protocols', views.AdminProtocolsView.as_view(), name='admin_protocols'),
+    path('e/<int:event_id>/admin_protocols/<str:file>', views.ProtocolDownload.as_view(), name='protocol_download'),
+    path('async_get_results/<int:event_id>/', views.async_get_results, name='async_get_results'),
     path('e/<int:event_id>/enter/', views.EnterResultsView.as_view(), name='event_enter'),
     path('e/<int:event_id>/enter_wo_reg/', views.EnterWithoutReg.as_view(), name='enter_wo_reg'),
     path('e/<int:event_id>/results/', views.ResultsView.as_view(), name='event_results'),
@@ -24,5 +27,5 @@ urlpatterns = [
 
     path('ajax/check_pin_code/', views.check_pin_code, name='check_pin_code'),
 
-    path('test/', views.TestView.as_view(), name='test'),
+    path('test/', views.async_get_results, name='test'),
 ]
