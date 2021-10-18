@@ -15,10 +15,6 @@ class Migration(migrations.Migration):
             model_name='route',
             name='accents_num',
         ),
-        migrations.RemoveField(
-            model_name='route',
-            name='score',
-        ),
         migrations.AlterField(
             model_name='route',
             name='score_json',
