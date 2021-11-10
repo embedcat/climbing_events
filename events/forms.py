@@ -40,7 +40,7 @@ class ParticipantRegistrationForm(forms.ModelForm):
             self.fields[Event.FIELD_GRADE] = forms.ChoiceField(choices=Participant.GRADES, label='Разряд',
                                                                required=False)
 
-        if group_list:
+        if group_list != ['']:
             self.fields['group_index'] = forms.ChoiceField(choices=tuple([(name, name) for name in group_list]),
                                                            label='Категория',
                                                            required=False)
