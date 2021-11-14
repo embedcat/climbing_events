@@ -233,6 +233,7 @@ class EventAdminSettingsView(LoginRequiredMixin, views.View):
                 registration_fields=cd['registration_fields'],
                 required_fields=cd['required_fields'],
                 is_without_registration=cd['is_without_registration'],
+                is_view_pin_after_registration=cd['is_view_pin_after_registration'],
             )
             logger.info(f'-> Event [{event}] update OK')
             return redirect('admin_settings', event_id)
@@ -448,7 +449,10 @@ class EventRegistrationView(views.View):
         logger.info('Registration [POST] ->')
         if form.is_valid():
             participant = services.register_participant(event=event, cd=form.cleaned_data)
-            return redirect('event_registration_ok', event_id=event_id, participant_id=participant.id)
+            if event.is_view_pin_after_registration:
+                return redirect('event_registration_ok', event_id=event_id, participant_id=participant.id)
+            else:
+                return redirect('event_participants', event_id=event_id)
         logger.warning(f'-> registration failed, [{form}] is not valid')
         return render(
             request=request,

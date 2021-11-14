@@ -114,6 +114,8 @@ class EventAdminSettingsForm(forms.ModelForm):
             'is_view_route_grade',
             'is_view_route_score',
             'is_separate_score_by_groups',
+            'is_without_registration',
+            'is_view_pin_after_registration',
             'score_type',
             'flash_points',
             'redpoint_points',
@@ -124,7 +126,6 @@ class EventAdminSettingsForm(forms.ModelForm):
             'set_max_participants',
             'registration_fields',
             'required_fields',
-            'is_without_registration',
         ]
         labels = {
             'routes_num': 'Количество трасс',
@@ -138,6 +139,8 @@ class EventAdminSettingsForm(forms.ModelForm):
             'is_view_route_grade': 'Показывать ктегорию трассы',
             'is_view_route_score': 'Показывать стоимость трассы',
             'is_separate_score_by_groups': 'Рассчитывать стоимость трассы отдельно по каждой группе',
+            'is_without_registration': 'Ввод результатов без регистрации',
+            'is_view_pin_after_registration': 'Показывать участнику пин-код после регистрации',
             'score_type': 'Тип подсчёта результатов',
             'flash_points': 'Очки за Flash',
             'redpoint_points': 'Очки за Redpoint',
@@ -148,7 +151,6 @@ class EventAdminSettingsForm(forms.ModelForm):
             'set_max_participants': 'Максимальное число участников в сете (0 - не ограничено)',
             'registration_fields': 'Дополнительные поля формы регистрации',
             'required_fields': 'Обязательные поля при регистрации',
-            'is_without_registration': 'Ввод результатов без регистрации',
         }
 
 
