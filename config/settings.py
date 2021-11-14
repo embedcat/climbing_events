@@ -195,3 +195,5 @@ if local_params.use_djdt:
     }
 
 PROTOCOLS_PATH = 'events/protocols'
+
+DEFAULT_EVENT_ID = local_params.default_event_id

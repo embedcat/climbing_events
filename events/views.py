@@ -25,7 +25,7 @@ logger = logging.getLogger(settings.LOGGER)
 class MainView(views.View):
     @staticmethod
     def get(request):
-        return redirect('event', event_id=1)
+        return redirect('event', event_id=settings.DEFAULT_EVENT_ID)
         events = Event.objects.all()
         return render(
             request=request,
