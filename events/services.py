@@ -182,7 +182,7 @@ def _update_results(event: Event, gender: Participant.GENDERS, group_index: int)
             accents_num += 0 if accent == ACCENT_NO else 1
 
         # update_route_score:
-        route_score = round(1 / accents_num, 2) if accents_num != 0 else 0
+        route_score = 1 / accents_num if accents_num != 0 else 0
         route.score_json.update({f'{json_key}': route_score})
         route.save()
 
