@@ -160,8 +160,9 @@ def _update_participant_score(event: Event, participant: Participant, routes: Qu
         if accent != ACCENT_NO:
             base_route_points = 1.0 if event.score_type == Event.SCORE_SIMPLE_SUM \
                 else routes[int(no)].score_json.get(json_key, 0)
-            participant.score += round(
-                base_route_points * (event.flash_points if accent == ACCENT_FLASH else event.redpoint_points), 2)
+            participant.score += base_route_points * (
+                event.flash_points if accent == ACCENT_FLASH else event.redpoint_points)
+    participant.score = round(participant.score, 2)
     participant.save()
 
 
