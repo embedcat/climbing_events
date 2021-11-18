@@ -11,6 +11,7 @@ from events import xl_tools
 from events.models import Event, Route, Participant
 from events.models import ACCENT_NO, ACCENT_FLASH
 
+
 # ================================================
 # =================== Utils ======================
 # ================================================
@@ -26,6 +27,7 @@ def get_group_list(event: Event) -> list:
 
 def get_set_list(event: Event) -> list:
     return [item.strip() for item in event.set_list.split(',')][:event.set_num] if event.set_num > 1 else []
+
 
 # ================================================
 # =================== Clear ======================
@@ -44,6 +46,7 @@ def clear_event(event: Event) -> None:
     clear_participants(event=event)
     clear_routes(event=event)
 
+
 # ================================================
 # =================== Routes =====================
 # ================================================
@@ -59,6 +62,7 @@ def create_event_routes(event: Event) -> None:
 
 def get_route_score(route: Route, json_key: str) -> float:
     return route.score_json.get(json_key, 0)
+
 
 # ================================================
 # ======== Register and edit participant =========
@@ -144,6 +148,7 @@ def register_participant(event: Event, cd: dict) -> Participant:
     _check_participants_number_to_close_registration(event=event)
     return participant
 
+
 # ================================================
 # ========== Calc and update results =============
 # ================================================
@@ -155,8 +160,8 @@ def _update_participant_score(event: Event, participant: Participant, routes: Qu
         if accent != ACCENT_NO:
             base_route_points = 1.0 if event.score_type == Event.SCORE_SIMPLE_SUM \
                 else routes[int(no)].score_json.get(json_key, 0)
-            participant.score += base_route_points * (
-                event.flash_points if accent == ACCENT_FLASH else event.redpoint_points)
+            participant.score += round(
+                base_route_points * (event.flash_points if accent == ACCENT_FLASH else event.redpoint_points), 2)
     participant.save()
 
 
@@ -202,6 +207,7 @@ def enter_results(event: Event, participant: Participant, accents_cleaned_data: 
     participant.save()
 
     _update_results(event=event, gender=participant.gender, group_index=participant.group_index)
+
 
 # ================================================
 # =============== Get results ====================
@@ -278,6 +284,7 @@ def get_result_response(event: Event) -> HttpResponse:
                             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = 'attachment; filename=result.xlsx'
     return response
+
 
 # ================================================
 # =================== Debug ======================
