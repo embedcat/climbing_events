@@ -24,8 +24,9 @@ logger = logging.getLogger(settings.LOGGER)
 class MainView(views.View):
     @staticmethod
     def get(request):
-        return redirect('event', event_id=settings.DEFAULT_EVENT_ID)
-        events = Event.objects.all()
+        if int(settings.DEFAULT_EVENT_ID) != 0:
+            return redirect('event', event_id=settings.DEFAULT_EVENT_ID)
+        events = Event.objects.all()        # TODO: view not all events
         return render(
             request=request,
             template_name='events/index.html',
