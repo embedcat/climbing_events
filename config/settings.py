@@ -191,7 +191,7 @@ MAINTENANCE_MODE_IGNORE_ADMIN_SITE = True
 # if True the superuser will not see the maintenance-mode page
 MAINTENANCE_MODE_IGNORE_SUPERUSER = False
 
-if env('USE_DJDT'):
+if env('USE_DJDT') is True:
     MIDDLEWARE += (
         'debug_toolbar.middleware.DebugToolbarMiddleware',
     )
