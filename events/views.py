@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-from time import sleep
 
 from asgiref.sync import sync_to_async
 from django import views
@@ -143,6 +142,7 @@ class AdminProtocolsView(LoginRequiredMixin, views.View):
         else:
             pass
         return redirect('admin_protocols', event_id)
+
 
 class ProtocolDownload(views.View):
     @staticmethod
