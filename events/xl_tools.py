@@ -86,4 +86,3 @@ def export_result(event: Event):
 
     book.remove(book.worksheets[0])
     book.save(os.path.join(settings.PROTOCOLS_PATH, f"results_{datetime.today().strftime('%Y-%m-%d-%H%M%S')}.xlsx"))
-
