@@ -4,11 +4,14 @@ import logging
 
 from asgiref.sync import sync_to_async
 from django import views
+from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.views import LoginView
 from django.db.models import Count
 from django.forms import formset_factory, modelformset_factory
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
+from django.views.generic import CreateView
 from djqscsv import render_to_csv_response
 
 from config import settings
@@ -616,6 +619,23 @@ class ParticipantRoutesView(LoginRequiredMixin, views.View):
                 'routes': event.route.all().order_by('number'),
             }
         )
+
+
+class CustomLoginView(LoginView):
+    redirect_authenticated_user = True
+    template_name = 'events/login.html'
+    extra_context = {
+        'title': 'Вход',
+    }
+
+
+class RegisterView(CreateView):
+    form_class = UserCreationForm
+    success_url = '/login'
+    template_name = 'events/register.html'
+    extra_context = {
+        'title': 'Регистрация',
+    }
 
 
 def check_pin_code(request):
