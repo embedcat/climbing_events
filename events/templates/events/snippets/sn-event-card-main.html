@@ -1,0 +1,16 @@
+<div class="col-sm-4 ">
+  <div class="card my-4">
+    <div class="card-header">
+      <h4 class="h4">{{ event.title }}</h4>
+    </div>
+
+    <div class="card-body">
+      <p>Дата: {{ event.date }}</p>
+    </div>
+
+    <div class="card-footer text-muted">
+      <a class="nav-link active" href="{% url 'event_registration' event.id %}">Регистрация</a>
+    </div>
+
+  </div>
+</div>

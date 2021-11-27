@@ -1,0 +1,18 @@
+{% extends 'events/event/base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}
+Регистрация
+{% endblock %}
+
+{% block content %}
+{% if event.is_published %}
+  {% if event.is_registration_open %}
+    {% crispy form %}
+  {% else %}
+    {% include 'events/snippets/sn-card-banner.html' with message='Регистрация закрыта' %}
+  {% endif %}
+{% else %}
+  {% include 'events/snippets/sn-card-banner.html' with message='Событие не опубликовано' %}
+{% endif %}
+
+{% endblock %}

@@ -1,4 +1,4 @@
-{% extends 'events/event-base.html' %}
+{% extends 'events/event/base.html' %}
 {% load crispy_forms_tags %}
 {% load static %}
 {% block title %}
@@ -21,7 +21,7 @@
   {% csrf_token %}
   <div id="enter-result-form" >
   {{ formset.management_form }}
-  {% include 'events/snippet-enter-form.html' %}
+  {% include 'events/snippets/sn-enter-form.html' %}
   </div>
 </form>
 

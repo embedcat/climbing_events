@@ -1,4 +1,4 @@
-{% extends 'events/event-base.html' %}
+{% extends 'events/event/base.html' %}
 {% load crispy_forms_tags %}
 
 {% block title %}
@@ -30,17 +30,17 @@
   </div>
   <div id="enter-result-form" style="display:none">
   {{ formset.management_form }}
-  {% include 'events/snippet-enter-form.html' %}
+  {% include 'events/snippets/sn-enter-form.html' %}
   </div>
 </form>
 
 <script src="/static/events/js/check_pin_code.js" type="text/javascript"></script>
 
 {% else %}
-{% include 'events/snippet-card-banner.html' with message='Ввод результатов закрыт' %}
+{% include 'events/snippets/sn-card-banner.html' with message='Ввод результатов закрыт' %}
 {% endif %}
 {% else %}
-{% include 'events/snippet-card-banner.html' with message='Событие не опубликовано' %}
+{% include 'events/snippets/sn-card-banner.html' with message='Событие не опубликовано' %}
 {% endif %}
 
 

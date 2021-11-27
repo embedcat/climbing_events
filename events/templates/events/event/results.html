@@ -1,4 +1,4 @@
-{% extends 'events/event-base.html' %}
+{% extends 'events/event/base.html' %}
 {% block title %}
 Просмотр результатов.
 {% endblock %}
@@ -16,21 +16,21 @@
 <div class="tab-content" id="myTabContent">
   <div class="tab-pane fade show active" id="tabResultMale" role="tabpanel" aria-labelledby="male-tab">
     {% for group in male %}
-      {% include 'events/snippet-result-table.html' with event=event routes=routes sorted_bunch=group.data routes_score=group.scores caption=group.name %}
+      {% include 'events/snippets/sn-result-table.html' with event=event routes=routes sorted_bunch=group.data routes_score=group.scores caption=group.name %}
     {% endfor %}
   </div>
   <div class="tab-pane fade" id="tabResultFemale" role="tabpanel" aria-labelledby="female-tab">
     {% for group in female %}
-      {% include 'events/snippet-result-table.html' with event=event routes=routes sorted_bunch=group.data routes_score=group.scores caption=group.name %}
+      {% include 'events/snippets/sn-result-table.html' with event=event routes=routes sorted_bunch=group.data routes_score=group.scores caption=group.name %}
     {% endfor %}
   </div>
 </div>
 
 {% else %}
-{% include 'events/snippet-card-banner.html' with message='Просмотр результатов закрыт' %}
+{% include 'events/snippets/sn-card-banner.html' with message='Просмотр результатов закрыт' %}
 {% endif %}
 {% else %}
-{% include 'events/snippet-card-banner.html' with message='Событие не опубликовано' %}
+{% include 'events/snippets/sn-card-banner.html' with message='Событие не опубликовано' %}
 {% endif %}
 
 {% endblock %}
