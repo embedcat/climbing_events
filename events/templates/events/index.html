@@ -1,20 +1,15 @@
 {% extends 'events/base.html' %}
-{% block navigation %}
-<nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
-  <a class="navbar-brand" href="{% url 'main' %}">Соревки</a>
-  <!--  <button class="btn btn-link btn-sm order-1 order-lg-0" href="#" id="sidebarToggle"><i class="fas fa-bars"></i>
-    </button>-->
-</nav>
-{% endblock %}
+
+{% block nav-staff %} {% include 'events/snippets/sn-nav-staff.html' %} {% endblock %}
 
 {% block container %}
-<main>
-  <div class="container-fluid mt-5 px-3">
+
+<section>
+  <div class="row mb-0">
     {% for event in events %}
-    {% include 'events/snippet-event-main.html' %}
+    {% include 'events/snippets/sn-event-card-main.html' %}
     {% endfor %}
   </div>
-</main>
-
+</section>
 
 {% endblock %}

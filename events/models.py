@@ -1,4 +1,5 @@
 from colorfield.fields import ColorField
+from django.contrib.auth import get_user_model
 from django.db import models
 from multiselectfield import MultiSelectField
 
@@ -10,6 +11,7 @@ def _get_blank_json():
 
 
 class Event(models.Model):
+    # owner = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='owner')
     title = models.CharField(max_length=128)
     gym = models.CharField(max_length=128)
     date = models.DateField(null=True)

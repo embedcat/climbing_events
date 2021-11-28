@@ -4,11 +4,14 @@ import logging
 
 from asgiref.sync import sync_to_async
 from django import views
+from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.views import LoginView
 from django.db.models import Count
 from django.forms import formset_factory, modelformset_factory
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
+from django.views.generic import CreateView
 from djqscsv import render_to_csv_response
 
 from config import settings
@@ -24,8 +27,9 @@ logger = logging.getLogger(settings.LOGGER)
 class MainView(views.View):
     @staticmethod
     def get(request):
-        return redirect('event', event_id=settings.DEFAULT_EVENT_ID)
-        events = Event.objects.all()
+        if int(settings.DEFAULT_EVENT_ID) != 0:
+            return redirect('event', event_id=settings.DEFAULT_EVENT_ID)
+        events = Event.objects.all()        # TODO: pagination
         return render(
             request=request,
             template_name='events/index.html',
@@ -41,7 +45,7 @@ class EventView(views.View):
         event = Event.objects.get(id=event_id)
         return render(
             request=request,
-            template_name='events/event.html',
+            template_name='events/event/description.html',
             context={
                 'event': event,
             }
@@ -54,7 +58,7 @@ class AdminActionsView(LoginRequiredMixin, views.View):
         event = Event.objects.get(id=event_id)
         return render(
             request=request,
-            template_name='events/event-admin-actions.html',
+            template_name='events/event/admin-actions.html',
             context={
                 'event': event,
             }
@@ -85,7 +89,7 @@ class AdminActionsClearView(LoginRequiredMixin, views.View):
         event = Event.objects.get(id=event_id)
         return render(
             request=request,
-            template_name='events/event-admin-actions-clear.html',
+            template_name='events/event/admin-actions-clear.html',
             context={
                 'event': event,
             }
@@ -124,7 +128,7 @@ class AdminProtocolsView(LoginRequiredMixin, views.View):
         event = Event.objects.get(id=event_id)
         return render(
             request=request,
-            template_name='events/event-admin-protocols.html',
+            template_name='events/event/admin-protocols.html',
             context={
                 'event': event,
                 'items': services.get_list_of_protocols()
@@ -156,7 +160,7 @@ class AdminDescriptionView(LoginRequiredMixin, views.View):
         event = Event.objects.get(id=event_id)
         return render(
             request=request,
-            template_name='events/event-admin-description.html',
+            template_name='events/event/admin-description.html',
             context={
                 'event': event,
                 'form': AdminDescriptionForm(instance=event),
@@ -182,7 +186,7 @@ class AdminDescriptionView(LoginRequiredMixin, views.View):
             logger.warning(f'-> Event [{event}] not updated. Form [{form}] is not valid')
             return render(
                 request=request,
-                template_name='events/event-admin-description.html',
+                template_name='events/event/admin-description.html',
                 context={
                     'event': event,
                     'form': AdminDescriptionForm(request.POST),
@@ -196,7 +200,7 @@ class EventAdminSettingsView(LoginRequiredMixin, views.View):
         event = Event.objects.get(id=event_id)
         return render(
             request=request,
-            template_name='events/event-admin-settings.html',
+            template_name='events/event/admin-settings.html',
             context={
                 'event': event,
                 'form': EventAdminSettingsForm(instance=event),
@@ -241,7 +245,7 @@ class EventAdminSettingsView(LoginRequiredMixin, views.View):
             logger.warning(f'-> Event [{event}] not updated. Form [{form}] is not valid')
             return render(
                 request=request,
-                template_name='events/event-admin-settings.html',
+                template_name='events/event/admin-settings.html',
                 context={
                     'event': event,
                     'form': EventAdminSettingsForm(request.POST),
@@ -260,7 +264,7 @@ class EnterResultsView(views.View):
         formset = AccentFormSet(initial=initial, prefix='accents')
         return render(
             request=request,
-            template_name='events/event-enter.html',
+            template_name='events/event/enter.html',
             context={
                 'event': event,
                 'formset': formset,
@@ -295,7 +299,7 @@ class EnterResultsView(views.View):
         logger.warning(f'-> {participant_form} or {accent_formset} are not valid')
         return render(
             request=request,
-            template_name='events/event-enter.html',
+            template_name='events/event/enter.html',
             context={
                 'event': event,
                 'formset': accent_formset,
@@ -317,7 +321,7 @@ class EnterWithoutReg(views.View):
         set_list = services.get_set_list_for_registration_available(event=event)
         return render(
             request=request,
-            template_name='events/event-enter-wo-reg.html',
+            template_name='events/event/enter-wo-reg.html',
             context={
                 'event': event,
                 'formset': formset,
@@ -353,7 +357,7 @@ class EnterWithoutReg(views.View):
             return redirect('event_results', event_id=event_id)
         return render(
             request=request,
-            template_name='events/event-enter-wo-reg.html',
+            template_name='events/event/enter-wo-reg.html',
             context={
                 'event': event,
                 'formset': accent_formset,
@@ -369,7 +373,7 @@ class ResultsView(views.View):
         results = services.get_results(event=event, full_results=True)
         return render(
             request=request,
-            template_name='events/event-results.html',
+            template_name='events/event/results.html',
             context={
                 'event': event,
                 'routes': range(1, event.routes_num + 1),
@@ -402,7 +406,7 @@ class EventParticipantsView(views.View):
         }
         return render(
             request=request,
-            template_name='events/event-participants.html',
+            template_name='events/event/participants.html',
             context={
                 'event': event,
                 'participants': participants,
@@ -423,7 +427,7 @@ class EventRegistrationView(views.View):
         set_list = services.get_set_list_for_registration_available(event=event)
         return render(
             request=request,
-            template_name='events/event-registration.html',
+            template_name='events/event/registration.html',
             context={
                 'event': event,
                 'form': ParticipantRegistrationForm(group_list=group_list,
@@ -456,7 +460,7 @@ class EventRegistrationView(views.View):
         logger.warning(f'-> registration failed, [{form}] is not valid')
         return render(
             request=request,
-            template_name='events/event-registration.html',
+            template_name='events/event/registration.html',
             context={
                 'event': event,
                 'form': form,
@@ -471,7 +475,7 @@ class EventRegistrationOkView(views.View):
         participant = Participant.objects.get(id=participant_id)
         return render(
             request=request,
-            template_name='events/event-registration-ok.html',
+            template_name='events/event/registration-ok.html',
             context={
                 'event': event,
                 'participant': participant,
@@ -615,6 +619,23 @@ class ParticipantRoutesView(LoginRequiredMixin, views.View):
                 'routes': event.route.all().order_by('number'),
             }
         )
+
+
+class CustomLoginView(LoginView):
+    redirect_authenticated_user = True
+    template_name = 'events/login.html'
+    extra_context = {
+        'title': 'Вход',
+    }
+
+
+class RegisterView(CreateView):
+    form_class = UserCreationForm
+    success_url = '/login'
+    template_name = 'events/register.html'
+    extra_context = {
+        'title': 'Регистрация',
+    }
 
 
 def check_pin_code(request):

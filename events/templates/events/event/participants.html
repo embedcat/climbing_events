@@ -1,4 +1,4 @@
-{% extends 'events/event-base.html' %}
+{% extends 'events/event/base.html' %}
 {% block title %}
 Участники
 {% endblock %}
@@ -110,7 +110,7 @@ drawDoughnutChart("cityChart", city_data);
 </div>
 
 {% else %}
-{% include 'events/snippet-card-banner.html' with message='Событие не опубликовано' %}
+{% include 'events/snippets/sn-card-banner.html' with message='Событие не опубликовано' %}
 {% endif %}
 
 {% endblock %}

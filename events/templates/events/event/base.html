@@ -1,0 +1,20 @@
+{% extends 'events/base.html' %}
+
+{% block nav-event %} {% include 'events/snippets/sn-nav-event.html' %}{% endblock %}
+{% block nav-staff %} {% include 'events/snippets/sn-nav-staff.html' %}{% endblock %}
+{% block nav-actions %} {% include 'events/snippets/sn-nav-actions.html' %}{% endblock %}
+
+{% block container %}
+<div class="container-fluid">
+  <h4 class="mt-4">{{ event.title }}</h4>
+  <ol class="breadcrumb mb-4">
+    <li class="breadcrumb-item active">
+      {% block title %} {% endblock %}
+    </li>
+  </ol>
+
+  <section class="tab-pane fade show active">
+    {% block content %} {% endblock %}
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% load active_link_tags %}
+
+<a class="nav-link {% active_link 'event' strict=True event_id=event.id %}"
+   href="{% url 'event' event.id %}">Описание</a>
+<a class="nav-link {% active_link 'event_registration' strict=True event_id=event.id %}"
+   href="{% url 'event_registration' event.id %}">Регистрация</a>
+<a class="nav-link {% active_link 'event_enter' strict=True event_id=event.id %}"
+   href="{% url 'event_enter' event.id %}">Внести результат</a>
+<a class="nav-link {% active_link 'event_participants' strict=True event_id=event.id %}"
+   href="{% url 'event_participants' event.id %}">Участники</a>
+<a class="nav-link {% active_link 'event_results' strict=True event_id=event.id %}"
+   href="{% url 'event_results' event.id %}">Результаты</a>
+<hr>

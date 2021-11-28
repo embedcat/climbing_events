@@ -1,6 +1,8 @@
+from django.contrib.auth.views import LogoutView
 from django.urls import path
 
 from events import views
+from events.views import CustomLoginView, RegisterView
 
 urlpatterns = [
     path('', views.MainView.as_view(), name='main'),
@@ -24,6 +26,10 @@ urlpatterns = [
     path('e/<int:event_id>/participants/export', views.ExportParticipantToCsv.as_view(), name='export_participants_to_csv'),
     path('e/<int:event_id>/p/<int:p_id>/', views.ParticipantView.as_view(), name='participant'),
     path('e/<int:event_id>/p/<int:p_id>/routes', views.ParticipantRoutesView.as_view(), name='participant_routes'),
+
+    path('login/', CustomLoginView.as_view(), name='login'),
+    path('logout/', LogoutView.as_view(), name='logout'),
+    path('register/', RegisterView.as_view(), name='register'),
 
     path('ajax/check_pin_code/', views.check_pin_code, name='check_pin_code'),
 
