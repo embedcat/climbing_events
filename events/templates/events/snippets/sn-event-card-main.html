@@ -1,16 +1,27 @@
-<div class="col-sm-4 ">
-  <div class="card my-4">
-    <div class="card-header">
-      <h4 class="h4">{{ event.title }}</h4>
+<div class="col-lg-4 mb-2">
+    <div class="card mx-auto" >
+        <a class="" href="{% url 'event' event.id %}"><img src="{{ event.poster.url }}" class="card-img-top"
+                                                           alt="poster"></a>
+        <div class="card-header">
+            <h4 class="card-title">{{ event.title }}</h4>
+        </div>
+        <div class="card-body">
+            <p class="card-text">This is a wider card with supporting text below as a natural lead-in to additional
+                content.
+                This content is a little bit longer.</p>
+        </div>
+        <div class="card-footer">
+            <a class="btn btn-primary" href="{% url 'event_registration' event.id %}">Регистрация</a>
+        </div>
     </div>
-
-    <div class="card-body">
-      <p>Дата: {{ event.date }}</p>
-    </div>
-
-    <div class="card-footer text-muted">
-      <a class="nav-link active" href="{% url 'event_registration' event.id %}">Регистрация</a>
-    </div>
-
-  </div>
 </div>
+
+<!--<div class="col-sm-6">-->
+<!--    <div class="card">-->
+<!--        <div class="card-body">-->
+<!--            <h5 class="card-title">title</h5>-->
+<!--            <p class="card-text">Lorem ipsum dolor sit amet, consectetur adipiscing elit. </p>-->
+<!--            <a href="#" class="btn btn-primary">Go somewhere</a>-->
+<!--        </div>-->
+<!--    </div>-->
+<!--</div>-->

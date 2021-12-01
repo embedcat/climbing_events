@@ -15,7 +15,8 @@ class Event(models.Model):
     title = models.CharField(max_length=128)
     gym = models.CharField(max_length=128)
     date = models.DateField(null=True)
-    poster = models.ImageField(upload_to=settings.MEDIA_POSTERS_DIR, blank=True, null=True)
+    poster = models.ImageField(upload_to=settings.MEDIA_POSTERS_DIR,
+                               default=f'{settings.STATIC_ROOT}/events/img/default_poster.png')
     description = models.TextField(null=True)
     routes_num = models.IntegerField(null=True)
     is_published = models.BooleanField(default=False)

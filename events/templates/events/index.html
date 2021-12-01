@@ -3,13 +3,14 @@
 {% block nav-staff %} {% include 'events/snippets/sn-nav-staff.html' %} {% endblock %}
 
 {% block container %}
-
-<section>
-  <div class="row mb-0">
+<div class="row">
+  <div class="col d-flex justify-content-center">
+    <div class="row w-80 p-0 w-0">
     {% for event in events %}
     {% include 'events/snippets/sn-event-card-main.html' %}
     {% endfor %}
+    </div>
   </div>
-</section>
+</div>
 
 {% endblock %}
