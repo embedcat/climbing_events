@@ -206,3 +206,6 @@ if env('USE_DJDT') is True:
 PROTOCOLS_PATH = 'events/protocols'
 
 DEFAULT_EVENT_ID = env('DEFAULT_EVENT_ID')
+
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'

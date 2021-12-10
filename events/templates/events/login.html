@@ -1,32 +1,33 @@
 {% extends 'events/base.html' %}
 {% block container %}
-  <main class="container">
-    <div class="row">
-
-      <div class="col-8 col-lg-4 offset-2 offset-lg-4">
-
-        <form method="post" class="form-signin pt-5" action="{% url 'login' %}">
-          {% csrf_token %}
-          <div class="text-center mt-5 b-1">
-            <p class="h5 font-weight-light">Войдите, чтобы управлять</p>
-          </div>
-          <div class="mt-5 form-label-group">
-            <p class="text-muted">Логин</p>
-            <input type="text" name="username" id="inputLogin" class="form-control" required autofocus>
-            <label for="inputLogin"></label>
-          </div>
-          <div class="form-label-group">
-            <p class="text-muted"> Пароль</p>
-            <input type="password" name="password" id="inputPassword" class="form-control" required>
-            <label for="inputPassword"></label>
-          </div>
-          <div class="checkbox mb-3"></div>
-          <button class="btn btn-primary btn-lg btn-block" type="submit">Войти</button>
-        </form>
-
-        <div class="mt-4 text-center"><p>Нет аккаунта? <a href="{% url 'register' %}">Зарегистрируйтесь!</a></p></div>
-
-      </div>
+<div class="row justify-content-center">
+    <div class="col-lg-5">
+        <div class="card shadow-lg border-0 rounded-lg mt-5">
+            <div class="card-header"><h3 class="text-center font-weight-light my-4">Вход</h3></div>
+            <div class="card-body">
+                <form>
+                    <div class="form-floating mb-3">
+                        <input class="form-control" id="inputEmail" type="email" placeholder="name@example.com"/>
+                        <label for="inputEmail">Email адрес</label>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input class="form-control" id="inputPassword" type="password" placeholder="Password"/>
+                        <label for="inputPassword">Пароль</label>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" id="inputRememberPassword" type="checkbox" value=""/>
+                        <label class="form-check-label" for="inputRememberPassword">Запомнить пароль</label>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-between mt-4 mb-0">
+                        <a class="small" href="password.html">Восстановить пароль</a>
+                        <a class="btn btn-primary" href="index.html">Войти</a>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-center py-3">
+                <div class="small"><a href="{% url 'register' %}">Нет аккаунта? Зарегистрироваться!</a></div>
+            </div>
+        </div>
     </div>
-  </main>
+</div>
 {% endblock %}

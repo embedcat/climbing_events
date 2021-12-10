@@ -4,13 +4,9 @@
 
 {% block container %}
 <div class="row">
-  <div class="col d-flex justify-content-center">
-    <div class="row w-80 p-0 w-0">
     {% for event in events %}
     {% include 'events/snippets/sn-event-card-main.html' %}
     {% endfor %}
-    </div>
-  </div>
 </div>
 
 {% endblock %}

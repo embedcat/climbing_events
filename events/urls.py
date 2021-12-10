@@ -2,7 +2,6 @@ from django.contrib.auth.views import LogoutView
 from django.urls import path
 
 from events import views
-from events.views import CustomLoginView, RegisterView
 
 urlpatterns = [
     path('', views.MainView.as_view(), name='main'),
@@ -27,9 +26,11 @@ urlpatterns = [
     path('e/<int:event_id>/p/<int:p_id>/', views.ParticipantView.as_view(), name='participant'),
     path('e/<int:event_id>/p/<int:p_id>/routes', views.ParticipantRoutesView.as_view(), name='participant_routes'),
 
-    path('login/', CustomLoginView.as_view(), name='login'),
+    path('login/', views.CustomLoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
-    path('register/', RegisterView.as_view(), name='register'),
+    path('register/', views.RegisterView.as_view(), name='register'),
+    path('profile/', views.ProfileView.as_view(), name='profile'),
+    path('my_events/', views.MyEventsView.as_view(), name='my_events'),
 
     path('ajax/check_pin_code/', views.check_pin_code, name='check_pin_code'),
 

@@ -4330,7 +4330,13 @@ input[type=button].btn-block {
   background-clip: border-box;
   border: 1px solid rgba(0, 0, 0, 0.125);
   border-radius: 0.25rem;
+  transition: -webkit-transform 0.3s ease;
 }
+
+.card:hover {
+  transform: scale(1.03, 1.03);
+}
+
 .card > hr {
   margin-right: 0;
   margin-left: 0;
