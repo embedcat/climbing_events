@@ -26,9 +26,7 @@ urlpatterns = [
     path('e/<int:event_id>/p/<int:p_id>/', views.ParticipantView.as_view(), name='participant'),
     path('e/<int:event_id>/p/<int:p_id>/routes', views.ParticipantRoutesView.as_view(), name='participant_routes'),
 
-    path('login/', views.CustomLoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
-    path('register/', views.RegisterView.as_view(), name='register'),
     path('profile/', views.ProfileView.as_view(), name='profile'),
     path('my_events/', views.MyEventsView.as_view(), name='my_events'),
 

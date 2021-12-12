@@ -2,9 +2,9 @@
 {% load crispy_forms_tags %}
 {% block title %}
 Регистрация
-{% endblock %}
+{% endblock title %}
 
-{% block content %}
+{% block body %}
 {% if event.is_published %}
   {% if event.is_registration_open %}
     {% crispy form %}
@@ -15,4 +15,4 @@
   {% include 'events/snippets/sn-card-banner.html' with message='Событие не опубликовано' %}
 {% endif %}
 
-{% endblock %}
+{% endblock body %}

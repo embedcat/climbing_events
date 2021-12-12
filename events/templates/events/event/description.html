@@ -2,7 +2,7 @@
 {% block title %}
 Описание
 {% endblock %}
-{% block content %}
+{% block body %}
 {% if event.is_published %}
 {{ event.description|safe }}
 {% else %}
