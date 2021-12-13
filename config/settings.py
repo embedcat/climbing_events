@@ -51,14 +51,13 @@ INSTALLED_APPS = [
     'tinymce',
     'colorfield',
     'multiselectfield',
+    'bootstrap_datepicker_plus',
 
     'events',
 
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
-
-
 ]
 
 MIDDLEWARE = [

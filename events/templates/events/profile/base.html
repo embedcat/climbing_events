@@ -1,0 +1,13 @@
+{% extends 'events/base.html' %}
+
+{% block nav-staff %} {% include 'events/snippets/sn-nav-staff.html' %}{% endblock %}
+
+{% block container %}
+<div class="container-fluid">
+  <h4 class="mt-4">{% block title %} {% endblock title %}</h4>
+
+  <section class="tab-pane fade show active">
+    {% block body %} {% endblock body %}
+  </section>
+</div>
+{% endblock container %}

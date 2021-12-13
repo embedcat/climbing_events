@@ -11,12 +11,12 @@ def _get_blank_json():
 
 
 class Event(models.Model):
-    # owner = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='owner')
+    owner = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='owner', default=1)
     title = models.CharField(max_length=128)
     gym = models.CharField(max_length=128)
     date = models.DateField(null=True)
     poster = models.ImageField(upload_to=settings.MEDIA_POSTERS_DIR,
-                               default=f'{settings.STATIC_ROOT}/events/img/default_poster.png')
+                               default=f'..{settings.STATIC_URL}events/img/default_poster.png')
     description = models.TextField(null=True)
     routes_num = models.IntegerField(null=True)
     is_published = models.BooleanField(default=False)

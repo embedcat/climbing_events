@@ -13,7 +13,7 @@ from djqscsv import render_to_csv_response
 
 from config import settings
 from events.forms import ParticipantRegistrationForm, AdminDescriptionForm, AccentForm, AccentParticipantForm, \
-    EventAdminSettingsForm, RouteEditForm, ParticipantForm
+    EventAdminSettingsForm, RouteEditForm, ParticipantForm, CreateEventForm
 from events.models import Event, Participant, Route
 from events.models import ACCENT_NO
 from events import services, xl_tools
@@ -622,14 +622,18 @@ class ProfileView(LoginRequiredMixin, views.View):
     @staticmethod
     def get(request):
         return render(request=request,
-                      template_name='events/profile.html')
+                      template_name='events/my-events.html')
 
 
 class MyEventsView(LoginRequiredMixin, views.View):
     @staticmethod
     def get(request):
+        events = Event.objects.filter(owner=request.user.id)
         return render(request=request,
-                      template_name='events/profile.html')
+                      template_name='events/profile/my-events.html',
+                      context={
+                          'events': events,
+                      })
 
 
 def check_pin_code(request):
@@ -665,3 +669,30 @@ class TestView(views.View):
                 'data': data,
             }
         )
+
+
+class CreateEventView(LoginRequiredMixin, views.View):
+    @staticmethod
+    def get(request):
+        form = CreateEventForm()
+        return render(request=request,
+                      template_name='events/profile/create.html',
+                      context={
+                          'form': form,
+                      })
+
+    @staticmethod
+    def post(request):
+        form = CreateEventForm(request.POST)
+        if form.is_valid():
+            cd = form.cleaned_data
+            event = services.create_event(owner=request.user, title=cd['title'], date=cd['date'])
+            return redirect('admin_description', event.id)
+        else:
+            return render(
+                request=request,
+                template_name='events/profile/create.html',
+                context={
+                    'form': CreateEventForm(request.POST),
+                }
+            )

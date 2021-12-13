@@ -1,3 +1,4 @@
+from bootstrap_datepicker_plus.widgets import DatePickerInput
 from crispy_forms.bootstrap import InlineRadios
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit, Layout
@@ -90,6 +91,9 @@ class AdminDescriptionForm(forms.ModelForm):
             'gym': 'Скалодром',
             'date': 'Дата (YYYY-MM-DD)',
             'poster': 'Афиша',
+        }
+        widgets = {
+            'date': DatePickerInput(),
         }
 
 
@@ -258,3 +262,25 @@ class ParticipantForm(forms.ModelForm):
             Event.FIELD_TEAM,
             Event.FIELD_GRADE,
         ]
+
+
+class CreateEventForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.add_input(Submit('submit', 'Создать'))
+
+    class Meta:
+        model = Event
+        fields = [
+            'title',
+            'date',
+        ]
+        labels = {
+            'title': 'Название',
+            'date': 'Дата (YYYY-MM-DD)',
+        }
+        widgets = {
+            'date': DatePickerInput(),
+        }

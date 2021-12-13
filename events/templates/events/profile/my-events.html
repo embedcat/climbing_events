@@ -1,0 +1,14 @@
+{% extends 'events/profile/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+Мои события
+{% endblock title %}
+
+{% block body %}
+<div class="row">
+  {% for event in events %}
+  {{ event }}<br>
+  {% endfor %}
+</div>
+{% endblock body %}
