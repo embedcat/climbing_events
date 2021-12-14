@@ -166,17 +166,16 @@ class AdminDescriptionView(LoginRequiredMixin, views.View):
 
     @staticmethod
     def post(request, event_id):
-        event = Event.objects.filter(id=event_id)
-        form = AdminDescriptionForm(request.POST)
+        event = Event.objects.get(id=event_id)
+        form = AdminDescriptionForm(request.POST, request.FILES)
         logger.info('Admin.Description [POST] ->')
         if form.is_valid():
             cd = form.cleaned_data
-            event.update(
-                title=cd['title'],
-                date=cd['date'],
-                poster=cd['poster'],
-                description=cd['description'],
-            )
+            event.poster = request.FILES['poster']
+            event.title = cd['title']
+            event.date = cd['date']
+            event.description = cd['description']
+            event.save()
             logger.info(f'-> Event [{event}] update OK')
             return redirect('admin_description', event_id)
         else:
@@ -186,7 +185,7 @@ class AdminDescriptionView(LoginRequiredMixin, views.View):
                 template_name='events/event/admin-description.html',
                 context={
                     'event': event,
-                    'form': AdminDescriptionForm(request.POST),
+                    'form': AdminDescriptionForm(request.POST, request.FILES),
                 }
             )
 
