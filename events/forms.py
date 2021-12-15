@@ -85,12 +85,14 @@ class AdminDescriptionForm(forms.ModelForm):
             'date',
             'poster',
             'description',
+            'short_description',
         ]
         labels = {
             'title': 'Название',
             'gym': 'Скалодром',
             'date': 'Дата (YYYY-MM-DD)',
             'poster': 'Афиша',
+            'short_description': 'Краткое описание',
         }
         widgets = {
             'date': DatePickerInput(),

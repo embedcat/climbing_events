@@ -18,6 +18,7 @@ class Event(models.Model):
     poster = models.ImageField(upload_to=settings.MEDIA_POSTERS_DIR,
                                default=f'..{settings.STATIC_URL}events/img/default_poster.png')
     description = models.TextField(null=True)
+    short_description = models.TextField(null=True, max_length=200)
     routes_num = models.IntegerField(null=True)
     is_published = models.BooleanField(default=False)
     is_registration_open = models.BooleanField(default=False)

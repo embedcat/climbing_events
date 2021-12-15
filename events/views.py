@@ -26,7 +26,7 @@ class MainView(views.View):
     def get(request):
         if int(settings.DEFAULT_EVENT_ID) != 0:
             return redirect('event', event_id=settings.DEFAULT_EVENT_ID)
-        events = Event.objects.all()        # TODO: pagination
+        events = Event.objects.all().order_by('-date')
         return render(
             request=request,
             template_name='events/index.html',
@@ -171,10 +171,12 @@ class AdminDescriptionView(LoginRequiredMixin, views.View):
         logger.info('Admin.Description [POST] ->')
         if form.is_valid():
             cd = form.cleaned_data
-            event.poster = request.FILES['poster']
+            if 'poster' in request.FILES:
+                event.poster = request.FILES['poster']
             event.title = cd['title']
             event.date = cd['date']
             event.description = cd['description']
+            event.short_description = cd['short_description']
             event.save()
             logger.info(f'-> Event [{event}] update OK')
             return redirect('admin_description', event_id)
