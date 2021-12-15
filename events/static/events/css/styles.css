@@ -3979,7 +3979,7 @@ input[type=button].btn-block {
   padding-top: 0.3125rem;
   padding-bottom: 0.3125rem;
   margin-right: 1rem;
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   line-height: inherit;
   white-space: nowrap;
 }
@@ -4331,6 +4331,14 @@ input[type=button].btn-block {
   border: 1px solid rgba(0, 0, 0, 0.125);
   border-radius: 0.25rem;
 }
+
+.card-animated {
+  transition: -webkit-transform 0.3s ease;
+}
+.card-animated:hover {
+  transform: scale(1.03, 1.03);
+}
+
 .card > hr {
   margin-right: 0;
   margin-left: 0;

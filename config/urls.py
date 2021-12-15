@@ -30,6 +30,7 @@ urlpatterns = [
     path('dja/', admin.site.urls),
     path('tinymce/', include('tinymce.urls')),
     url(r'^maintenance-mode/', include('maintenance_mode.urls')),
+    path('accounts/', include('allauth.urls')),
 ]
 
 if local_params.use_djdt:

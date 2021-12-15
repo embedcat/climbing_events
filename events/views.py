@@ -4,19 +4,16 @@ import logging
 
 from asgiref.sync import sync_to_async
 from django import views
-from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.views import LoginView
 from django.db.models import Count
 from django.forms import formset_factory, modelformset_factory
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
-from django.views.generic import CreateView
 from djqscsv import render_to_csv_response
 
 from config import settings
 from events.forms import ParticipantRegistrationForm, AdminDescriptionForm, AccentForm, AccentParticipantForm, \
-    EventAdminSettingsForm, RouteEditForm, ParticipantForm
+    EventAdminSettingsForm, RouteEditForm, ParticipantForm, CreateEventForm
 from events.models import Event, Participant, Route
 from events.models import ACCENT_NO
 from events import services, xl_tools
@@ -29,7 +26,7 @@ class MainView(views.View):
     def get(request):
         if int(settings.DEFAULT_EVENT_ID) != 0:
             return redirect('event', event_id=settings.DEFAULT_EVENT_ID)
-        events = Event.objects.all()        # TODO: pagination
+        events = Event.objects.all().order_by('-date')
         return render(
             request=request,
             template_name='events/index.html',
@@ -169,17 +166,18 @@ class AdminDescriptionView(LoginRequiredMixin, views.View):
 
     @staticmethod
     def post(request, event_id):
-        event = Event.objects.filter(id=event_id)
-        form = AdminDescriptionForm(request.POST)
+        event = Event.objects.get(id=event_id)
+        form = AdminDescriptionForm(request.POST, request.FILES)
         logger.info('Admin.Description [POST] ->')
         if form.is_valid():
             cd = form.cleaned_data
-            event.update(
-                title=cd['title'],
-                date=cd['date'],
-                poster=cd['poster'],
-                description=cd['description'],
-            )
+            if 'poster' in request.FILES:
+                event.poster = request.FILES['poster']
+            event.title = cd['title']
+            event.date = cd['date']
+            event.description = cd['description']
+            event.short_description = cd['short_description']
+            event.save()
             logger.info(f'-> Event [{event}] update OK')
             return redirect('admin_description', event_id)
         else:
@@ -189,7 +187,7 @@ class AdminDescriptionView(LoginRequiredMixin, views.View):
                 template_name='events/event/admin-description.html',
                 context={
                     'event': event,
-                    'form': AdminDescriptionForm(request.POST),
+                    'form': AdminDescriptionForm(request.POST, request.FILES),
                 }
             )
 
@@ -621,21 +619,22 @@ class ParticipantRoutesView(LoginRequiredMixin, views.View):
         )
 
 
-class CustomLoginView(LoginView):
-    redirect_authenticated_user = True
-    template_name = 'events/login.html'
-    extra_context = {
-        'title': 'Вход',
-    }
+class ProfileView(LoginRequiredMixin, views.View):
+    @staticmethod
+    def get(request):
+        return render(request=request,
+                      template_name='events/my-events.html')
 
 
-class RegisterView(CreateView):
-    form_class = UserCreationForm
-    success_url = '/login'
-    template_name = 'events/register.html'
-    extra_context = {
-        'title': 'Регистрация',
-    }
+class MyEventsView(LoginRequiredMixin, views.View):
+    @staticmethod
+    def get(request):
+        events = Event.objects.filter(owner=request.user.id)
+        return render(request=request,
+                      template_name='events/profile/my-events.html',
+                      context={
+                          'events': events,
+                      })
 
 
 def check_pin_code(request):
@@ -671,3 +670,30 @@ class TestView(views.View):
                 'data': data,
             }
         )
+
+
+class CreateEventView(LoginRequiredMixin, views.View):
+    @staticmethod
+    def get(request):
+        form = CreateEventForm()
+        return render(request=request,
+                      template_name='events/profile/create.html',
+                      context={
+                          'form': form,
+                      })
+
+    @staticmethod
+    def post(request):
+        form = CreateEventForm(request.POST)
+        if form.is_valid():
+            cd = form.cleaned_data
+            event = services.create_event(owner=request.user, title=cd['title'], date=cd['date'])
+            return redirect('admin_description', event.id)
+        else:
+            return render(
+                request=request,
+                template_name='events/profile/create.html',
+                context={
+                    'form': CreateEventForm(request.POST),
+                }
+            )

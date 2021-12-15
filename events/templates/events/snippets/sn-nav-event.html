@@ -1,5 +1,5 @@
 {% load active_link_tags %}
-
+<div class="sb-sidenav-menu-heading">{{ event.title }}</div>
 <a class="nav-link {% active_link 'event' strict=True event_id=event.id %}"
    href="{% url 'event' event.id %}">Описание</a>
 <a class="nav-link {% active_link 'event_registration' strict=True event_id=event.id %}"

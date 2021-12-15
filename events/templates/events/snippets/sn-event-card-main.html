@@ -1,16 +1,24 @@
-<div class="col-sm-4 ">
-  <div class="card my-4">
+<div class="col-md-4 my-2">
+  <div class="card mx-auto h-100 card-animated">
+    <a class="" href="{% url 'event' event.id %}"><img src="{{ event.poster.url }}"
+                                                       class="card-img-top img-thumbnail"
+                                                       alt="poster"></a>
     <div class="card-header">
-      <h4 class="h4">{{ event.title }}</h4>
+      <h4 class="card-title">{{ event.title }}</h4>
     </div>
-
     <div class="card-body">
-      <p>Дата: {{ event.date }}</p>
+      <h6 class="card-subtitle text-muted">{{event.date }}</h6>
+      <p class="card-text p-y-1">{{ event.short_description }}</p>
     </div>
-
-    <div class="card-footer text-muted">
-      <a class="nav-link active" href="{% url 'event_registration' event.id %}">Регистрация</a>
+    <div class="card-footer">
+      {% if event.is_registration_open %}
+      <a class="btn btn-primary" href="{% url 'event_registration' event.id %}">Регистрация</a>
+      {% else %}
+      <a class="btn btn-primary" href="{% url 'event' event.id %}">Подробнее</a>
+      {% endif %}
+      {% if event.is_results_allowed %}
+      <a class="btn btn-primary" href="{% url 'event_results' event.id %}">Результаты</a>
+      {% endif %}
     </div>
-
   </div>
 </div>

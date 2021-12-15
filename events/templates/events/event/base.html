@@ -9,12 +9,12 @@
   <h4 class="mt-4">{{ event.title }}</h4>
   <ol class="breadcrumb mb-4">
     <li class="breadcrumb-item active">
-      {% block title %} {% endblock %}
+      {% block title %} {% endblock title %}
     </li>
   </ol>
 
   <section class="tab-pane fade show active">
-    {% block content %} {% endblock %}
+    {% block body %} {% endblock body %}
   </section>
 </div>
 {% endblock %}

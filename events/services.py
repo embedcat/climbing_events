@@ -3,6 +3,7 @@ import random
 import string
 from datetime import datetime
 
+from django.contrib.auth import get_user_model
 from django.db.models import QuerySet
 from django.http import HttpResponse
 
@@ -11,6 +12,14 @@ from events import xl_tools
 from events.models import Event, Route, Participant
 from events.models import ACCENT_NO, ACCENT_FLASH
 
+
+def create_event(owner: get_user_model(), title: str, date: datetime) -> Event:
+    event = Event.objects.create(
+        owner=owner,
+        title=title,
+        date=date,
+    )
+    return event
 
 # ================================================
 # =================== Utils ======================

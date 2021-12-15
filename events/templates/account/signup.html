@@ -1,0 +1,47 @@
+{% extends "account/base.html" %}
+
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block head_title %}{% trans "Signup" %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-5">
+    <div class="card shadow-lg border-0 rounded-lg mt-5">
+      <div class="card-header">
+        <h3 class="text-center font-weight-light my-4">Регистрация</h3>
+      </div>
+      <div class="card-body">
+        <form class="signup" id="signup_form" method="post" action="{% url 'account_signup' %}">
+          {% csrf_token %}
+          <div id="div_id_email" class="form-group"><label for="id_email" class=" requiredField">
+            E-mail<span class="asteriskField">*</span> </label>
+            <div class=""><input type="email" name="email" placeholder="E-mail address" autocomplete="email"
+                                 class="textinput textInput form-control" required id="id_email"></div>
+          </div>
+          <div id="div_id_password1" class="form-group"><label for="id_password1" class=" requiredField">
+            Пароль<span class="asteriskField">*</span> </label>
+            <div class=""><input type="password" name="password1" placeholder="Password" autocomplete="new-password"
+                                 class="textinput textInput form-control" required id="id_password1"></div>
+          </div>
+          <div id="div_id_password2" class="form-group"><label for="id_password2" class=" requiredField">
+            Пароль (ещё раз)<span class="asteriskField">*</span> </label>
+            <div class=""><input type="password" name="password2" placeholder="Password (again)"
+                                 class="textinput textInput form-control" required id="id_password2"></div>
+          </div>
+          {% if redirect_field_value %}
+          <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}"/>
+          {% endif %}
+          <button class="btn btn-primary btn-block" type="submit">Зарегистрироваться</button>
+        </form>
+      </div>
+      <div class="card-footer text-center py-3">
+        <a href="{{ login_url }}">Есть аккаунт? Войти</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{% endblock %}

@@ -1,6 +1,6 @@
 {% load active_link_tags %}
-{% if user.is_superuser %}
-<div class="sb-sidenav-menu-heading">Админка</div>
+{% if user.is_authenticated %}
+<div class="sb-sidenav-menu-heading">Управление событием</div>
 <a class="nav-link {% active_link 'admin_actions' strict=True event_id=event.id %}"
    href="{% url 'admin_actions' event.id %}">Управление</a>
 <a class="nav-link {% active_link 'admin_description' strict=True event_id=event.id %}"
