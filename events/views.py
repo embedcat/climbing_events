@@ -26,7 +26,7 @@ class MainView(views.View):
     def get(request):
         if int(settings.DEFAULT_EVENT_ID) != 0:
             return redirect('event', event_id=settings.DEFAULT_EVENT_ID)
-        events = Event.objects.all().order_by('-date')
+        events = Event.objects.filter(is_published=True).order_by('-date')
         return render(
             request=request,
             template_name='events/index.html',
