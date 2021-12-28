@@ -19,7 +19,6 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
 
-import local_params
 from config import settings
 
 handler404 = 'events.views.page_not_found_view'
@@ -33,7 +32,7 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),
 ]
 
-if local_params.use_djdt:
+if settings.USE_DJDT:
     urlpatterns += [
         path('__debug__/', include(debug_toolbar.urls)),
     ]

@@ -9,7 +9,6 @@ from django.db.models import Count
 from django.forms import formset_factory, modelformset_factory
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
-from djqscsv import render_to_csv_response
 
 from config import settings
 from events.forms import ParticipantRegistrationForm, AdminDescriptionForm, AccentForm, AccentParticipantForm, \
@@ -34,7 +33,7 @@ class MainView(views.View):
     def get(request):
         if int(settings.DEFAULT_EVENT_ID) != 0:
             return redirect('event', event_id=settings.DEFAULT_EVENT_ID)
-        events = Event.objects.all().order_by('-date')
+        events = Event.objects.filter(is_published=True).order_by('-date')
         return render(
             request=request,
             template_name='events/index.html',
@@ -419,6 +418,7 @@ class EventParticipantsView(views.View):
                 'chart_set_data': json.dumps(chart_set_data),
                 'chart_group_data': json.dumps(chart_group_data),
                 'chart_city_data': json.dumps(chart_city_data),
+                'fields': event.registration_fields,
             }
         )
 
@@ -527,14 +527,6 @@ class RouteEditor(IsOwnerMixin, views.View):
                 'formset': formset,
             }
         )
-
-
-class ExportParticipantToCsv(IsOwnerMixin, views.View):
-    @staticmethod
-    def get(request, event_id):
-        event = Event.objects.get(id=event_id)
-        participants = event.participant.all()
-        return render_to_csv_response(participants, delimiter=';')
 
 
 class ParticipantView(IsOwnerMixin, views.View):

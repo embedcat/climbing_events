@@ -22,81 +22,98 @@
   </div>
 </nav>
 <div class="tab-content" id="myTabContent">
-    <div class="tab-pane fade show active" id="tabList" role="tabpanel" aria-labelledby="list-tab">
-        <table class="table table-sm table-striped"
-               data-toggle="table"
-               data-sort-name="num"
-               data-sortable="true"
-               id="dataTable" width="100%">
-            <thead class="table-dark">
-            <tr>
-                <th data-field="num" data-sortable="true" style="width:10%">#</th>
-                <th data-field="name" dattable-lighta-sortable="true">Участник</th>
+  <div class="tab-pane fade show active" id="tabList" role="tabpanel" aria-labelledby="list-tab">
+    <table class="table table-sm table-striped"
+           data-toggle="table"
+           data-sort-name="num"
+           data-sortable="true"
+           id="dataTable" width="100%">
+      <thead class="table-dark">
+      <tr>
+        <th data-field="num" data-sortable="true" style="width:10%">#</th>
+        <th data-field="name" dattable-lighta-sortable="true">Участник</th>
                 {% if user == event.owner or user.is_superuser %}
-                <th>Pin</th>
-                {% endif %}
-                <th data-field="gender" data-sortable="true">Пол</th>
-                <th data-field="bithdate" data-sortable="true">Год рождения</th>
-                <th data-field="city" data-sortable="true">Город</th>
-                <th data-field="team" data-sortable="true">Команда</th>
-                <th data-field="grade" data-sortable="true">Разряд</th>
-                {% if event.set_num > 1 %}
-                <th data-field="set" data-sortable="true">Сет</th>
-                {% endif %}
-                {% if event.group_num > 1 %}
-                <th data-field="group" data-sortable="true">Категория</th>
-                {% endif %}
-            </tr>
-            </thead>
-            <tbody>
-            {% for participant in participants %}
-            <tr>
-                <td>{{ forloop.counter }}</td>
-                <td>
-                    {{ participant.last_name }} {{ participant.first_name }}
-                    {% if user == event.owner or user.is_superuser %}
-                    <span class="small"><em><a href="{% url 'participant' event.id participant.id %}">(ред.)</a></em></span>
-                    {% endif %}
-                </td>
-                {% if user.is_superuser %}
-                <td>{{ participant.pin }}</td>
-                {% endif %}
-                <td>{{ participant.get_gender_display }}</td>
-                <td>{% if participant.birth_year is not None %}{{ participant.birth_year }}{% endif %}</td>
-                <td>{% if participant.city is not None %}{{ participant.city }}{% endif %}</td>
-                <td>{% if participant.team is not None %}{{ participant.team }}{% endif %}</td>
-                <td>{{ participant.get_grade_display }}</td>
-                {% if event.set_num > 1 %}
-                <td>{{ participant.set_index|set_label:event }}</td>
-                {% endif %}
-                {% if event.group_num > 1 %}
-                <td>{{participant.group_index|group_label:event }}</td>
-                {% endif %}
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-        {% if user == event.owner or user.is_superuser %}
-        <a href="{% url 'export_participants_to_csv' event.id %}">Export to .*csv</a>
+        <th>Pin</th>
         {% endif %}
+        {% if 'gender' in fields %}
+        <th data-field="gender" data-sortable="true">Пол</th>
+        {% endif %}
+        {% if 'birth_year' in fields %}
+        <th data-field="bithdate" data-sortable="true">Год рождения</th>
+        {% endif %}
+        {% if 'city' in fields %}
+        <th data-field="city" data-sortable="true">Город</th>
+        {% endif %}
+        {% if 'team' in fields %}
+        <th data-field="team" data-sortable="true">Команда</th>
+        {% endif %}
+        {% if 'grade' in fields %}
+        <th data-field="grade" data-sortable="true">Разряд</th>
+        {% endif %}
+        {% if event.set_num > 1 %}
+        <th data-field="set" data-sortable="true">Сет</th>
+        {% endif %}
+        {% if event.group_num > 1 %}
+        <th data-field="group" data-sortable="true">Категория</th>
+        {% endif %}
+      </tr>
+      </thead>
+      <tbody>
+      {% for participant in participants %}
+      <tr>
+        <td>{{ forloop.counter }}</td>
+        <td>
+          {{ participant.last_name }} {{ participant.first_name }}
+                    {% if user == event.owner or user.is_superuser %}
+          <span class="small"><em><a href="{% url 'participant' event.id participant.id %}">(ред.)</a></em></span>
+          {% endif %}
+        </td>
+        {% if user.is_superuser %}
+        <td>{{ participant.pin }}</td>
+        {% endif %}
+        {% if 'gender' in fields %}
+        <td>{{ participant.get_gender_display }}</td>
+        {% endif %}
+        {% if 'birth_year' in fields %}
+        <td>{{ participant.birth_year }}</td>
+        {% endif %}
+        {% if 'city' in fields %}
+        <td>{{ participant.city }}</td>
+        {% endif %}
+        {% if 'team' in fields %}
+        <td>{{ participant.team }}</td>
+        {% endif %}
+        {% if 'grade' in fields %}
+        <td>{{ participant.get_grade_display }}</td>
+        {% endif %}
+        {% if event.set_num > 1 %}
+        <td>{{ participant.set_index|set_label:event }}</td>
+        {% endif %}
+        {% if event.group_num > 1 %}
+        <td>{{participant.group_index|group_label:event }}</td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="tab-pane fade" id="tabStat" role="tabpanel" aria-labelledby="stat-tab">
+    <div class="d-flex justify-content-center my-2">Распределение по сетам</div>
+    <div class="card-body">
+      <canvas id="setChart" width="100%"></canvas>
     </div>
-    <div class="tab-pane fade" id="tabStat" role="tabpanel" aria-labelledby="stat-tab">
-        <div class="d-flex justify-content-center my-2">Распределение по сетам</div>
-        <div class="card-body">
-            <canvas id="setChart" width="100%"></canvas>
-        </div>
-        <hr>
-        <div class="d-flex justify-content-center my-2">Распределение по группам</div>
-        <div class="card-body">
-            <canvas id="groupChart" width="100%"></canvas>
-        </div>
-        <hr>
-        <div class="d-flex justify-content-center my-2">Распределение по городам</div>
-        <div class="card-body">
-            <canvas id="cityChart" width="100%"></canvas>
-        </div>
+    <hr>
+    <div class="d-flex justify-content-center my-2">Распределение по группам</div>
+    <div class="card-body">
+      <canvas id="groupChart" width="100%"></canvas>
+    </div>
+    <hr>
+    <div class="d-flex justify-content-center my-2">Распределение по городам</div>
+    <div class="card-body">
+      <canvas id="cityChart" width="100%"></canvas>
+    </div>
 
-        <script>
+    <script>
 var set_data = JSON.parse("{{ chart_set_data|escapejs }}");
 drawBarChart("setChart", set_data);
 var group_data = JSON.parse("{{ chart_group_data|escapejs }}");
@@ -105,8 +122,8 @@ var city_data = JSON.parse("{{ chart_city_data|escapejs }}");
 drawDoughnutChart("cityChart", city_data);
 
 
-        </script>
-    </div>
+    </script>
+  </div>
 </div>
 
 {% else %}
