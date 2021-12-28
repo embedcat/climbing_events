@@ -32,7 +32,7 @@
             <tr>
                 <th data-field="num" data-sortable="true" style="width:10%">#</th>
                 <th data-field="name" dattable-lighta-sortable="true">Участник</th>
-                {% if user.is_superuser %}
+                {% if user == event.owner or user.is_superuser %}
                 <th>Pin</th>
                 {% endif %}
                 <th data-field="gender" data-sortable="true">Пол</th>
@@ -54,7 +54,7 @@
                 <td>{{ forloop.counter }}</td>
                 <td>
                     {{ participant.last_name }} {{ participant.first_name }}
-                    {% if user.is_superuser %}
+                    {% if user == event.owner or user.is_superuser %}
                     <span class="small"><em><a href="{% url 'participant' event.id participant.id %}">(ред.)</a></em></span>
                     {% endif %}
                 </td>
@@ -76,7 +76,7 @@
             {% endfor %}
             </tbody>
         </table>
-        {% if user.is_superuser %}
+        {% if user == event.owner or user.is_superuser %}
         <a href="{% url 'export_participants_to_csv' event.id %}">Export to .*csv</a>
         {% endif %}
     </div>
