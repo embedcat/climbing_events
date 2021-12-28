@@ -411,6 +411,7 @@ class EventParticipantsView(views.View):
                 'chart_set_data': json.dumps(chart_set_data),
                 'chart_group_data': json.dumps(chart_group_data),
                 'chart_city_data': json.dumps(chart_city_data),
+                'fields': event.registration_fields,
             }
         )
 
