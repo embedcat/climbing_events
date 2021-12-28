@@ -129,7 +129,6 @@ dmypy.json
 .pyre/
 
 /staticfiles/
-local_params.py
 /.idea/
 /db.sqlite3
 /static/
