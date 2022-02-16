@@ -9,16 +9,23 @@ from django.db.models import Count
 from django.forms import formset_factory, modelformset_factory
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
-from djqscsv import render_to_csv_response
 
 from config import settings
 from events.forms import ParticipantRegistrationForm, AdminDescriptionForm, AccentForm, AccentParticipantForm, \
     EventAdminSettingsForm, RouteEditForm, ParticipantForm, CreateEventForm
-from events.models import Event, Participant, Route
-from events.models import ACCENT_NO
+from events.models import Event, Participant, Route, ACCENT_NO
 from events import services, xl_tools
+from braces import views as braces
 
 logger = logging.getLogger(settings.LOGGER)
+
+
+class IsOwnerMixin(braces.UserPassesTestMixin):
+    redirect_field_name = ''
+
+    def test_func(self, user):
+        event_id = self.kwargs.get('event_id')
+        return user.is_superuser or user.id is Event.objects.get(id=event_id).owner.id
 
 
 class MainView(views.View):
@@ -26,7 +33,7 @@ class MainView(views.View):
     def get(request):
         if int(settings.DEFAULT_EVENT_ID) != 0:
             return redirect('event', event_id=settings.DEFAULT_EVENT_ID)
-        events = Event.objects.all().order_by('-date')
+        events = Event.objects.filter(is_published=True).order_by('-date')
         return render(
             request=request,
             template_name='events/index.html',
@@ -49,7 +56,7 @@ class EventView(views.View):
         )
 
 
-class AdminActionsView(LoginRequiredMixin, views.View):
+class AdminActionsView(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
@@ -80,7 +87,7 @@ class AdminActionsView(LoginRequiredMixin, views.View):
         return redirect('admin_actions', event_id)
 
 
-class AdminActionsClearView(LoginRequiredMixin, views.View):
+class AdminActionsClearView(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
@@ -119,7 +126,7 @@ async def async_get_results(request, event_id):
     return redirect('admin_protocols', event_id)
 
 
-class AdminProtocolsView(LoginRequiredMixin, views.View):
+class AdminProtocolsView(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
@@ -151,7 +158,7 @@ class ProtocolDownload(views.View):
         return services.download_xlsx_response(file)
 
 
-class AdminDescriptionView(LoginRequiredMixin, views.View):
+class AdminDescriptionView(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
@@ -192,7 +199,7 @@ class AdminDescriptionView(LoginRequiredMixin, views.View):
             )
 
 
-class EventAdminSettingsView(LoginRequiredMixin, views.View):
+class EventAdminSettingsView(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
@@ -411,6 +418,7 @@ class EventParticipantsView(views.View):
                 'chart_set_data': json.dumps(chart_set_data),
                 'chart_group_data': json.dumps(chart_group_data),
                 'chart_city_data': json.dumps(chart_city_data),
+                'fields': event.registration_fields,
             }
         )
 
@@ -481,7 +489,7 @@ class EventRegistrationOkView(views.View):
         )
 
 
-class RouteEditor(LoginRequiredMixin, views.View):
+class RouteEditor(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
@@ -521,15 +529,7 @@ class RouteEditor(LoginRequiredMixin, views.View):
         )
 
 
-class ExportParticipantToCsv(LoginRequiredMixin, views.View):
-    @staticmethod
-    def get(request, event_id):
-        event = Event.objects.get(id=event_id)
-        participants = event.participant.all()
-        return render_to_csv_response(participants, delimiter=';')
-
-
-class ParticipantView(LoginRequiredMixin, views.View):
+class ParticipantView(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id, p_id):
         event = Event.objects.get(id=event_id)
@@ -575,7 +575,7 @@ class ParticipantView(LoginRequiredMixin, views.View):
             )
 
 
-class ParticipantRoutesView(LoginRequiredMixin, views.View):
+class ParticipantRoutesView(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id, p_id):
         event = Event.objects.get(id=event_id)
@@ -619,7 +619,7 @@ class ParticipantRoutesView(LoginRequiredMixin, views.View):
         )
 
 
-class ProfileView(LoginRequiredMixin, views.View):
+class ProfileView(IsOwnerMixin, views.View):
     @staticmethod
     def get(request):
         return render(request=request,

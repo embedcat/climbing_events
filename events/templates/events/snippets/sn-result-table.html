@@ -18,7 +18,7 @@
     <td>{{ forloop.counter }}</td>
     <td>
       {{ d.participant.last_name }} {{ d.participant.first_name }}
-      {% if user.is_superuser %}
+      {% if user == event.owner or user.is_superuser %}
       <span class="small"><em><a href="{% url 'participant_routes' event.id d.participant.id %}">(ред.)</a></em></span>
       {% endif %}
     </td>
