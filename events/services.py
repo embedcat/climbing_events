@@ -1,8 +1,10 @@
+import io
 import os
 import random
 import string
 from datetime import datetime
 
+import segno
 from django.contrib.auth import get_user_model
 from django.db.models import QuerySet
 from django.http import HttpResponse
@@ -43,18 +45,63 @@ def get_set_list(event: Event) -> list:
 # ================================================
 
 
-def clear_routes(event: Event) -> None:
+def remove_routes(event: Event) -> None:
     event.route.all().delete()
 
 
-def clear_participants(event: Event) -> None:
+def remove_participants(event: Event) -> None:
     event.participant.all().delete()
 
 
 def clear_event(event: Event) -> None:
-    clear_participants(event=event)
-    clear_routes(event=event)
+    remove_participants(event=event)
+    remove_routes(event=event)
 
+
+def clear_results(event: Event) -> None:
+    participants = event.participant.all()
+    for participant in participants:
+        _clear_participant_score(participant=participant)
+
+
+# ================================================
+# =================== Events =====================
+# ================================================
+
+def update_event_settings(event: Event, cd: dict) -> None:
+    old_routes_num = event.routes_num
+
+    event.routes_num = cd['routes_num']
+    event.is_published = cd['is_published']
+    event.is_registration_open = cd['is_registration_open']
+    event.is_enter_result_allowed = cd['is_enter_result_allowed']
+    event.is_results_allowed = cd['is_results_allowed']
+    event.is_count_only_entered_results = cd['is_count_only_entered_results']
+    event.is_view_full_results = cd['is_view_full_results']
+    event.is_view_route_color = cd['is_view_route_color']
+    event.is_view_route_grade = cd['is_view_route_grade']
+    event.is_view_route_score = cd['is_view_route_score']
+    event.is_separate_score_by_groups = cd['is_separate_score_by_groups']
+    event.score_type = cd['score_type']
+    event.flash_points = cd['flash_points']
+    event.redpoint_points = cd['redpoint_points']
+    event.group_num = cd['group_num']
+    event.group_list = cd['group_list']
+    event.set_num = cd['set_num']
+    event.set_list = cd['set_list']
+    event.set_max_participants = cd['set_max_participants']
+    event.registration_fields = cd['registration_fields']
+    event.required_fields = cd['required_fields']
+    event.is_without_registration = cd['is_without_registration']
+    event.is_view_pin_after_registration = cd['is_view_pin_after_registration']
+
+    event.save()
+
+    if old_routes_num != event.routes_num:
+        print("new routes")
+        clear_results(event=event)
+        remove_routes(event=event)
+        create_event_routes(event=event)
 
 # ================================================
 # =================== Routes =====================
@@ -158,6 +205,12 @@ def register_participant(event: Event, cd: dict) -> Participant:
     return participant
 
 
+def _clear_participant_score(participant: Participant) -> None:
+    participant.score = 0
+    participant.accents = {}
+    participant.save()
+
+
 # ================================================
 # ========== Calc and update results =============
 # ================================================
@@ -178,8 +231,8 @@ def _update_participant_score(event: Event, participant: Participant, routes: Qu
 def _update_results(event: Event, gender: Participant.GENDERS, group_index: int):
     json_key = _get_participant_json_key(gender=gender, group_index=group_index)
 
-    participants = event.participant.filter(gender=gender) if event.is_separate_score_by_groups \
-        else event.participant.filter(gender=gender, group_index=group_index)
+    participants = event.participant.filter(gender=gender, group_index=group_index) if event.is_separate_score_by_groups \
+        else event.participant.filter(gender=gender)
 
     # update routes:
     routes = event.route.all().order_by('number')
@@ -327,12 +380,22 @@ def debug_create_participants(event: Event, num: int) -> None:
         _debug_create_random_participant(event=event)
 
 
+# ================================================
+# =================== Utils ======================
+# ================================================
+
+
 def get_maintenance_context(request):
     return {'code': '', 'msg': 'Сервер на обслуживании'}
 
 
-def get_list_of_protocols() -> list:
-    path = settings.PROTOCOLS_PATH
+# ================================================
+# =================== Files ======================
+# ================================================
+
+
+def get_list_of_protocols(event: Event) -> list:
+    path = settings.PROTOCOLS_PATH + f'/{event.id}'
     if not os.path.exists(path=path):
         return []
     files = [f for f in os.scandir(path) if not f.is_dir()]
@@ -349,3 +412,26 @@ def download_xlsx_response(file: str) -> HttpResponse:
                                     content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             response['Content-Disposition'] = 'attachment; filename=' + os.path.basename(path)
             return response
+
+
+def remove_file(file: str) -> bool:
+    path = os.path.join(settings.PROTOCOLS_PATH, str(file))
+    if os.path.exists(path):
+        os.remove(path=path)
+        return True
+    return False
+
+
+# ================================================
+# ================= QR-codes =====================
+# ================================================
+
+
+def qr_create(text: str, title: str = 'qrcode') -> HttpResponse:
+    qr = segno.make_qr(text, version=4)
+    out = io.BytesIO()
+    qr.save(out=out, kind='png', scale=50)
+    response = HttpResponse(content=out.getvalue(),
+                            content_type='image/png')
+    response['Content-Disposition'] = f'attachment; filename={title}.png'
+    return response

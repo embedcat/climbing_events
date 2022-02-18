@@ -55,7 +55,7 @@ class Test(TestCase):
         p = services._debug_create_random_participant(self.event)
         services.create_event_routes(self.event)
         services.create_default_accents(self.event, p)
-        services.clear_participants(self.event)
+        services.remove_participants(self.event)
         self.assertEqual(self.event.participant.count(), 0)
         self.assertEqual(self.event.accent.count(), 0)
 
@@ -88,7 +88,7 @@ class Test(TestCase):
         services._check_participants_number_to_close_registration(self.event)
         self.assertFalse(self.event.is_registration_open)
 
-        services.clear_participants(self.event)
+        services.remove_participants(self.event)
         self.event.set_max_participants = 1
         self.event.set_num = 2
         self.event.is_registration_open = True
@@ -96,7 +96,7 @@ class Test(TestCase):
         services._check_participants_number_to_close_registration(self.event)
         self.assertTrue(self.event.is_registration_open)
 
-        services.clear_participants(self.event)
+        services.remove_participants(self.event)
         self.event.set_max_participants = 1
         self.event.set_num = 2
         self.event.is_registration_open = True

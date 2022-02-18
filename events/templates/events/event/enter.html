@@ -26,7 +26,7 @@
     Найден участник:
   </div>
   <div class="alert alert-danger" id="alert-error" role="alert" style="display: none;">
-    Участник не найден. Проверьте PIN-код, или <a href="{% url 'event_registration' event.id %}">зарегистрируйтесь</a>
+    Участник не найден. Проверьте PIN-код, или <a href="{% url 'registration' event.id %}">зарегистрируйтесь</a>
   </div>
   <div id="enter-result-form" style="display:none">
   {{ formset.management_form }}

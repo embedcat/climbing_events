@@ -9,6 +9,7 @@ from django.db.models import Count
 from django.forms import formset_factory, modelformset_factory
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
+from django.urls import reverse
 
 from config import settings
 from events.forms import ParticipantRegistrationForm, AdminDescriptionForm, AccentForm, AccentParticipantForm, \
@@ -72,46 +73,17 @@ class AdminActionsView(IsOwnerMixin, views.View):
     def post(request, event_id):
         event = Event.objects.get(id=event_id)
         logger.info('Admin.Services [POST]')
-        if 'create_participant' in request.POST:
-            services.debug_create_participants(event=event, num=5)
-        elif 'create_routes' in request.POST:
-            services.create_event_routes(event=event)
-        elif 'update_score' in request.POST:
+        if 'update_score' in request.POST:
             services.update_results(event=event)
-        elif 'export_startlist' in request.POST:
-            return services.get_startlist_response(event=event)
-        elif 'export_result' in request.POST:
-            return services.get_result_response(event=event)
-        else:
-            pass
-        return redirect('admin_actions', event_id)
-
-
-class AdminActionsClearView(IsOwnerMixin, views.View):
-    @staticmethod
-    def get(request, event_id):
-        event = Event.objects.get(id=event_id)
-        return render(
-            request=request,
-            template_name='events/event/admin-actions-clear.html',
-            context={
-                'event': event,
-            }
-        )
-
-    @staticmethod
-    def post(request, event_id):
-        event = Event.objects.get(id=event_id)
-        logger.info('Admin.Settings.Deletions [POST]')
+        if 'create_results' in request.POST:
+            services.clear_results(event=event)
+        if 'remove_participants' in request.POST:
+            services.remove_participants(event=event)
         if 'clear_event' in request.POST:
             services.clear_event(event=event)
-        elif 'clear_participants' in request.POST:
-            services.clear_participants(event=event)
-        elif 'clear_routes' in request.POST:
-            services.clear_routes(event=event)
-        else:
-            pass
-        return redirect('admin_actions_clear', event_id)
+        if 'remove_event' in request.POST:
+            services.remove_participants(event=event)
+        return redirect('admin_actions', event_id)
 
 
 @sync_to_async
@@ -135,7 +107,7 @@ class AdminProtocolsView(IsOwnerMixin, views.View):
             template_name='events/event/admin-protocols.html',
             context={
                 'event': event,
-                'items': services.get_list_of_protocols()
+                'protocols': services.get_list_of_protocols(event=event)
             }
         )
 
@@ -145,17 +117,31 @@ class AdminProtocolsView(IsOwnerMixin, views.View):
         logger.info('Admin.Protocols [POST]')
         if 'export_startlist' in request.POST:
             return services.get_startlist_response(event=event)
-        elif 'export_result' in request.POST:
+        if 'export_result' in request.POST:
             return redirect('async_get_results', event_id)
-        else:
-            pass
+        if 'qr_description' in request.POST:
+            url = request.build_absolute_uri(reverse('event', args=(event_id, )))
+            return services.qr_create(text=url, title='qr_event')
+        if 'qr_register' in request.POST:
+            url = request.build_absolute_uri(reverse('registration', args=(event_id, )))
+            return services.qr_create(text=url, title='qr_registration')
+        if 'qr_enter' in request.POST:
+            url = request.build_absolute_uri(reverse('enter_results', args=(event_id, )))
+            return services.qr_create(text=url, title='qr_enter_results')
         return redirect('admin_protocols', event_id)
 
 
 class ProtocolDownload(views.View):
     @staticmethod
     def get(request, event_id, file):
-        return services.download_xlsx_response(file)
+        return services.download_xlsx_response(f'{event_id}/{file}')
+
+
+class ProtocolRemove(views.View):
+    @staticmethod
+    def get(request, event_id, file):
+        services.remove_file(f'{event_id}/{file}')
+        return redirect('admin_protocols', event_id=event_id)
 
 
 class AdminDescriptionView(IsOwnerMixin, views.View):
@@ -199,7 +185,7 @@ class AdminDescriptionView(IsOwnerMixin, views.View):
             )
 
 
-class EventAdminSettingsView(IsOwnerMixin, views.View):
+class AdminSettingsView(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
@@ -214,36 +200,11 @@ class EventAdminSettingsView(IsOwnerMixin, views.View):
 
     @staticmethod
     def post(request, event_id):
-        event = Event.objects.filter(id=event_id)
+        event = Event.objects.get(id=event_id)
         form = EventAdminSettingsForm(request.POST)
         logger.info('Admin.Settings [POST] ->')
         if form.is_valid():
-            cd = form.cleaned_data
-            event.update(
-                routes_num=cd['routes_num'],
-                is_published=cd['is_published'],
-                is_registration_open=cd['is_registration_open'],
-                is_enter_result_allowed=cd['is_enter_result_allowed'],
-                is_results_allowed=cd['is_results_allowed'],
-                is_count_only_entered_results=cd['is_count_only_entered_results'],
-                is_view_full_results=cd['is_view_full_results'],
-                is_view_route_color=cd['is_view_route_color'],
-                is_view_route_grade=cd['is_view_route_grade'],
-                is_view_route_score=cd['is_view_route_score'],
-                is_separate_score_by_groups=cd['is_separate_score_by_groups'],
-                score_type=cd['score_type'],
-                flash_points=cd['flash_points'],
-                redpoint_points=cd['redpoint_points'],
-                group_num=cd['group_num'],
-                group_list=cd['group_list'],
-                set_num=cd['set_num'],
-                set_list=cd['set_list'],
-                set_max_participants=cd['set_max_participants'],
-                registration_fields=cd['registration_fields'],
-                required_fields=cd['required_fields'],
-                is_without_registration=cd['is_without_registration'],
-                is_view_pin_after_registration=cd['is_view_pin_after_registration'],
-            )
+            services.update_event_settings(event=event, cd=form.cleaned_data)
             logger.info(f'-> Event [{event}] update OK')
             return redirect('admin_settings', event_id)
         else:
@@ -292,7 +253,7 @@ class EnterResultsView(views.View):
                 participant = event.participant.get(pin=int(pin))
             except (Participant.DoesNotExist, TypeError):
                 logger.warning('-> Participant not found')
-                return redirect('event_enter', event_id=event_id)
+                return redirect('enter_results', event_id=event_id)
             logger.info(f'-> participant found: [{participant}] ->')
 
             services.enter_results(event=event,
@@ -300,7 +261,7 @@ class EnterResultsView(views.View):
                                    accents_cleaned_data=accent_formset.cleaned_data)
 
             logger.info('-> update participant accents')
-            return redirect('event_enter', event_id=event_id)
+            return redirect('enter_results', event_id=event_id)
         logger.warning(f'-> {participant_form} or {accent_formset} are not valid')
         return render(
             request=request,
@@ -359,7 +320,7 @@ class EnterWithoutReg(views.View):
             services.enter_results(event=event,
                                    participant=participant,
                                    accents_cleaned_data=accent_formset.cleaned_data)
-            return redirect('event_results', event_id=event_id)
+            return redirect('results', event_id=event_id)
         return render(
             request=request,
             template_name='events/event/enter-wo-reg.html',
@@ -388,7 +349,7 @@ class ResultsView(views.View):
         )
 
 
-class EventParticipantsView(views.View):
+class ParticipantsView(views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
@@ -423,12 +384,12 @@ class EventParticipantsView(views.View):
         )
 
 
-class EventRegistrationView(views.View):
+class RegistrationView(views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
         if event.is_without_registration:
-            return redirect('event_enter', event_id=event_id)
+            return redirect('enter_results', event_id=event_id)
         group_list = services.get_group_list(event=event)
         set_list = services.get_set_list_for_registration_available(event=event)
         return render(
@@ -462,7 +423,7 @@ class EventRegistrationView(views.View):
             if event.is_view_pin_after_registration:
                 return redirect('event_registration_ok', event_id=event_id, participant_id=participant.id)
             else:
-                return redirect('event_participants', event_id=event_id)
+                return redirect('participants', event_id=event_id)
         logger.warning(f'-> registration failed, [{form}] is not valid')
         return render(
             request=request,
@@ -559,7 +520,7 @@ class ParticipantView(IsOwnerMixin, views.View):
                                )
         if form.is_valid():
             services.update_participant(event=event, participant=participant, cd=form.cleaned_data)
-            return redirect('participant', event_id, p_id)
+            return redirect('participants', event_id)
         else:
             return render(
                 request=request,
@@ -605,7 +566,7 @@ class ParticipantRoutesView(IsOwnerMixin, views.View):
             services.enter_results(event=event,
                                    participant=participant,
                                    accents_cleaned_data=accent_formset.cleaned_data)
-            return redirect('participant_routes', event_id=event_id, p_id=p_id)
+            return redirect('results', event_id=event_id)
         return render(
             request=request,
             template_name='events/participant-routes.html',
@@ -615,6 +576,40 @@ class ParticipantRoutesView(IsOwnerMixin, views.View):
                 'participant': participant,
                 'formset': accent_formset,
                 'routes': event.route.all().order_by('number'),
+            }
+        )
+
+
+class ParticipantRemoveView(IsOwnerMixin, views.View):
+    @staticmethod
+    def get(request, event_id, p_id):
+        event = Event.objects.get(id=event_id)
+        participant = Participant.objects.get(id=p_id)
+        return render(
+            request=request,
+            template_name='events/participant-remove.html',
+            context={
+                'title': f'{participant.last_name} {participant.first_name}',
+                'event': event,
+                'participant': participant,
+            }
+        )
+
+    @staticmethod
+    def post(request, event_id, p_id):
+        event = Event.objects.get(id=event_id)
+        participant = Participant.objects.get(id=p_id)
+        if 'participant_remove' in request.POST:
+            participant.delete()
+            services.update_results(event=event)
+            return redirect('participants', event_id=event_id)
+        return render(
+            request=request,
+            template_name='events/participant-remove.html',
+            context={
+                'title': f'{participant.last_name} {participant.first_name}',
+                'event': event,
+                'participant': participant,
             }
         )
 

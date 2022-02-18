@@ -15,6 +15,10 @@
     <a class="nav-link" id="tab2" href="{% url 'participant_routes' event.id participant.id %}"
        role="tab" aria-selected="false">Результаты</a>
   </li>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" id="tab3" href="{% url 'participant_remove' event.id participant.id %}"
+       role="tab" aria-selected="false">Удаление участника</a>
+  </li>
 </ul>
 <br>
 {% crispy form %}
