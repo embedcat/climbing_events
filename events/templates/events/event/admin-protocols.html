@@ -32,11 +32,35 @@
                  value="Получить итоговый протокол"/></td>
       <td>Получаем итоговый протокол в *.xlsx</td>
     </tr>
+    <tr>
+      <td><input class="btn btn-primary"
+                 id="submit-id-qr_description"
+                 name="qr_description"
+                 type="submit"
+                 value="QR-код на описание"/></td>
+      <td>Скачать QR-код на описание</td>
+    </tr>
+    <tr>
+      <td><input class="btn btn-primary"
+                 id="submit-id-qr_register"
+                 name="qr_register"
+                 type="submit"
+                 value="QR-код на регистрацию"/></td>
+      <td>Скачать QR-код на регистрацию</td>
+    </tr>
+    <tr>
+      <td><input class="btn btn-primary"
+                 id="submit-id-qr_enter"
+                 name="qr_enter"
+                 type="submit"
+                 value="QR-код на внесение результатов"/></td>
+      <td>Скачать QR-код на внесение результатов</td>
+    </tr>
     </tbody>
   </table>
 </form>
 <hr>
-<h4>Протоколы</h4>
+<h4>Файлы</h4>
 <table class="table table-sm table-striped table-bordered"
                data-toggle="table"
                data-sort-name="no"
@@ -45,16 +69,19 @@
     <thead class="table-dark">
     <tr>
         <th data-field="no" data-sortable="true" style="width:5%">#</th>
-        <th data-field="name" data-sortable="true">Logfile</th>
-        <th data-field="size" data-sortable="true">Size</th>
-        <th data-field="date" data-sortable="true">Date</th>
+        <th data-field="name" data-sortable="true">Файл</th>
+        <th data-field="action" data-sortable="true">Действия</th>
+        <th data-field="size" data-sortable="true">Размер</th>
+        <th data-field="date" data-sortable="true">Дата создания</th>
     </tr>
     </thead>
     <tbody>
-    {% for item in items %}
+    {% for item in protocols %}
     <tr>
         <td>{{ forloop.counter }}</td>
         <td><a href="{% url 'protocol_download' event.id item.name %}">{{ item.name }}</a></td>
+        <td><a href="{% url 'protocol_download' event.id item.name %}"><i class="fa-solid fa-download"></i></a>&nbsp
+            <a href="{% url 'protocol_remove' event.id item.name %}"><i class="fa-solid fa-trash"></i></a></td>
         <td>{{ item.size }}</td>
         <td>{{ item.mtime|date:'H:i j-M-Y' }}</td>
     </tr>

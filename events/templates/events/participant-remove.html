@@ -12,11 +12,11 @@
        role="tab" aria-selected="false">Участник</a>
   </li>
   <li class="nav-item" role="presentation">
-    <a class="nav-link active" id="tab2" data-toggle="tab" href="{% url 'participant_routes' event.id participant.id %}"
+    <a class="nav-link" id="tab2" data-toggle="tab" href="{% url 'participant_routes' event.id participant.id %}"
        role="tab" aria-selected="true">Результаты</a>
   </li>
   <li class="nav-item" role="presentation">
-    <a class="nav-link" id="tab3" href="{% url 'participant_remove' event.id participant.id %}"
+    <a class="nav-link active" id="tab3" href="{% url 'participant_remove' event.id participant.id %}"
        role="tab" aria-selected="false">Удаление участника</a>
   </li>
 </ul>
@@ -24,8 +24,11 @@
 <form action="" method="post">
   {% csrf_token %}
   <div id="enter-result-form">
-    {{ formset.management_form }}
-    {% include 'events/snippets/sn-enter-form.html' %}
+    <input class="btn btn-danger"
+           id="submit-id-remove"
+           name="participant_remove"
+           type="submit"
+           value="Удалить участника"/>
   </div>
 </form>
 

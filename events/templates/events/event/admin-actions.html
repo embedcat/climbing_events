@@ -18,32 +18,45 @@
     <tbody>
     <tr>
       <td><input class="btn btn-primary"
-                 id="submit-id-create_routes"
-                 name="create_routes"
-                 type="submit"
-                 value="Создать трассы"/></td>
-      <td>Создает нужное количество трасс</td>
-    </tr>
-    <tr>
-      <td><input class="btn btn-primary"
-                 id="submit-id-create_participant"
-                 name="create_participant"
-                 type="submit"
-                 value="Создать участников"/></td>
-      <td>Созадает 5 случайных участников</td>
-    </tr>
-    <tr>
-      <td><input class="btn btn-primary"
                  id="submit-id-update_score"
                  name="update_score"
                  type="submit"
-                 value="Посчтитать рузультаты"/></td>
+                 value="Пересчитать рузультаты"/></td>
       <td>Пересчитывает баллы трасс и участников</td>
+    </tr>
+    <tr>
+      <td><input class="btn btn-warning"
+                 id="submit-id-clear_results"
+                 name="clear_results"
+                 type="submit"
+                 value="Очистить результаты"/></td>
+      <td>Очистить результаты</td>
+    </tr>
+    <tr>
+      <td><input class="btn btn-danger"
+                 id="submit-id-remove_participants"
+                 name="remove_participants"
+                 type="submit"
+                 value="Удалить участников"/></td>
+      <td>Удаляет участников</td>
+    </tr>
+    <tr>
+      <td><input class="btn btn-danger"
+                 id="submit-id-clear_event"
+                 name="clear_event"
+                 type="submit"
+                 value="Очистить событие"/></td>
+      <td>Удаляет всех участников, трассы и прохождения</td>
+    </tr>
+    <tr>
+      <td><input class="btn btn-danger"
+                 id="submit-id-remove_event"
+                 name="remove_event"
+                 type="submit"
+                 value="Удалить событие"/></td>
+      <td>Удаляет событие полностью</td>
     </tr>
     </tbody>
   </table>
-  <hr>
-
 </form>
-<a class="btn btn-warning" href="{% url 'admin_actions_clear' event.id %}">Перейти к очистке события</a>
 {% endblock %}

@@ -85,4 +85,9 @@ def export_result(event: Event):
                 sheet.cell(row=ROW_OFFSET + index, column=8 + len(p['accents'])).value = p['score']
 
     book.remove(book.worksheets[0])
-    book.save(os.path.join(settings.PROTOCOLS_PATH, f"results_{datetime.today().strftime('%Y-%m-%d-%H%M%S')}.xlsx"))
+    path = os.path.join(settings.PROTOCOLS_PATH, f'{event.id}')
+    if not os.path.exists(path=path):
+        os.mkdir(path)
+    file = os.path.join(path, f"results_{datetime.today().strftime('%Y-%m-%d-%H%M%S')}.xlsx")
+    print(file)
+    book.save(file)

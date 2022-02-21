@@ -12,12 +12,12 @@
     </div>
     <div class="card-footer">
       {% if event.is_registration_open %}
-      <a class="btn btn-primary" href="{% url 'event_registration' event.id %}">Регистрация</a>
+      <a class="btn btn-primary" href="{% url 'registration' event.id %}">Регистрация</a>
       {% else %}
       <a class="btn btn-primary" href="{% url 'event' event.id %}">Подробнее</a>
       {% endif %}
       {% if event.is_results_allowed %}
-      <a class="btn btn-primary" href="{% url 'event_results' event.id %}">Результаты</a>
+      <a class="btn btn-primary" href="{% url 'results' event.id %}">Результаты</a>
       {% endif %}
     </div>
   </div>

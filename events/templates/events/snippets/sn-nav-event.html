@@ -2,12 +2,12 @@
 <div class="sb-sidenav-menu-heading">{{ event.title }}</div>
 <a class="nav-link {% active_link 'event' strict=True event_id=event.id %}"
    href="{% url 'event' event.id %}">Описание</a>
-<a class="nav-link {% active_link 'event_registration' strict=True event_id=event.id %}"
-   href="{% url 'event_registration' event.id %}">Регистрация</a>
-<a class="nav-link {% active_link 'event_enter' strict=True event_id=event.id %}"
-   href="{% url 'event_enter' event.id %}">Внести результат</a>
-<a class="nav-link {% active_link 'event_participants' strict=True event_id=event.id %}"
-   href="{% url 'event_participants' event.id %}">Участники</a>
-<a class="nav-link {% active_link 'event_results' strict=True event_id=event.id %}"
-   href="{% url 'event_results' event.id %}">Результаты</a>
+<a class="nav-link {% active_link 'registration' strict=True event_id=event.id %}"
+   href="{% url 'registration' event.id %}">Регистрация</a>
+<a class="nav-link {% active_link 'enter_results' strict=True event_id=event.id %}"
+   href="{% url 'enter_results' event.id %}">Внести результат</a>
+<a class="nav-link {% active_link 'participants' strict=True event_id=event.id %}"
+   href="{% url 'participants' event.id %}">Участники</a>
+<a class="nav-link {% active_link 'results' strict=True event_id=event.id %}"
+   href="{% url 'results' event.id %}">Результаты</a>
 <hr>
