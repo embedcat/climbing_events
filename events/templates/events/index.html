@@ -3,10 +3,11 @@
 {% block nav-staff %} {% include 'events/snippets/sn-nav-staff.html' %} {% endblock %}
 
 {% block container %}
-<div class="row mt-2">
-    {% for event in events %}
-    {% include 'events/snippets/sn-event-card-main.html' %}
-    {% endfor %}
+<div class="container">
+    <div class="row mt-2">
+        {% for event in events %}
+        {% include 'events/snippets/sn-event-card-main.html' %}
+        {% endfor %}
+    </div>
 </div>
-
 {% endblock %}
