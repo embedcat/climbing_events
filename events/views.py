@@ -82,7 +82,8 @@ class AdminActionsView(IsOwnerMixin, views.View):
         if 'clear_event' in request.POST:
             services.clear_event(event=event)
         if 'remove_event' in request.POST:
-            services.remove_participants(event=event)
+            services.remove_event(event=event)
+            return redirect('my_events')
         return redirect('admin_actions', event_id)
 
 
