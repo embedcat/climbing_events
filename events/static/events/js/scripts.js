@@ -13,3 +13,8 @@ window.addEventListener('DOMContentLoaded', event => {
         });
     }
 });
+
+
+function confirm_action() {
+    return confirm("Вы уверены?");
+}
