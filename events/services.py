@@ -21,6 +21,7 @@ def create_event(owner: get_user_model(), title: str, date: datetime) -> Event:
         title=title,
         date=date,
     )
+    create_event_routes(event=event)
     return event
 
 # ================================================
@@ -51,6 +52,10 @@ def remove_routes(event: Event) -> None:
 
 def remove_participants(event: Event) -> None:
     event.participant.all().delete()
+
+
+def remove_event(event: Event) -> None:
+    event.delete()
 
 
 def clear_event(event: Event) -> None:

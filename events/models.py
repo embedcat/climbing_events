@@ -19,7 +19,7 @@ class Event(models.Model):
                                default=f'..{settings.STATIC_URL}events/img/default_poster.png')
     description = models.TextField(null=True)
     short_description = models.TextField(null=True, max_length=200)
-    routes_num = models.IntegerField(null=True)
+    routes_num = models.IntegerField(null=True, default=10)
     is_published = models.BooleanField(default=False)
     is_registration_open = models.BooleanField(default=False)
     is_results_allowed = models.BooleanField(default=False)
@@ -41,9 +41,9 @@ class Event(models.Model):
     flash_points = models.IntegerField(default=100)
     redpoint_points = models.IntegerField(default=80)
     group_num = models.IntegerField(default=1)
-    group_list = models.CharField(max_length=200, default='')
+    group_list = models.CharField(max_length=200, default='Общая группа')
     set_num = models.IntegerField(default=1)
-    set_list = models.CharField(max_length=200, default='')
+    set_list = models.CharField(max_length=200, default='Общий сет')
     set_max_participants = models.IntegerField(default=0)
     FIELD_BIRTH_YEAR = 'birth_year'
     FIELD_CITY = 'city'
