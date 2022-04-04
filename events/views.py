@@ -167,6 +167,7 @@ class AdminDescriptionView(IsOwnerMixin, views.View):
             cd = form.cleaned_data
             if 'poster' in request.FILES:
                 event.poster = request.FILES['poster']
+            event.gym = cd['gym']
             event.title = cd['title']
             event.date = cd['date']
             event.description = cd['description']
