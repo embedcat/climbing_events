@@ -497,6 +497,14 @@ class ParticipantView(IsOwnerMixin, views.View):
     def get(request, event_id, p_id):
         event = Event.objects.get(id=event_id)
         participant = Participant.objects.get(id=p_id)
+        group_list = services.get_group_list(event=event) if event.group_num > 1 else ""
+        group_list_value = group_list[participant.group_index] if event.group_num > 1 else ""
+        set_list = services.get_set_list_for_change_available(event=event, participant=participant)
+        set_index_value = ""
+        if event.set_num > 1:
+            current_set_value = services.get_set_list(event=event)[participant.set_index]
+            current_set_index = set_list.index(current_set_value)
+            set_index_value = set_list[current_set_index]
         return render(
             request=request,
             template_name='events/participant.html',
@@ -505,8 +513,10 @@ class ParticipantView(IsOwnerMixin, views.View):
                 'event': event,
                 'participant': participant,
                 'form': ParticipantForm(instance=participant,
-                                        group_list=services.get_group_list(event=event),
-                                        set_list=services.get_set_list_for_registration_available(event=event),
+                                        group_list=group_list,
+                                        set_list=set_list,
+                                        initial={'group_index': group_list_value,
+                                                 'set_index': set_index_value}
                                         ),
             }
         )

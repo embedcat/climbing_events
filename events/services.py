@@ -143,6 +143,19 @@ def get_set_list_for_registration_available(event: Event) -> list:
     return set_list
 
 
+def get_set_list_for_change_available(event: Event, participant: Participant) -> list:
+    set_list_all = get_set_list(event=event)
+    set_list = []
+    if event.set_max_participants > 0:
+        for i, item in enumerate(set_list_all):
+            set_participants_num = event.participant.filter(set_index=i).count()
+            if set_participants_num < event.set_max_participants or participant.set_index == i:
+                set_list.append(item)
+    else:
+        set_list = set_list_all
+    return set_list
+
+
 def update_participant(event: Event, participant: Participant, cd: dict) -> Participant:
     participant.event = event
     participant.first_name = cd['first_name']
