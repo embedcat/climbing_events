@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import operator
 
 from asgiref.sync import sync_to_async
 from django import views
@@ -355,7 +356,8 @@ class ParticipantsView(views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
-        participants = Participant.objects.filter(event__id=event_id).order_by('last_name')
+        queryset = Participant.objects.filter(event__id=event_id)
+        participants = sorted(queryset, key=operator.attrgetter('last_name'))
         set_list = services.get_set_list(event=event)
         chart_set_data = {
             'labels': set_list,
