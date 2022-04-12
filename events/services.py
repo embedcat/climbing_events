@@ -61,12 +61,17 @@ def remove_event(event: Event) -> None:
 def clear_event(event: Event) -> None:
     remove_participants(event=event)
     remove_routes(event=event)
+    create_event_routes(event=event)
 
 
 def clear_results(event: Event) -> None:
     participants = event.participant.all()
     for participant in participants:
         _clear_participant_score(participant=participant)
+    routes = event.route.all()
+    for route in routes:
+        route.score_json.clear()
+        route.save()
 
 
 # ================================================

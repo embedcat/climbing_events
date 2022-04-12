@@ -76,10 +76,8 @@ class AdminActionsView(IsOwnerMixin, views.View):
         logger.info('Admin.Services [POST]')
         if 'update_score' in request.POST:
             services.update_results(event=event)
-        if 'create_results' in request.POST:
+        if 'clear_results' in request.POST:
             services.clear_results(event=event)
-        if 'remove_participants' in request.POST:
-            services.remove_participants(event=event)
         if 'clear_event' in request.POST:
             services.clear_event(event=event)
         if 'remove_event' in request.POST:
