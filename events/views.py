@@ -462,7 +462,7 @@ class RouteEditor(IsOwnerMixin, views.View):
         formset = RouteEditFormSet(queryset=event.route.all().order_by('number'), prefix='routes')
         return render(
             request=request,
-            template_name='events/route_editor.html',
+            template_name='events/event/route-editor.html',
             context={
                 'event': event,
                 'formset': formset,
@@ -486,7 +486,7 @@ class RouteEditor(IsOwnerMixin, views.View):
         logger.warning(f'-> update failed, [{formset}] is not valid')
         return render(
             request=request,
-            template_name='events/route_editor.html',
+            template_name='events/event/route-editor.html',
             context={
                 'event': event,
                 'formset': formset,
@@ -509,7 +509,7 @@ class ParticipantView(IsOwnerMixin, views.View):
             set_index_value = set_list[current_set_index]
         return render(
             request=request,
-            template_name='events/participant.html',
+            template_name='events/event/participant.html',
             context={
                 'title': f'{participant.last_name} {participant.first_name}',
                 'event': event,
@@ -538,7 +538,7 @@ class ParticipantView(IsOwnerMixin, views.View):
         else:
             return render(
                 request=request,
-                template_name='events/participant.html',
+                template_name='events/event/participant.html',
                 context={
                     'title': f'{participant.last_name} {participant.first_name}',
                     'event': event,
@@ -560,7 +560,7 @@ class ParticipantRoutesView(IsOwnerMixin, views.View):
         formset = AccentFormSet(initial=initial, prefix='accents')
         return render(
             request=request,
-            template_name='events/participant-routes.html',
+            template_name='events/event/participant-routes.html',
             context={
                 'title': f'{participant.last_name} {participant.first_name}',
                 'event': event,
@@ -583,7 +583,7 @@ class ParticipantRoutesView(IsOwnerMixin, views.View):
             return redirect('results', event_id=event_id)
         return render(
             request=request,
-            template_name='events/participant-routes.html',
+            template_name='events/event/participant-routes.html',
             context={
                 'title': f'{participant.last_name} {participant.first_name}',
                 'event': event,
@@ -601,7 +601,7 @@ class ParticipantRemoveView(IsOwnerMixin, views.View):
         participant = Participant.objects.get(id=p_id)
         return render(
             request=request,
-            template_name='events/participant-remove.html',
+            template_name='events/event/participant-remove.html',
             context={
                 'title': f'{participant.last_name} {participant.first_name}',
                 'event': event,
@@ -619,7 +619,7 @@ class ParticipantRemoveView(IsOwnerMixin, views.View):
             return redirect('participants', event_id=event_id)
         return render(
             request=request,
-            template_name='events/participant-remove.html',
+            template_name='events/event/participant-remove.html',
             context={
                 'title': f'{participant.last_name} {participant.first_name}',
                 'event': event,
@@ -665,20 +665,6 @@ def page_not_found_view(request, exception):
 def error_view(request):
     return render(request=request, template_name='events/error.html', status=500,
                   context={'code': '', 'msg': 'Ошибка сервера!'})
-
-
-class TestView(views.View):
-    @staticmethod
-    def get(request):
-        event = Event.objects.get(id=1)
-        data = services.get_results(event=event, full_results=True)
-        return render(
-            request=request,
-            template_name='events/test.html',
-            context={
-                'data': data,
-            }
-        )
 
 
 class CreateEventView(LoginRequiredMixin, views.View):

@@ -180,7 +180,7 @@ class AccentForm(forms.Form):
         self.helper.form_tag = False
         self.helper.disable_csrf = True
         self.helper.layout = Layout(
-            InlineRadios('accent', template='events/form-accent.html'),
+            InlineRadios('accent', template='events/snippets/sn-form-accent.html'),
         )
 
 
