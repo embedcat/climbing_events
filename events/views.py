@@ -122,13 +122,13 @@ class AdminProtocolsView(IsOwnerMixin, views.View):
         if 'export_result' in request.POST:
             return redirect('async_get_results', event_id)
         if 'qr_description' in request.POST:
-            url = request.build_absolute_uri(reverse('event', args=(event_id, )))
+            url = request.build_absolute_uri(reverse('event', args=(event_id,)))
             return services.qr_create(text=url, title='qr_event')
         if 'qr_register' in request.POST:
-            url = request.build_absolute_uri(reverse('registration', args=(event_id, )))
+            url = request.build_absolute_uri(reverse('registration', args=(event_id,)))
             return services.qr_create(text=url, title='qr_registration')
         if 'qr_enter' in request.POST:
-            url = request.build_absolute_uri(reverse('enter_results', args=(event_id, )))
+            url = request.build_absolute_uri(reverse('enter_results', args=(event_id,)))
             return services.qr_create(text=url, title='qr_enter_results')
         return redirect('admin_protocols', event_id)
 
@@ -692,3 +692,17 @@ class CreateEventView(LoginRequiredMixin, views.View):
                     'form': CreateEventForm(request.POST),
                 }
             )
+
+
+class AboutView(views.View):
+    @staticmethod
+    def get(request):
+        return render(request=request,
+                      template_name='events/profile/about.html')
+
+
+class HelpView(LoginRequiredMixin, views.View):
+    @staticmethod
+    def get(request):
+        return render(request=request,
+                      template_name='events/profile/help.html')

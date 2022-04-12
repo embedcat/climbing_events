@@ -27,6 +27,8 @@ urlpatterns = [
 
     path('create/', views.CreateEventView.as_view(), name='create'),
     path('my_events/', views.MyEventsView.as_view(), name='my_events'),
+    path('about/', views.AboutView.as_view(), name='about'),
+    path('help/', views.HelpView.as_view(), name='help'),
 
     path('ajax/check_pin_code/', views.check_pin_code, name='check_pin_code'),
 
