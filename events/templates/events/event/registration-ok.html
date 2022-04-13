@@ -1,9 +1,7 @@
 {% extends 'events/event/base.html' %}
-{% load crispy_forms_tags %}
-{% load static %}
 {% block title %}
 <div class="text-center">
-<img src="{% static 'events/img/check.png' %}" alt="OK" width="25px"><span class="ml-2">Регистрация завершена</span>
+<i class="fa-solid fa-circle-check text-success"></i><span class="ml-2">Регистрация завершена</span>
 </div>
 {% endblock %}
 

@@ -3,8 +3,13 @@
 {% block nav-staff %} {% include 'events/snippets/sn-nav-staff.html' %}{% endblock %}
 
 {% block container %}
-<div class="container-fluid">
-  <h4 class="mt-4">{% block title %} {% endblock title %}</h4>
+<div class="container">
+  <h4 class="mt-4"></h4>
+  <ol class="breadcrumb mb-4">
+    <li class="breadcrumb-item active">
+      <h3>{% block title %} {% endblock title %}</h3>
+    </li>
+  </ol>
 
   <section class="tab-pane fade show active">
     {% block body %} {% endblock body %}
