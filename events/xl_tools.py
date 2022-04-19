@@ -89,5 +89,4 @@ def export_result(event: Event):
     if not os.path.exists(path=path):
         os.mkdir(path)
     file = os.path.join(path, f"results_{datetime.today().strftime('%Y-%m-%d-%H%M%S')}.xlsx")
-    print(file)
     book.save(file)

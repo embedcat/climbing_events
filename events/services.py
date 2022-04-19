@@ -92,6 +92,7 @@ def update_event_settings(event: Event, cd: dict) -> None:
     event.is_view_route_grade = cd['is_view_route_grade']
     event.is_view_route_score = cd['is_view_route_score']
     event.is_separate_score_by_groups = cd['is_separate_score_by_groups']
+    event.is_update_results_after_enter = cd['is_update_results_after_enter']
     event.score_type = cd['score_type']
     event.flash_points = cd['flash_points']
     event.redpoint_points = cd['redpoint_points']
@@ -231,6 +232,7 @@ def register_participant(event: Event, cd: dict) -> Participant:
 def _clear_participant_score(participant: Participant) -> None:
     participant.score = 0
     participant.accents = {}
+    participant.is_entered_result = False
     participant.save()
 
 
@@ -282,7 +284,7 @@ def update_results(event: Event):
             _update_results(event=event, gender=gender, group_index=group_index)
 
 
-def enter_results(event: Event, participant: Participant, accents_cleaned_data: dict):
+def enter_results(event: Event, participant: Participant, accents_cleaned_data: list, force_update: bool = False):
     # save participant accents:
     accents = dict()
     for index, accent in enumerate(accents_cleaned_data):
@@ -292,7 +294,8 @@ def enter_results(event: Event, participant: Participant, accents_cleaned_data: 
     participant.is_entered_result = True
     participant.save()
 
-    _update_results(event=event, gender=participant.gender, group_index=participant.group_index)
+    if event.is_update_results_after_enter or force_update:
+        _update_results(event=event, gender=participant.gender, group_index=participant.group_index)
 
 
 # ================================================
@@ -401,6 +404,12 @@ def _debug_create_random_participant(event: Event) -> Participant:
 def debug_create_participants(event: Event, num: int) -> None:
     for i in range(num):
         _debug_create_random_participant(event=event)
+
+
+def debug_apply_random_results(event: Event) -> None:
+    for participant in event.participant.all():
+        accents = [{'accent': random.choice(['FL', 'RP', 'NO'])} for _ in range(event.routes_num)]
+        enter_results(event=event, participant=participant, accents_cleaned_data=accents)
 
 
 # ================================================

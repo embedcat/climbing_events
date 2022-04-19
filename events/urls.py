@@ -14,6 +14,7 @@ urlpatterns = [
     path('e/<int:event_id>/admin_protocols/<str:file>/remove', views.ProtocolRemove.as_view(), name='protocol_remove'),
     path('async_get_results/<int:event_id>/', views.async_get_results, name='async_get_results'),
     path('e/<int:event_id>/enter/', views.EnterResultsView.as_view(), name='enter_results'),
+    path('e/<int:event_id>/enter_ok/', views.EnterResultsOKView.as_view(), name='enter_results_ok'),
     path('e/<int:event_id>/enter_wo_reg/', views.EnterWithoutReg.as_view(), name='enter_wo_reg'),
     path('e/<int:event_id>/results/', views.ResultsView.as_view(), name='results'),
     path('e/<int:event_id>/participants/', views.ParticipantsView.as_view(), name='participants'),

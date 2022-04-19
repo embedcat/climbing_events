@@ -83,6 +83,8 @@ class AdminActionsView(IsOwnerMixin, views.View):
         if 'remove_event' in request.POST:
             services.remove_event(event=event)
             return redirect('my_events')
+        if 'test' in request.POST:
+            services.debug_apply_random_results(event=event)
         return redirect('admin_actions', event_id)
 
 
@@ -262,7 +264,7 @@ class EnterResultsView(views.View):
                                    accents_cleaned_data=accent_formset.cleaned_data)
 
             logger.info('-> update participant accents')
-            return redirect('enter_results', event_id=event_id)
+            return redirect('enter_results_ok', event_id=event_id)
         logger.warning(f'-> {participant_form} or {accent_formset} are not valid')
         return render(
             request=request,
@@ -272,6 +274,19 @@ class EnterResultsView(views.View):
                 'formset': accent_formset,
                 'participant_form': participant_form,
                 'routes': event.route.all().order_by('number'),
+            }
+        )
+
+
+class EnterResultsOKView(views.View):
+    @staticmethod
+    def get(request, event_id):
+        event = Event.objects.get(id=event_id)
+        return render(
+            request=request,
+            template_name='events/event/enter-ok.html',
+            context={
+                'event': event,
             }
         )
 
@@ -321,7 +336,7 @@ class EnterWithoutReg(views.View):
             services.enter_results(event=event,
                                    participant=participant,
                                    accents_cleaned_data=accent_formset.cleaned_data)
-            return redirect('results', event_id=event_id)
+            return redirect('enter_results_ok', event_id=event_id)
         return render(
             request=request,
             template_name='events/event/enter-wo-reg.html',
@@ -577,7 +592,8 @@ class ParticipantRoutesView(IsOwnerMixin, views.View):
         if accent_formset.is_valid():
             services.enter_results(event=event,
                                    participant=participant,
-                                   accents_cleaned_data=accent_formset.cleaned_data)
+                                   accents_cleaned_data=accent_formset.cleaned_data,
+                                   force_update=True)
             return redirect('results', event_id=event_id)
         return render(
             request=request,

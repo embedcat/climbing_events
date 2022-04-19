@@ -17,8 +17,10 @@
 
 <nav>
   <div class="nav nav-tabs" id="nav-tab" role="tablist">
-    <a class="nav-link active" id="list-tab" data-bs-toggle="tab" href="#tabList" role="tab" aria-controls="tabList" aria-selected="true">Список</a>
-    <a class="nav-link" id="stat-tab" data-bs-toggle="tab" href="#tabStat" role="tab" aria-controls="tabStat" aria-selected="false">Статистика</a>
+    <a class="nav-link active" id="list-tab" data-bs-toggle="tab" href="#tabList" role="tab" aria-controls="tabList"
+       aria-selected="true">Список</a>
+    <a class="nav-link" id="stat-tab" data-bs-toggle="tab" href="#tabStat" role="tab" aria-controls="tabStat"
+       aria-selected="false">Статистика</a>
   </div>
 </nav>
 <div class="tab-content" id="myTabContent">
@@ -32,7 +34,7 @@
       <tr>
         <th data-field="num" data-sortable="true" style="width:10%">#</th>
         <th data-field="name" dattable-lighta-sortable="true">Участник</th>
-                {% if user == event.owner or user.is_superuser %}
+        {% if user == event.owner or user.is_superuser %}
         <th>Pin</th>
         {% endif %}
         {% if 'gender' in fields %}
@@ -64,7 +66,8 @@
         <td>{{ forloop.counter }}</td>
         <td>
           {{ participant.last_name }} {{ participant.first_name }}
-                    {% if user == event.owner or user.is_superuser %}
+          {% if user == event.owner or user.is_superuser %}
+          <span title="Результат {% if not participant.is_entered_result %}не {% endif %}введён"><i class="fa-solid fa-check {% if participant.is_entered_result %} text-success {% else %} text-danger {% endif %}"></i></span>
           <span class="small"><em><a href="{% url 'participant' event.id participant.id %}">(ред.)</a></em></span>
           {% endif %}
         </td>
@@ -120,6 +123,7 @@ var group_data = JSON.parse("{{ chart_group_data|escapejs }}");
 drawDoughnutChart("groupChart", group_data);
 var city_data = JSON.parse("{{ chart_city_data|escapejs }}");
 drawDoughnutChart("cityChart", city_data);
+
 
 
     </script>

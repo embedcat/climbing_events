@@ -134,6 +134,6 @@ dmypy.json
 /static/
 /config/maintenance_mode_state.txt
 /media/
-/events/protocols/
+/events/protocols/*
 *.backup
 
