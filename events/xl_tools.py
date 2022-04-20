@@ -1,3 +1,4 @@
+import operator
 import os
 from datetime import datetime
 
@@ -29,7 +30,9 @@ def export_participants_to_start_list(event: Event):
         sheet = book.copy_worksheet(book.worksheets[0])
         sheet.title = f'Сет {set_no + 1}'
         sheet.cell(row=5, column=1).value = sheet.title
-        for index, p in enumerate(event.participant.filter(set_index=set_no).order_by('last_name')):
+        queryset = event.participant.filter(set_index=set_no)
+        participants = sorted(queryset, key=operator.attrgetter('last_name'))
+        for index, p in enumerate(participants):
             sheet.cell(row=ROW_OFFSET + index, column=1).value = index + 1
             sheet.cell(row=ROW_OFFSET + index, column=2).value = f'{p.last_name} {p.first_name}'
             sheet.cell(row=ROW_OFFSET + index, column=3).value = p.birth_year
