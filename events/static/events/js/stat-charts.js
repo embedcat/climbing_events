@@ -2,7 +2,8 @@
 Chart.defaults.global.defaultFontFamily = '-apple-system,system-ui,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif';
 Chart.defaults.global.defaultFontColor = '#292b2c';
 
-backgroundColors = ['#0d6efd', '#ffc107', '#dc3545', '#198754', '#d63384', '#6f42c1', '#0dcaf0', '#fd7e14', '#20c997', '#6610f2'];
+backgroundColors = ['#0d6efd', '#ffc107', '#dc3545', '#198754', '#d63384', '#6f42c1', '#0dcaf0', '#fd7e14', '#20c997', '#6610f2',
+                    '#80ff33', '#e933ff', '#ffdc33', '#ff4233', '#336aff', '#ff33cd'];
 
 function drawBarChart(id, data) {
     var ctx = document.getElementById(id);

@@ -122,10 +122,7 @@ drawBarChart("setChart", set_data);
 var group_data = JSON.parse("{{ chart_group_data|escapejs }}");
 drawDoughnutChart("groupChart", group_data);
 var city_data = JSON.parse("{{ chart_city_data|escapejs }}");
-drawDoughnutChart("cityChart", city_data);
-
-
-
+drawBarChart("cityChart", city_data);
     </script>
   </div>
 </div>

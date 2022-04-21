@@ -383,6 +383,7 @@ class ParticipantsView(views.View):
         }
         cities = Participant.objects.filter(event__id=event_id).values('city').order_by('-city').annotate(
             num=Count('city'))
+        cities = sorted(cities, key=operator.itemgetter('num'), reverse=True)
         chart_city_data = {
             'labels': [str(city['city']) for city in cities],
             'data': [city['num'] for city in cities],
