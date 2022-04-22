@@ -22,7 +22,7 @@
     {% if event.is_view_route_color %}
     <td>
       <span
-          style="width: 25px; height: 25px; margin:auto; display: inline-block; border: 1px solid gray; vertical-align: middle; border-radius: 4px; background:{{ route.color }}"></span>
+              style="width: 25px; height: 25px; margin:auto; display: inline-block; border: 1px solid gray; vertical-align: middle; border-radius: 4px; background:{{ route.color }}"></span>
     </td>
     {% endif %}
     {% if event.is_view_route_grade %}
@@ -34,5 +34,6 @@
   </tbody>
 </table>
 <div class="form-actions">
-  <input class="btn btn-primary" id="submit-save" name="submit" type="submit" value="Сохранить результат">
+  <input class="btn btn-primary" id="submit-save" name="submit" type="submit" value="Сохранить результат"
+         onclick="return confirm_action();">
 </div>
