@@ -24,7 +24,7 @@
   {% endif %}
   {% for d in sorted_bunch %}
   <tr>
-    <td>{{ forloop.counter }}</td>
+    <td>{{ d.participant.place }}</td>
     <td>
       {{ d.participant.last_name }} {{ d.participant.first_name }}
       {% if user == event.owner or user.is_superuser %}

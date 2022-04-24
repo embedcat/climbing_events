@@ -1,4 +1,5 @@
 import io
+import operator
 import os
 import random
 import string
@@ -284,6 +285,14 @@ def _update_results(event: Event, gender: Participant.GENDERS, group_index: int)
     # update all participants in group:
     for p in participants:
         _update_participant_score(event=event, participant=p, routes=routes, json_key=json_key)
+
+    # update participant place:
+    participants = sorted(participants, key=operator.attrgetter("score"), reverse=True)
+    for index, p in enumerate(participants):
+        p.place = index + 1
+        if index != 0 and participants[index-1].score == p.score:
+            p.place = participants[index-1].place
+        p.save()
 
 
 def update_results(event: Event):

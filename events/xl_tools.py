@@ -71,7 +71,7 @@ def export_result(event: Event):
             sheet = book.copy_worksheet(book.worksheets[0])
             sheet.title = title
             for index, p in enumerate(participants):
-                sheet.cell(row=ROW_OFFSET + index, column=1).value = index + 1
+                sheet.cell(row=ROW_OFFSET + index, column=1).value = p['participant'].place
                 sheet.cell(row=ROW_OFFSET + index,
                            column=2).value = f"{p['participant'].last_name} {p['participant'].first_name}"
                 sheet.cell(row=ROW_OFFSET + index, column=3).value = p['participant'].birth_year

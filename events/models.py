@@ -116,6 +116,7 @@ class Participant(models.Model):
     set_index = models.IntegerField(default=0)
 
     accents = models.JSONField(default=_get_blank_json)
+    place = models.IntegerField(default=0)
 
     def __str__(self):
         return f'<Part-t: Name={self.last_name}, PIN={self.pin}, Score={self.score}, set={self.set_index}>'
