@@ -358,7 +358,7 @@ class ResultsView(views.View):
             template_name='events/event/results.html',
             context={
                 'event': event,
-                'routes': range(1, event.routes_num + 1),
+                'routes': event.route.all(),
                 'male': results[Participant.GENDER_MALE],
                 'female': results[Participant.GENDER_FEMALE],
             }

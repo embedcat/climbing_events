@@ -5,14 +5,23 @@
     <th style="width:10%">Место</th>
     <th>Участник</th>
     {% if event.is_view_full_results %}
-    {% for i in routes %}
-    <th>T#{{i}}</th>
+    {% for route in routes %}
+    <th>T#{{ forloop.counter }}</th>
     {% endfor %}
     {% endif %}
     <th>Результат</th>
   </tr>
   </thead>
   <tbody>
+  {% if event.is_view_full_results and event.is_view_route_grade %}
+  <tr>
+    <td></td>
+    <td></td>
+    {% for route in routes %}
+    <td><small><em>{{ route.grade }}</em></small></td>
+    {% endfor %}
+  </tr>
+  {% endif %}
   {% for d in sorted_bunch %}
   <tr>
     <td>{{ forloop.counter }}</td>
@@ -35,7 +44,7 @@
     <td></td>
     <td>FL/RP:</td>
     {% for score in routes_score %}
-    <td>{{ score }}</td>
+    <td><small><em>{{ score }}</em></small></td>
     {% endfor %}
     <td></td>
   </tr>
