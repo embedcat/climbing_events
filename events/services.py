@@ -163,6 +163,10 @@ def get_set_list_for_change_available(event: Event, participant: Participant) ->
 
 
 def update_participant(event: Event, participant: Participant, cd: dict) -> Participant:
+    current_group_index = participant.group_index
+    new_group_index = get_group_list(event=event).index(cd['group_index']) if 'group_index' in cd else 0
+    need_update_results = 'group_index' in cd and current_group_index != new_group_index
+
     participant.event = event
     participant.first_name = cd['first_name']
     participant.last_name = cd['last_name']
@@ -171,9 +175,13 @@ def update_participant(event: Event, participant: Participant, cd: dict) -> Part
     participant.city = cd[Event.FIELD_CITY] if Event.FIELD_CITY in cd else ''
     participant.team = cd[Event.FIELD_TEAM] if Event.FIELD_TEAM in cd else ''
     participant.grade = cd[Event.FIELD_GRADE] if Event.FIELD_GRADE in cd else Participant.GRADE_BR
-    participant.group_index = get_group_list(event=event).index(cd['group_index']) if 'group_index' in cd else 0
+    participant.group_index = new_group_index
     participant.set_index = get_set_list(event=event).index(cd['set_index']) if 'set_index' in cd else 0
     participant.save()
+
+    if need_update_results:
+        _update_results(event=event, gender=participant.gender, group_index=current_group_index)
+        _update_results(event=event, gender=participant.gender, group_index=new_group_index)
     return participant
 
 
