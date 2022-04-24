@@ -7,3 +7,4 @@ python manage.py migrate
 python manage.py collectstatic --noinput
 systemctl restart gunicorn
 python manage.py maintenance_mode off
+deactivate
