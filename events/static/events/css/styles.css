@@ -10255,3 +10255,12 @@ body {
 .sb-sidenav-light .sb-sidenav-footer {
   background-color: #e9ecef;
 }
+
+.accent_- {
+}
+.accent_F {
+    background-color: #D8F2FF !important;
+}
+.accent_RP {
+    background-color: #FFFED6 !important;
+}

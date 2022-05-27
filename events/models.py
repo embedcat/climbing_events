@@ -179,8 +179,8 @@ class Route(models.Model):
         return f'N={self.number}, score={self.score_json}'
 
 
-ACCENT_NO = 'NO'
-ACCENT_FLASH = 'FL'
+ACCENT_NO = '-'
+ACCENT_FLASH = 'F'
 ACCENT_REDPOINT = 'RP'
 ACCENT_TYPE = [
     (ACCENT_NO, 'NO'),

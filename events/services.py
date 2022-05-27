@@ -425,7 +425,7 @@ def debug_create_participants(event: Event, num: int) -> None:
 
 def debug_apply_random_results(event: Event) -> None:
     for participant in event.participant.all():
-        accents = [{'accent': random.choice(['FL', 'RP', 'NO'])} for _ in range(event.routes_num)]
+        accents = [{'accent': random.choice(['F', 'RP', '-'])} for _ in range(event.routes_num)]
         enter_results(event=event, participant=participant, accents_cleaned_data=accents)
 
 
