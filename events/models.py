@@ -69,6 +69,8 @@ class Event(models.Model):
     required_fields = MultiSelectField(choices=REQUIRED_FIELDS, default=None, null=True, blank=True)
     is_without_registration = models.BooleanField(default=False)
     is_view_pin_after_registration = models.BooleanField(default=True)
+    is_check_result_before_enter = models.BooleanField(default=False)
+    is_update_result_allowed = models.BooleanField(default=True)
 
 
 class Participant(models.Model):

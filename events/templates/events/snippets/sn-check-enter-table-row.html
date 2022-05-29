@@ -1,0 +1,19 @@
+<thead class="table-dark">
+<tr>
+  {% for cell in cells %}
+  <th>
+    #{{ cell.num }} {% if event.is_view_route_grade %}({{ cell.grade }}){% endif %}
+  </th>
+  {% endfor %}
+</tr>
+</thead>
+
+<tbody>
+<tr>
+  {% for cell in cells %}
+  <td class="align-middle accent_{{ cell.result }}">
+    {{ cell.result }}
+  </td>
+  {% endfor %}
+</tr>
+</tbody>

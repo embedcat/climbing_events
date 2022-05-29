@@ -225,10 +225,15 @@ class AdminSettingsView(IsOwnerMixin, views.View):
 class EnterResultsView(views.View):
     @staticmethod
     def get(request, event_id):
+        saved_accents = request.session.pop("accents", None)
+        pin = request.session.pop("pin", None)
         event = Event.objects.get(id=event_id)
         if event.is_without_registration:
             return redirect('enter_wo_reg', event_id=event_id)
-        initial = [{'label': i, 'accent': ACCENT_NO} for i in range(event.routes_num)]
+        if pin and len(saved_accents) == event.routes_num:
+            initial = [{'label': i, 'accent': accent} for i, accent in saved_accents.items()]
+        else:
+            initial = [{'label': i, 'accent': ACCENT_NO} for i in range(event.routes_num)]
         AccentFormSet = formset_factory(AccentForm, extra=0)
         formset = AccentFormSet(initial=initial, prefix='accents')
         return render(
@@ -239,6 +244,7 @@ class EnterResultsView(views.View):
                 'formset': formset,
                 'participant_form': AccentParticipantForm(prefix='participant'),
                 'routes': event.route.all().order_by('number'),
+                'pin': pin
             }
         )
 
@@ -250,6 +256,7 @@ class EnterResultsView(views.View):
         accent_formset = AccentFormSet(request.POST, prefix='accents')
         logger.info('Enter Result [POST] ->')
         if participant_form.is_valid() and accent_formset.is_valid():
+            entered_results = services.accent_form_to_results(form_cleaned_data=accent_formset.cleaned_data)
             pin = participant_form.cleaned_data['pin']
             logger.info(f'-> pin={pin} ->')
             try:
@@ -259,9 +266,14 @@ class EnterResultsView(views.View):
                 return redirect('enter_results', event_id=event_id)
             logger.info(f'-> participant found: [{participant}] ->')
 
+            if event.is_check_result_before_enter:
+                request.session['pin'] = pin
+                request.session['accents'] = entered_results
+                return redirect('enter_check', event_id=event_id)
+
             services.enter_results(event=event,
                                    participant=participant,
-                                   accents_cleaned_data=accent_formset.cleaned_data)
+                                   accents=entered_results)
 
             logger.info('-> update participant accents')
             return redirect('enter_results_ok', event_id=event_id)
@@ -276,6 +288,53 @@ class EnterResultsView(views.View):
                 'routes': event.route.all().order_by('number'),
             }
         )
+
+
+class EnterCheckView(views.View):
+    @staticmethod
+    def get(request, event_id):
+        event = Event.objects.get(id=event_id)
+        routes = event.route.all().order_by('number')
+        result = request.session.get("accents")
+        temp, items = [], []
+        for i, route in enumerate(routes):
+            temp.append({
+                'num': route.number,
+                'grade': route.grade,
+                'result': result.get(str(i), ACCENT_NO),
+            })
+        for i in range(0, event.routes_num, 5):
+            items.append(temp[i:i+5])
+        return render(
+            request=request,
+            template_name='events/event/enter-check.html',
+            context={
+                'event': event,
+                'items': items,
+            }
+        )
+
+    @staticmethod
+    def post(request, event_id):
+        event = Event.objects.get(id=event_id)
+        if 'cancel' in request.POST:
+            return redirect('enter_results', event_id=event_id)
+        if 'submit' in request.POST:
+            result = request.session.pop("accents", None)
+            pin = request.session.pop("pin", None)
+            try:
+                participant = event.participant.get(pin=int(pin))
+            except (Participant.DoesNotExist, TypeError):
+                logger.warning('-> Participant not found')
+                return redirect('enter_results', event_id=event_id)
+            logger.info(f'-> participant found: [{participant}] ->')
+
+            services.enter_results(event=event,
+                                   participant=participant,
+                                   accents=result)
+
+            logger.info('-> update participant accents')
+            return redirect('enter_results_ok', event_id=event_id)
 
 
 class EnterResultsOKView(views.View):
@@ -335,7 +394,7 @@ class EnterWithoutReg(views.View):
             participant = services.register_participant(event=event, cd=form.cleaned_data)
             services.enter_results(event=event,
                                    participant=participant,
-                                   accents_cleaned_data=accent_formset.cleaned_data)
+                                   accents=services.accent_form_to_results(form_cleaned_data=accent_formset.cleaned_data))
             return redirect('enter_results_ok', event_id=event_id)
         return render(
             request=request,
@@ -593,7 +652,7 @@ class ParticipantRoutesView(IsOwnerMixin, views.View):
         if accent_formset.is_valid():
             services.enter_results(event=event,
                                    participant=participant,
-                                   accents_cleaned_data=accent_formset.cleaned_data,
+                                   accents=services.accent_form_to_results(form_cleaned_data=accent_formset.cleaned_data),
                                    force_update=True)
             return redirect('results', event_id=event_id)
         return render(
@@ -666,9 +725,12 @@ def check_pin_code(request):
     event_id = request.GET.get('event_id')
     try:
         participant = Participant.objects.get(pin=pin, event__id=event_id)
-        response = {'Find': True, 'participant': f'{participant.first_name} {participant.last_name}'}
+        if participant.is_entered_result and not Event.objects.get(id=event_id).is_update_result_allowed:
+            response = {'result': False, 'reason': f'Найден участник: {participant.first_name} {participant.last_name}, но повторный ввод результатов запрещён.'}
+        else:
+            response = {'result': True, 'participant': f'{participant.first_name} {participant.last_name}', 'accents': participant.accents}
     except Participant.DoesNotExist:
-        response = {'Find': False}
+        response = {'result': False, 'reason': 'Участник не найден. Проверьте PIN-код, или <a href="{% url \'registration\' event.id %}">зарегистрируйтесь</a>!'}
     return JsonResponse(response)
 
 

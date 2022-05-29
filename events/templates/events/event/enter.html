@@ -20,15 +20,14 @@
                                           {{ event.id }},
                                           this.value)"
                          type="text"
-                         maxlength="4"></div>
+                         maxlength="4"
+                         {% if pin %}value="{{ pin }}"{% endif %}></div>
   </div>
   <div class="alert alert-success" id="alert-ok" role="alert" style="display: none;">
-    Найден участник:
   </div>
   <div class="alert alert-danger" id="alert-error" role="alert" style="display: none;">
-    Участник не найден. Проверьте PIN-код, или <a href="{% url 'registration' event.id %}">зарегистрируйтесь</a>
   </div>
-  <div id="enter-result-form" style="display:none">
+  <div id="enter-result-form" {% if not pin %} style="display:none" {% endif %}>
   {{ formset.management_form }}
   {% include 'events/snippets/sn-enter-form.html' %}
   </div>

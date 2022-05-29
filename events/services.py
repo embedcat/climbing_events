@@ -106,6 +106,8 @@ def update_event_settings(event: Event, cd: dict) -> None:
     event.required_fields = cd['required_fields']
     event.is_without_registration = cd['is_without_registration']
     event.is_view_pin_after_registration = cd['is_view_pin_after_registration']
+    event.is_check_result_before_enter = cd['is_check_result_before_enter']
+    event.is_update_result_allowed = cd['is_update_result_allowed']
 
     event.save()
 
@@ -301,12 +303,8 @@ def update_results(event: Event):
             _update_results(event=event, gender=gender, group_index=group_index)
 
 
-def enter_results(event: Event, participant: Participant, accents_cleaned_data: list, force_update: bool = False):
+def enter_results(event: Event, participant: Participant, accents: dict, force_update: bool = False):
     # save participant accents:
-    accents = dict()
-    for index, accent in enumerate(accents_cleaned_data):
-        accents.update({f'{index}': accent['accent']})
-
     participant.accents = accents
     participant.is_entered_result = True
     participant.save()
@@ -436,6 +434,10 @@ def debug_apply_random_results(event: Event) -> None:
 
 def get_maintenance_context(request):
     return {'code': '', 'msg': 'Сервер на обслуживании'}
+
+
+def accent_form_to_results(form_cleaned_data: list) -> dict:
+    return {i: accent.get('accent') for i, accent in enumerate(form_cleaned_data)}
 
 
 # ================================================
