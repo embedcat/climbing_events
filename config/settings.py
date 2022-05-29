@@ -142,6 +142,8 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = 'media'
 MEDIA_POSTERS_DIR = 'posters'
 
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
 LOGGER = 'EventLogger'

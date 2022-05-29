@@ -88,6 +88,8 @@ def export_result(event: Event):
                 sheet.cell(row=ROW_OFFSET + index, column=8 + len(p['accents'])).value = p['score']
 
     book.remove(book.worksheets[0])
+    if not os.path.exists(path=settings.PROTOCOLS_PATH):
+        os.mkdir(settings.PROTOCOLS_PATH)
     path = os.path.join(settings.PROTOCOLS_PATH, f'{event.id}')
     if not os.path.exists(path=path):
         os.mkdir(path)
