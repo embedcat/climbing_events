@@ -69,6 +69,8 @@ class Event(models.Model):
     required_fields = MultiSelectField(choices=REQUIRED_FIELDS, default=None, null=True, blank=True)
     is_without_registration = models.BooleanField(default=False)
     is_view_pin_after_registration = models.BooleanField(default=True)
+    is_check_result_before_enter = models.BooleanField(default=False)
+    is_update_result_allowed = models.BooleanField(default=True)
 
 
 class Participant(models.Model):
@@ -179,8 +181,8 @@ class Route(models.Model):
         return f'N={self.number}, score={self.score_json}'
 
 
-ACCENT_NO = 'NO'
-ACCENT_FLASH = 'FL'
+ACCENT_NO = '-'
+ACCENT_FLASH = 'F'
 ACCENT_REDPOINT = 'RP'
 ACCENT_TYPE = [
     (ACCENT_NO, 'NO'),

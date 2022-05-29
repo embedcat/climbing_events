@@ -1,5 +1,5 @@
 <h4>{{ caption }}</h4>
-<table class="table table-sm table-striped table-bordered">
+<table class="table table-sm table-bordered">
   <thead class="table-dark">
   <tr>
     <th style="width:10%">Место</th>
@@ -24,7 +24,7 @@
   {% endif %}
   {% for d in sorted_bunch %}
   <tr>
-    <td>{{ d.participant.place }}</td>
+    <td class="align-middle">{{ d.participant.place }}</td>
     <td>
       {{ d.participant.last_name }} {{ d.participant.first_name }}
       {% if user == event.owner or user.is_superuser %}
@@ -33,10 +33,10 @@
     </td>
     {% if event.is_view_full_results %}
     {% for accent in d.accents %}
-    <td>{{ accent }}</td>
+    <td class="align-middle accent_{{ accent }}"><p class="text-center">{{ accent }}</p></td>
     {% endfor %}
     {% endif %}
-    <td>{{ d.score }}</td>
+    <td class="align-middle">{{ d.score }}</td>
   </tr>
   {% endfor %}
   {% if event.is_view_full_results and event.is_view_route_score %}

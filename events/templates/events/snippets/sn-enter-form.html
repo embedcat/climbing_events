@@ -35,5 +35,5 @@
 </table>
 <div class="form-actions">
   <input class="btn btn-primary" id="submit-save" name="submit" type="submit" value="Сохранить результат"
-         onclick="return confirm_action();">
+         {% if not event.is_check_result_before_enter %} onclick="return confirm_action();" {% endif %}>
 </div>
