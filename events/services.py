@@ -25,6 +25,7 @@ def create_event(owner: get_user_model(), title: str, date: datetime) -> Event:
     create_event_routes(event=event)
     return event
 
+
 # ================================================
 # =================== Utils ======================
 # ================================================
@@ -116,6 +117,7 @@ def update_event_settings(event: Event, cd: dict) -> None:
         clear_results(event=event)
         remove_routes(event=event)
         create_event_routes(event=event)
+
 
 # ================================================
 # =================== Routes =====================
@@ -292,8 +294,8 @@ def _update_results(event: Event, gender: Participant.GENDERS, group_index: int)
     participants = sorted(participants, key=operator.attrgetter("score"), reverse=True)
     for index, p in enumerate(participants):
         p.place = index + 1
-        if index != 0 and participants[index-1].score == p.score:
-            p.place = participants[index-1].place
+        if index != 0 and participants[index - 1].score == p.score:
+            p.place = participants[index - 1].place
         p.save()
 
 
