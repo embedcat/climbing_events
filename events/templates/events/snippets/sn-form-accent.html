@@ -1,12 +1,12 @@
 {% load crispy_forms_filters %}
 {% load l10n %}
-<div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+<div class="btn-group" role="group" aria-label="Basic radio toggle button group" style="height: 45px;">
     {% for choice in field.field.choices %}
         <input type="radio" class="btn-check custom-control-input" name="{{ field.html_name }}"
                id="id_{{ field.html_name }}_{{ forloop.counter }}" value="{{ choice.0|unlocalize }}" autocomplete="off"
                {% if choice.0|stringformat:"s" == field.value|default_if_none:""|stringformat:"s" %} checked="checked"{% endif %}>
         <label for="id_{{ field.html_name }}_{{ forloop.counter }}"
-               class="btn py-0 my-0
+               class="btn d-inline-flex align-items-center my-0
                {% if choice.0 == '-' %} btn-outline-secondary{% endif %}
                {% if choice.0 == 'F' %} btn-outline-success{% endif %}
                {% if choice.0 == 'RP' %} btn-outline-primary{% endif %}

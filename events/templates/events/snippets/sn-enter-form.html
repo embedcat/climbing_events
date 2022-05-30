@@ -18,17 +18,17 @@
   <tbody>
   {% for form, route in formset|zip:routes %}
   <tr>
-    <td>{{ route.number }}</td>
+    <td class="align-middle">{{ route.number }}</td>
     {% if event.is_view_route_color %}
-    <td>
+    <td class="align-middle">
       <span
               style="width: 25px; height: 25px; margin:auto; display: inline-block; border: 1px solid gray; vertical-align: middle; border-radius: 4px; background:{{ route.color }}"></span>
     </td>
     {% endif %}
     {% if event.is_view_route_grade %}
-    <td>{{ route.grade }}</td>
+    <td class="align-middle">{{ route.grade }}</td>
     {% endif %}
-    <td>{% crispy form %}</td>
+    <td class="align-middle">{% crispy form %}</td>
   </tr>
   {% endfor %}
   </tbody>
