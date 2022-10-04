@@ -6,6 +6,7 @@ import operator
 from asgiref.sync import sync_to_async
 from django import views
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import DataError
 from django.db.models import Count
 from django.forms import formset_factory, modelformset_factory
 from django.http import JsonResponse
@@ -484,6 +485,7 @@ class RegistrationView(views.View):
 
     @staticmethod
     def post(request, event_id):
+        error = None
         event = Event.objects.get(id=event_id)
         group_list = services.get_group_list(event=event)
         set_list = services.get_set_list(event=event)
@@ -496,11 +498,14 @@ class RegistrationView(views.View):
                                            is_enter_form=False)
         logger.info('Registration [POST] ->')
         if form.is_valid():
-            participant = services.register_participant(event=event, cd=form.cleaned_data)
-            if event.is_view_pin_after_registration:
-                return redirect('event_registration_ok', event_id=event_id, participant_id=participant.id)
-            else:
-                return redirect('participants', event_id=event_id)
+            try:
+                participant = services.register_participant(event=event, cd=form.cleaned_data)
+                if event.is_view_pin_after_registration:
+                    return redirect('event_registration_ok', event_id=event_id, participant_id=participant.id)
+                else:
+                    return redirect('participants', event_id=event_id)
+            except DataError:
+                error = "Такой участник уже зарегистрирован"
         logger.warning(f'-> registration failed, [{form}] is not valid')
         return render(
             request=request,
@@ -508,6 +513,7 @@ class RegistrationView(views.View):
             context={
                 'event': event,
                 'form': form,
+                'error': error,
             }
         )
 

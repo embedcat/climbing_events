@@ -7,6 +7,9 @@
 {% block body %}
 {% if event.is_published %}
   {% if event.is_registration_open %}
+    {% if error %}
+      {% include 'events/snippets/sn-card-banner.html' with message=error %}
+    {% endif %}
     {% crispy form %}
   {% else %}
     {% include 'events/snippets/sn-card-banner.html' with message='Регистрация закрыта' %}

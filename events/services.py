@@ -7,6 +7,7 @@ from datetime import datetime
 
 import segno
 from django.contrib.auth import get_user_model
+from django.db import DataError
 from django.db.models import QuerySet
 from django.http import HttpResponse
 
@@ -226,6 +227,8 @@ def _create_participant(event: Event, first_name: str, last_name: str,
 
 
 def register_participant(event: Event, cd: dict) -> Participant:
+    if event.participant.filter(first_name=cd['first_name'], last_name=cd['last_name']).count():
+        raise DataError
     participant = _create_participant(
         event=event,
         first_name=cd['first_name'],
