@@ -6,7 +6,6 @@ import operator
 from asgiref.sync import sync_to_async
 from django import views
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db import DataError
 from django.db.models import Count
 from django.forms import formset_factory, modelformset_factory
 from django.http import JsonResponse
@@ -14,6 +13,7 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 
 from config import settings
+from events.exceptions import DuplicateParticipantError, ParticipantTooYoungError
 from events.forms import ParticipantRegistrationForm, AdminDescriptionForm, AccentForm, AccentParticipantForm, \
     EventAdminSettingsForm, RouteEditForm, ParticipantForm, CreateEventForm
 from events.models import Event, Participant, Route, ACCENT_NO
@@ -470,6 +470,8 @@ class RegistrationView(views.View):
             return redirect('enter_results', event_id=event_id)
         group_list = services.get_group_list(event=event)
         set_list = services.get_set_list_for_registration_available(event=event)
+        registration_fields = services.get_registration_fields(event=event)
+        required_fields = services.get_registration_required_fields(event=event)
         return render(
             request=request,
             template_name='events/event/registration.html',
@@ -477,8 +479,8 @@ class RegistrationView(views.View):
                 'event': event,
                 'form': ParticipantRegistrationForm(group_list=group_list,
                                                     set_list=set_list,
-                                                    registration_fields=event.registration_fields,
-                                                    required_fields=event.required_fields,
+                                                    registration_fields=registration_fields,
+                                                    required_fields=required_fields,
                                                     is_enter_form=False)
             }
         )
@@ -489,12 +491,14 @@ class RegistrationView(views.View):
         event = Event.objects.get(id=event_id)
         group_list = services.get_group_list(event=event)
         set_list = services.get_set_list(event=event)
+        registration_fields = services.get_registration_fields(event=event)
+        required_fields = services.get_registration_required_fields(event=event)
         form = ParticipantRegistrationForm(request.POST,
                                            request.FILES,
                                            group_list=group_list,
                                            set_list=set_list,
-                                           registration_fields=event.registration_fields,
-                                           required_fields=event.required_fields,
+                                           registration_fields=registration_fields,
+                                           required_fields=required_fields,
                                            is_enter_form=False)
         logger.info('Registration [POST] ->')
         if form.is_valid():
@@ -504,8 +508,8 @@ class RegistrationView(views.View):
                     return redirect('event_registration_ok', event_id=event_id, participant_id=participant.id)
                 else:
                     return redirect('participants', event_id=event_id)
-            except DataError:
-                error = "Такой участник уже зарегистрирован"
+            except (DuplicateParticipantError, ParticipantTooYoungError) as e:
+                error = e
         logger.warning(f'-> registration failed, [{form}] is not valid')
         return render(
             request=request,

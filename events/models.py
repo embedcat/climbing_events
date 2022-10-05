@@ -71,6 +71,7 @@ class Event(models.Model):
     is_view_pin_after_registration = models.BooleanField(default=True)
     is_check_result_before_enter = models.BooleanField(default=False)
     is_update_result_allowed = models.BooleanField(default=True)
+    participant_min_age = models.IntegerField(default=0)
 
 
 class Participant(models.Model):

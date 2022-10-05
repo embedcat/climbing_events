@@ -135,6 +135,7 @@ class EventAdminSettingsForm(forms.ModelForm):
             'set_max_participants',
             'registration_fields',
             'required_fields',
+            'participant_min_age',
         ]
         labels = {
             'routes_num': 'Количество трасс',
@@ -163,6 +164,7 @@ class EventAdminSettingsForm(forms.ModelForm):
             'set_max_participants': 'Максимальное число участников в сете (0 - не ограничено)',
             'registration_fields': 'Дополнительные поля формы регистрации',
             'required_fields': 'Обязательные поля при регистрации',
+            'participant_min_age': 'Минимальный возраст участника',
         }
 
 

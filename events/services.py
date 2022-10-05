@@ -7,12 +7,12 @@ from datetime import datetime
 
 import segno
 from django.contrib.auth import get_user_model
-from django.db import DataError
 from django.db.models import QuerySet
 from django.http import HttpResponse
 
 from config import settings
 from events import xl_tools
+from events.exceptions import DuplicateParticipantError, ParticipantTooYoungError
 from events.models import Event, Route, Participant
 from events.models import ACCENT_NO, ACCENT_FLASH
 
@@ -110,6 +110,7 @@ def update_event_settings(event: Event, cd: dict) -> None:
     event.is_view_pin_after_registration = cd['is_view_pin_after_registration']
     event.is_check_result_before_enter = cd['is_check_result_before_enter']
     event.is_update_result_allowed = cd['is_update_result_allowed']
+    event.participant_min_age = cd['participant_min_age']
 
     event.save()
 
@@ -166,6 +167,20 @@ def get_set_list_for_change_available(event: Event, participant: Participant) ->
     else:
         set_list = set_list_all
     return set_list
+
+
+def get_registration_fields(event: Event) -> list:
+    registration_fields = event.registration_fields
+    if event.participant_min_age:
+        registration_fields.append(Event.FIELD_BIRTH_YEAR)
+    return registration_fields
+
+
+def get_registration_required_fields(event: Event) -> list:
+    required_fields = event.required_fields
+    if event.participant_min_age:
+        required_fields.append(Event.FIELD_BIRTH_YEAR)
+    return required_fields
 
 
 def update_participant(event: Event, participant: Participant, cd: dict) -> Participant:
@@ -227,8 +242,10 @@ def _create_participant(event: Event, first_name: str, last_name: str,
 
 
 def register_participant(event: Event, cd: dict) -> Participant:
-    if event.participant.filter(first_name=cd['first_name'], last_name=cd['last_name']).count():
-        raise DataError
+    if event.participant.filter(first_name=cd['first_name'], last_name=cd['last_name']):
+        raise DuplicateParticipantError
+    if datetime.today().year - cd[Event.FIELD_BIRTH_YEAR] < event.participant_min_age:
+        raise ParticipantTooYoungError(event.participant_min_age)
     participant = _create_participant(
         event=event,
         first_name=cd['first_name'],
