@@ -1,6 +1,6 @@
 from django.urls import path
 
-from events import views
+from events import views, pay_views
 
 urlpatterns = [
     path('', views.MainView.as_view(), name='main'),
@@ -29,10 +29,14 @@ urlpatterns = [
 
     path('create/', views.CreateEventView.as_view(), name='create'),
     path('my_events/', views.MyEventsView.as_view(), name='my_events'),
+    path('profile/', views.ProfileView.as_view(), name='profile'),
     path('about/', views.AboutView.as_view(), name='about'),
     path('help/', views.HelpView.as_view(), name='help'),
 
     path('ajax/check_pin_code/', views.check_pin_code, name='check_pin_code'),
+
+    path('pay/notify/', pay_views.NotifyView.as_view(), name='pay_notify'),
+    path('pay/<int:event_id>/<int:p_id>', pay_views.CreatePay.as_view(), name='pay_create'),
 
     path('test/', views.async_get_results, name='test'),
 ]

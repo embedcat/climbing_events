@@ -4,7 +4,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit, Layout
 from django import forms
 
-from events.models import Participant, Event, ACCENT_TYPE, Route
+from events.models import Participant, Event, ACCENT_TYPE, Route, CustomUser
 from tinymce.widgets import TinyMCE
 
 
@@ -40,6 +40,9 @@ class ParticipantRegistrationForm(forms.ModelForm):
         if Event.FIELD_GRADE in registration_fields:
             self.fields[Event.FIELD_GRADE] = forms.ChoiceField(choices=Participant.GRADES, label='Разряд',
                                                                required=False)
+        if Event.FIELD_EMAIL in registration_fields:
+            self.fields[Event.FIELD_EMAIL] = forms.EmailField(label='Email',
+                                                              required=Event.FIELD_EMAIL in required_fields)
 
         if group_list != ['']:
             self.fields['group_index'] = forms.ChoiceField(choices=tuple([(name, name) for name in group_list]),
@@ -136,6 +139,8 @@ class EventAdminSettingsForm(forms.ModelForm):
             'registration_fields',
             'required_fields',
             'participant_min_age',
+            'is_pay',
+            'price',
         ]
         labels = {
             'routes_num': 'Количество трасс',
@@ -165,6 +170,8 @@ class EventAdminSettingsForm(forms.ModelForm):
             'registration_fields': 'Дополнительные поля формы регистрации',
             'required_fields': 'Обязательные поля при регистрации',
             'participant_min_age': 'Минимальный возраст участника',
+            'is_pay': 'Оплачивать стартовые взносы на сайте',
+            'price': 'Стоимость участия',
         }
 
 
@@ -241,6 +248,7 @@ class ParticipantForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         group_list = kwargs.pop('group_list')
         set_list = kwargs.pop('set_list')
+        is_paid = kwargs.pop('is_paid')
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_method = 'post'
@@ -251,6 +259,9 @@ class ParticipantForm(forms.ModelForm):
         self.fields[Event.FIELD_CITY].required = False
         self.fields[Event.FIELD_TEAM].required = False
         self.fields[Event.FIELD_GRADE].required = False
+        self.fields[Event.FIELD_EMAIL].required = False
+        self.fields[Event.FIELD_EMAIL].widget.attrs['readonly'] = True
+
         if group_list:
             self.fields['group_index'] = forms.ChoiceField(choices=tuple([(name, name) for name in group_list]),
                                                            label='Категория',
@@ -259,6 +270,11 @@ class ParticipantForm(forms.ModelForm):
             self.fields['set_index'] = forms.ChoiceField(choices=tuple([(name, name) for name in set_list]),
                                                          label='Сет',
                                                          required=False)
+        if not is_paid:
+            del self.fields['paid']
+            # self.fields['paid'] = forms.ChoiceField(widget=forms.CheckboxInput, label='Оплачено', required=False)
+        print(f"{is_paid=}")
+        print(self.fields)
 
     class Meta:
         model = Participant
@@ -271,6 +287,8 @@ class ParticipantForm(forms.ModelForm):
             Event.FIELD_CITY,
             Event.FIELD_TEAM,
             Event.FIELD_GRADE,
+            Event.FIELD_EMAIL,
+            'paid',
         ]
 
 
@@ -293,4 +311,24 @@ class CreateEventForm(forms.ModelForm):
         }
         widgets = {
             'date': DatePickerInput(),
+        }
+
+
+class CustomUserForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.add_input(Submit('submit', 'Обновить'))
+
+    class Meta:
+        model = CustomUser
+        fields = [
+            'yoomoney_wallet_id',
+            'yoomoney_secret_key',
+        ]
+        labels = {
+            'yoomoney_wallet_id': 'Yoomoney-кошелек',
+            'yoomoney_secret_key': 'Секретный ключ кошелька (для уведомлений об оплате)',
+
         }

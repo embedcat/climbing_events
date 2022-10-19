@@ -6,6 +6,7 @@ import operator
 from asgiref.sync import sync_to_async
 from django import views
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.mail import send_mail
 from django.db.models import Count
 from django.forms import formset_factory, modelformset_factory
 from django.http import JsonResponse
@@ -15,7 +16,7 @@ from django.urls import reverse
 from config import settings
 from events.exceptions import DuplicateParticipantError, ParticipantTooYoungError
 from events.forms import ParticipantRegistrationForm, AdminDescriptionForm, AccentForm, AccentParticipantForm, \
-    EventAdminSettingsForm, RouteEditForm, ParticipantForm, CreateEventForm
+    EventAdminSettingsForm, RouteEditForm, ParticipantForm, CreateEventForm, CustomUserForm
 from events.models import Event, Participant, Route, ACCENT_NO
 from events import services, xl_tools
 from braces import views as braces
@@ -305,7 +306,7 @@ class EnterCheckView(views.View):
                 'result': result.get(str(i), ACCENT_NO),
             })
         for i in range(0, event.routes_num, 5):
-            items.append(temp[i:i+5])
+            items.append(temp[i:i + 5])
         return render(
             request=request,
             template_name='events/event/enter-check.html',
@@ -395,7 +396,8 @@ class EnterWithoutReg(views.View):
             participant = services.register_participant(event=event, cd=form.cleaned_data)
             services.enter_results(event=event,
                                    participant=participant,
-                                   accents=services.accent_form_to_results(form_cleaned_data=accent_formset.cleaned_data))
+                                   accents=services.accent_form_to_results(
+                                       form_cleaned_data=accent_formset.cleaned_data))
             return redirect('enter_results_ok', event_id=event_id)
         return render(
             request=request,
@@ -527,6 +529,12 @@ class EventRegistrationOkView(views.View):
     def get(request, event_id, participant_id):
         event = Event.objects.get(id=event_id)
         participant = Participant.objects.get(id=participant_id)
+        if participant.email and event.is_pay:
+            send_mail(subject='Регистрация завершена',
+                      message=f'Оплатите стартовый взнос по ссылке: (link)',
+                      from_email=None,
+                      recipient_list=[participant.email],
+                      fail_silently=False)
         return render(
             request=request,
             template_name='events/event/registration-ok.html',
@@ -601,7 +609,8 @@ class ParticipantView(IsOwnerMixin, views.View):
                                         group_list=group_list,
                                         set_list=set_list,
                                         initial={'group_index': group_list_value,
-                                                 'set_index': set_index_value}
+                                                 'set_index': set_index_value},
+                                        is_paid=event.is_pay,
                                         ),
             }
         )
@@ -614,6 +623,7 @@ class ParticipantView(IsOwnerMixin, views.View):
                                request.FILES,
                                group_list=services.get_group_list(event=event),
                                set_list=services.get_set_list_for_registration_available(event=event),
+                               is_paid=event.is_pay,
                                )
         if form.is_valid():
             services.update_participant(event=event, participant=participant, cd=form.cleaned_data)
@@ -628,6 +638,7 @@ class ParticipantView(IsOwnerMixin, views.View):
                     'form': ParticipantForm(request.POST,
                                             group_list=services.get_group_list(event=event),
                                             set_list=services.get_set_list_for_registration_available(event=event),
+                                            is_paid=event.is_pay,
                                             ),
                 }
             )
@@ -662,7 +673,8 @@ class ParticipantRoutesView(IsOwnerMixin, views.View):
         if accent_formset.is_valid():
             services.enter_results(event=event,
                                    participant=participant,
-                                   accents=services.accent_form_to_results(form_cleaned_data=accent_formset.cleaned_data),
+                                   accents=services.accent_form_to_results(
+                                       form_cleaned_data=accent_formset.cleaned_data),
                                    force_update=True)
             return redirect('results', event_id=event_id)
         return render(
@@ -736,11 +748,14 @@ def check_pin_code(request):
     try:
         participant = Participant.objects.get(pin=pin, event__id=event_id)
         if participant.is_entered_result and not Event.objects.get(id=event_id).is_update_result_allowed:
-            response = {'result': False, 'reason': f'Найден участник: {participant.first_name} {participant.last_name}, но повторный ввод результатов запрещён.'}
+            response = {'result': False,
+                        'reason': f'Найден участник: {participant.first_name} {participant.last_name}, но повторный ввод результатов запрещён.'}
         else:
-            response = {'result': True, 'participant': f'{participant.first_name} {participant.last_name}', 'accents': participant.accents}
+            response = {'result': True, 'participant': f'{participant.first_name} {participant.last_name}',
+                        'accents': participant.accents}
     except Participant.DoesNotExist:
-        response = {'result': False, 'reason': 'Участник не найден. Проверьте PIN-код, или <a href="{% url \'registration\' event.id %}">зарегистрируйтесь</a>!'}
+        response = {'result': False,
+                    'reason': 'Участник не найден. Проверьте PIN-код, или <a href="{% url \'registration\' event.id %}">зарегистрируйтесь</a>!'}
     return JsonResponse(response)
 
 
@@ -777,9 +792,33 @@ class CreateEventView(LoginRequiredMixin, views.View):
                 template_name='events/profile/create.html',
                 context={
                     'form': CreateEventForm(request.POST),
-                }
-            )
+                })
 
+
+class ProfileView(views.View):
+    @staticmethod
+    def get(request):
+        return render(request=request,
+                      template_name='events/profile/profile.html',
+                      context={
+                          'form': CustomUserForm(instance=request.user),
+                      })
+    @staticmethod
+    def post(request):
+        form = CustomUserForm(request.POST)
+        if form.is_valid():
+            cd = form.cleaned_data
+            request.user.yoomoney_wallet_id = cd['yoomoney_wallet_id']
+            request.user.yoomoney_secret_key = cd['yoomoney_secret_key']
+            request.user.save()
+            return redirect('profile')
+        else:
+            return render(
+                request=request,
+                template_name='events/profile/profile.html',
+                context={
+                    'form': CustomUserForm(request.POST),
+                })
 
 class AboutView(views.View):
     @staticmethod
