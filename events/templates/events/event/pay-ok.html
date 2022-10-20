@@ -1,0 +1,13 @@
+{% extends 'events/event/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+Оплата стартового взноса
+{% endblock title %}
+
+{% block body %}
+<div class="row">
+<h2>Платёж успешно исполнен</h2>
+  <p>Перейти к <a href="{% url 'participants' event.id %}">списку участников</a></p>
+</div>
+{% endblock body %}

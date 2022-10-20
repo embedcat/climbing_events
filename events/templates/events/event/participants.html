@@ -76,7 +76,11 @@
         </td>
         {% if event.is_pay %}
         <td>
-          <span title="{% if participant.paid %}Оплата подтверждена{% else %}Не оплачено{% endif %}"><i class="fa-solid fa-check {% if participant.paid %} text-success {% else %} text-danger {% endif %}"></i></span>
+          {% if participant.paid %}
+          <span title="Оплата подтверждена"><i class="fa-solid fa-check text-success "></i></span>
+        {% else %}
+          <a href="{% url 'pay_create' event.id participant.id %}" title="Перейти к оплате"><i class="fa-solid fa-cart-shopping text-danger"></i></a>
+          {% endif %}
         </td>
         {% endif %}
         {% if user.is_superuser %}
