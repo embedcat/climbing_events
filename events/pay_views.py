@@ -4,6 +4,7 @@ from django import views
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse
+from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 
 from config import settings
@@ -21,6 +22,10 @@ def notify(request):
 
 
 class NotifyView(views.View):
+    @method_decorator(csrf_exempt)
+    def dispatch(self, *args, **kwargs):
+        return super(NotifyView, self).dispatch(*args, **kwargs)
+
     @staticmethod
     def get(request):
         return HttpResponse(status=200)
