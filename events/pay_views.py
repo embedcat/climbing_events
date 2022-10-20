@@ -1,9 +1,14 @@
+import logging
+
 from django import views
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse
 
+from config import settings
 from events.models import Event, Participant
+
+logger = logging.getLogger(settings.LOGGER)
 
 
 class NotifyView(views.View):
@@ -13,7 +18,7 @@ class NotifyView(views.View):
 
     @staticmethod
     def post(request):
-        print(request)
+        logger.info(f'Pay Notify -> {request.data}')
         return HttpResponse(status=200)
 
 
