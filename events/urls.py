@@ -36,6 +36,8 @@ urlpatterns = [
     path('ajax/check_pin_code/', views.check_pin_code, name='check_pin_code'),
 
     path('pay/notify/', pay_views.NotifyView.as_view(), name='pay_notify'),
+    path('pay/notify/', pay_views.notify, name='pay_notify2'),
+
     path('pay/<int:event_id>/<int:p_id>/', pay_views.CreatePay.as_view(), name='pay_create'),
     path('pay/ok/<int:event_id>/', pay_views.PayOk.as_view(), name='pay_ok'),
 

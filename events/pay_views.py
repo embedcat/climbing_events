@@ -4,11 +4,20 @@ from django import views
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse
+from django.views.decorators.csrf import csrf_exempt
 
 from config import settings
 from events.models import Event, Participant
 
 logger = logging.getLogger(settings.LOGGER)
+
+
+@csrf_exempt
+def notify(request):
+    # Do some stuffs...
+
+    # Return an HHTPResponse as Django expects a response from the view
+    return HttpResponse(status=200)
 
 
 class NotifyView(views.View):
