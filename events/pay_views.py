@@ -20,11 +20,12 @@ class NotifyView(views.View):
 
     @staticmethod
     def get(request):
+        logger.info(f'Pay Notify -> {request.POST=}')
+        logger.info(f'Pay Notify -> {request.GET=}')
         return HttpResponse(status=200)
 
     @staticmethod
     def post(request):
-        logger.info(f'Pay Notify -> {request}')
         return HttpResponse(status=200)
 
 
