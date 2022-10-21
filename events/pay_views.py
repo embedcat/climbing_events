@@ -20,12 +20,14 @@ class NotifyView(views.View):
 
     @staticmethod
     def get(request):
-        logger.info(f'Pay Notify -> post: {[v for v in request.POST.values()]}')
-        logger.info(f'Pay Notify -> get: {[v for v in request.GET.values()]}')
+        logger.info(f'Pay Notify -> post: {dict(request.POST.items())}')
+        logger.info(f'Pay Notify -> get: {dict(request.POST.items())}')
         return HttpResponse(status=200)
 
     @staticmethod
     def post(request):
+        logger.warning(f'Pay Notify -> post: {dict(request.POST.items())}')
+        logger.warning(f'Pay Notify -> get: {dict(request.POST.items())}')
         return HttpResponse(status=200)
 
 
