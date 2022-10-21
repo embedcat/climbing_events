@@ -139,7 +139,7 @@ class EventAdminSettingsForm(forms.ModelForm):
             'registration_fields',
             'required_fields',
             'participant_min_age',
-            'is_pay',
+            'is_pay_allowed',
             'price',
         ]
         labels = {
@@ -170,7 +170,7 @@ class EventAdminSettingsForm(forms.ModelForm):
             'registration_fields': 'Дополнительные поля формы регистрации',
             'required_fields': 'Обязательные поля при регистрации',
             'participant_min_age': 'Минимальный возраст участника',
-            'is_pay': 'Оплачивать стартовые взносы на сайте',
+            'is_pay_allowed': 'Оплачивать стартовые взносы на сайте',
             'price': 'Стоимость участия',
         }
 
@@ -248,20 +248,17 @@ class ParticipantForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         group_list = kwargs.pop('group_list')
         set_list = kwargs.pop('set_list')
-        is_paid = kwargs.pop('is_paid')
+        registration_fields = kwargs.pop('registration_fields')
+        is_pay_allowd = kwargs.pop('is_pay_allowed')
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.add_input(Submit('submit', 'Сохранить'))
         self.fields['pin'].widget.attrs['readonly'] = True
-        self.fields[Event.FIELD_GENDER].required = False
-        self.fields[Event.FIELD_BIRTH_YEAR].required = False
-        self.fields[Event.FIELD_CITY].required = False
-        self.fields[Event.FIELD_TEAM].required = False
-        self.fields[Event.FIELD_GRADE].required = False
-        self.fields[Event.FIELD_EMAIL].required = False
-        self.fields[Event.FIELD_EMAIL].widget.attrs['readonly'] = True
+        self.fields['email'].widget.attrs['readonly'] = True
 
+        for field in self.Meta.fields:
+            self.fields[field].required = False
         if group_list:
             self.fields['group_index'] = forms.ChoiceField(choices=tuple([(name, name) for name in group_list]),
                                                            label='Категория',
@@ -270,11 +267,11 @@ class ParticipantForm(forms.ModelForm):
             self.fields['set_index'] = forms.ChoiceField(choices=tuple([(name, name) for name in set_list]),
                                                          label='Сет',
                                                          required=False)
-        if not is_paid:
+        deleting_fields = list(set(Event.OPTIONAL_FIELDS) - set(registration_fields))
+        for field in deleting_fields:
+            del self.fields[field]
+        if not is_pay_allowd:
             del self.fields['paid']
-            # self.fields['paid'] = forms.ChoiceField(widget=forms.CheckboxInput, label='Оплачено', required=False)
-        print(f"{is_paid=}")
-        print(self.fields)
 
     class Meta:
         model = Participant
@@ -290,6 +287,18 @@ class ParticipantForm(forms.ModelForm):
             Event.FIELD_EMAIL,
             'paid',
         ]
+        labels = {
+            'last_name': 'Фамилия',
+            'first_name': 'Имя',
+            'pin': 'Пин-код',
+            Event.FIELD_GENDER: 'Пол',
+            Event.FIELD_BIRTH_YEAR: 'Год рождения',
+            Event.FIELD_CITY: 'Город',
+            Event.FIELD_TEAM: 'Команда',
+            Event.FIELD_GRADE: 'Спортивный разряд',
+            Event.FIELD_EMAIL: 'E-mail',
+            'paid': 'Оплата произведена',
+        }
 
 
 class CreateEventForm(forms.ModelForm):

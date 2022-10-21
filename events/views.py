@@ -371,8 +371,8 @@ class EnterWithoutReg(views.View):
                 'routes': routes,
                 'form': ParticipantRegistrationForm(group_list=group_list,
                                                     set_list=set_list,
-                                                    registration_fields=event.registration_fields,
-                                                    required_fields=event.required_fields,
+                                                    registration_fields=services.get_registration_fields(event=event),
+                                                    required_fields=services.get_registration_required_fields(event=event),
                                                     is_enter_form=True)
 
             }
@@ -387,8 +387,8 @@ class EnterWithoutReg(views.View):
                                            request.FILES,
                                            group_list=group_list,
                                            set_list=set_list,
-                                           registration_fields=event.registration_fields,
-                                           required_fields=event.required_fields,
+                                           registration_fields=services.get_registration_fields(event=event),
+                                           required_fields=services.get_registration_required_fields(event=event),
                                            is_enter_form=True)
         AccentFormSet = formset_factory(AccentForm)
         accent_formset = AccentFormSet(request.POST, prefix='accents')
@@ -459,7 +459,7 @@ class ParticipantsView(views.View):
                 'chart_set_data': json.dumps(chart_set_data),
                 'chart_group_data': json.dumps(chart_group_data),
                 'chart_city_data': json.dumps(chart_city_data),
-                'fields': event.registration_fields,
+                'fields': services.get_registration_fields(event=event),
             }
         )
 
@@ -529,7 +529,7 @@ class EventRegistrationOkView(views.View):
     def get(request, event_id, participant_id):
         event = Event.objects.get(id=event_id)
         participant = Participant.objects.get(id=participant_id)
-        if participant.email and event.is_pay:
+        if participant.email and event.is_pay_allowed:
             send_mail(subject='Регистрация завершена',
                       message=f'Оплатите стартовый взнос по ссылке: (link)',
                       from_email=None,
@@ -610,7 +610,8 @@ class ParticipantView(IsOwnerMixin, views.View):
                                         set_list=set_list,
                                         initial={'group_index': group_list_value,
                                                  'set_index': set_index_value},
-                                        is_paid=event.is_pay,
+                                        is_pay_allowed=event.is_pay_allowed,
+                                        registration_fields=services.get_registration_fields(event=event),
                                         ),
             }
         )
@@ -623,7 +624,8 @@ class ParticipantView(IsOwnerMixin, views.View):
                                request.FILES,
                                group_list=services.get_group_list(event=event),
                                set_list=services.get_set_list_for_registration_available(event=event),
-                               is_paid=event.is_pay,
+                               is_pay_allowed=event.is_pay_allowed,
+                               registration_fields=services.get_registration_fields(event=event),
                                )
         if form.is_valid():
             services.update_participant(event=event, participant=participant, cd=form.cleaned_data)
@@ -635,10 +637,12 @@ class ParticipantView(IsOwnerMixin, views.View):
                 context={
                     'title': f'{participant.last_name} {participant.first_name}',
                     'event': event,
+                    'participant': participant,
                     'form': ParticipantForm(request.POST,
                                             group_list=services.get_group_list(event=event),
                                             set_list=services.get_set_list_for_registration_available(event=event),
-                                            is_paid=event.is_pay,
+                                            is_pay_allowed=event.is_pay_allowed,
+                                            registration_fields=services.get_registration_fields(event=event),
                                             ),
                 }
             )

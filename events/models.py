@@ -58,6 +58,14 @@ class Event(models.Model):
     FIELD_GENDER = 'gender'
     FIELD_GRADE = 'grade'
     FIELD_EMAIL = 'email'
+    OPTIONAL_FIELDS = [
+        FIELD_BIRTH_YEAR,
+        FIELD_CITY,
+        FIELD_TEAM,
+        FIELD_GENDER,
+        FIELD_GRADE,
+        FIELD_EMAIL,
+    ]
     REQUIRED_FIELDS = [
         (FIELD_BIRTH_YEAR, 'Год рождения'),
         (FIELD_CITY, 'Город'),
@@ -81,7 +89,7 @@ class Event(models.Model):
     is_check_result_before_enter = models.BooleanField(default=False)
     is_update_result_allowed = models.BooleanField(default=True)
     participant_min_age = models.IntegerField(default=0)
-    is_pay = models.BooleanField(default=False)
+    is_pay_allowed = models.BooleanField(default=False)
     price = models.IntegerField(default=0, null=True, blank=True)
 
 

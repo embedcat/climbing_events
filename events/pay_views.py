@@ -13,14 +13,6 @@ from events.models import Event, Participant
 logger = logging.getLogger(settings.LOGGER)
 
 
-@csrf_exempt
-def notify(request):
-    # Do some stuffs...
-
-    # Return an HHTPResponse as Django expects a response from the view
-    return HttpResponse(status=200)
-
-
 class NotifyView(views.View):
     @method_decorator(csrf_exempt)
     def dispatch(self, *args, **kwargs):
@@ -32,7 +24,7 @@ class NotifyView(views.View):
 
     @staticmethod
     def post(request):
-        logger.info(f'Pay Notify -> {request.data}')
+        logger.info(f'Pay Notify -> {request}')
         return HttpResponse(status=200)
 
 

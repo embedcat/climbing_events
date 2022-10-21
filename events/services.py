@@ -111,7 +111,7 @@ def update_event_settings(event: Event, cd: dict) -> None:
     event.is_check_result_before_enter = cd['is_check_result_before_enter']
     event.is_update_result_allowed = cd['is_update_result_allowed']
     event.participant_min_age = cd['participant_min_age']
-    event.is_pay = cd['is_pay']
+    event.is_pay_allowed = cd['is_pay_allowed']
     event.price = cd['price']
 
     event.save()
@@ -175,6 +175,8 @@ def get_registration_fields(event: Event) -> list:
     registration_fields = event.registration_fields
     if event.participant_min_age:
         registration_fields.append(Event.FIELD_BIRTH_YEAR)
+    if Event.FIELD_EMAIL not in registration_fields and event.is_pay_allowed:
+        registration_fields.append(Event.FIELD_EMAIL)
     return registration_fields
 
 
@@ -182,6 +184,8 @@ def get_registration_required_fields(event: Event) -> list:
     required_fields = event.required_fields
     if event.participant_min_age:
         required_fields.append(Event.FIELD_BIRTH_YEAR)
+    if Event.FIELD_EMAIL not in required_fields and event.is_pay_allowed:
+        required_fields.append(Event.FIELD_EMAIL)
     return required_fields
 
 
@@ -201,6 +205,7 @@ def update_participant(event: Event, participant: Participant, cd: dict) -> Part
     participant.group_index = new_group_index
     participant.set_index = get_set_list(event=event).index(cd['set_index']) if 'set_index' in cd else 0
     participant.paid = cd['paid'] if 'paid' in cd else False
+    participant.email = cd['email'] if 'email' in cd else ''
     participant.save()
 
     if need_update_results:

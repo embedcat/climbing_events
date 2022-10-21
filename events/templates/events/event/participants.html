@@ -34,7 +34,7 @@
       <tr>
         <th data-field="num" data-sortable="true" style="width:10%">#</th>
         <th data-field="name" dattable-lighta-sortable="true">Участник</th>
-        {% if event.is_pay %}
+        {% if event.is_pay_allowed %}
         <th>Оплата</th>
         {% endif %}
         {% if user == event.owner or user.is_superuser %}
@@ -74,7 +74,7 @@
           <span class="small"><em><a href="{% url 'participant' event.id participant.id %}">(ред.)</a></em></span>
           {% endif %}
         </td>
-        {% if event.is_pay %}
+        {% if event.is_pay_allowed %}
         <td>
           {% if participant.paid %}
           <span title="Оплата подтверждена"><i class="fa-solid fa-check text-success "></i></span>
