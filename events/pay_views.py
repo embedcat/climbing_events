@@ -23,6 +23,8 @@ class NotifyView(views.View):
         logger.info(f'Pay Notify -> post: {dict(request.POST.items())}')
         logger.info(f'Pay Notify -> get: {dict(request.GET.items())}')
         logger.info(f'Pay Notify -> get meta: {dict(request.META.items())}')
+        logger.info(f'Pay Notify -> body: {dict(request.BODY.items())}')
+        logger.info(f'Pay Notify -> data: {dict(request.DATA.items())}')
         return HttpResponse(status=200)
 
     @staticmethod
