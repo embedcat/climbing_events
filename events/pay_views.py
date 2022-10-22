@@ -29,6 +29,8 @@ class NotifyView(views.View):
     def post(request):
         logger.warning(f'Pay Notify -> post: {dict(request.POST.items())}')
         logger.warning(f'Pay Notify -> get: {dict(request.GET.items())}')
+        logger.warning(f'Pay Notify -> body: {dict(request.BODY.items())}')
+        logger.warning(f'Pay Notify -> data: {dict(request.DATA.items())}')
         logger.warning(f'Pay Notify -> get meta: {dict(request.META.items())}')
         return HttpResponse(status=200)
 
