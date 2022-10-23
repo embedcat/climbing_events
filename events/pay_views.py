@@ -9,6 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from config import settings
 from events.models import Event, Participant
+from events.exceptions import ParticipantNotFoundError
 
 logger = logging.getLogger(settings.LOGGER)
 
@@ -20,20 +21,25 @@ class NotifyView(views.View):
 
     @staticmethod
     def get(request):
-        logger.info(f'Pay Notify -> post: {dict(request.POST.items())}')
-        logger.info(f'Pay Notify -> get: {dict(request.GET.items())}')
-        logger.info(f'Pay Notify -> get meta: {dict(request.META.items())}')
-        logger.info(f'Pay Notify -> body: {dict(request.BODY.items())}')
-        logger.info(f'Pay Notify -> data: {dict(request.DATA.items())}')
         return HttpResponse(status=200)
 
     @staticmethod
     def post(request):
-        logger.warning(f'Pay Notify -> post: {dict(request.POST.items())}')
-        logger.warning(f'Pay Notify -> get: {dict(request.GET.items())}')
-        logger.warning(f'Pay Notify -> body: {dict(request.BODY.items())}')
-        logger.warning(f'Pay Notify -> data: {dict(request.DATA.items())}')
-        logger.warning(f'Pay Notify -> get meta: {dict(request.META.items())}')
+        if True or 'label' in request.POST:
+            label = request.POST['label']
+            label = label.split('_')
+            for part in label:
+                if part.startswith('e'):
+                    event_id = int(part[1:])
+                if part.startswith('p'):
+                    participant_id = int(part[1:])
+            try:
+                event = Event.objects.get(id=event_id)
+                participant = Participant.objects.get(id=participant_id, event=event)
+                participant.paid = True
+                participant.save()
+            except ParticipantNotFoundError as e:
+                logger.error(e)
         return HttpResponse(status=200)
 
 
@@ -45,7 +51,7 @@ class CreatePay(views.View):
         if participant.paid:
             return redirect('pay_ok', event_id)
         amount = event.price
-        order_id = f"e{event_id}_p{p_id}_{participant.last_name}_{participant.first_name}"
+        order_id = f"e{event_id}_p{p_id}"
         success_uri = request.build_absolute_uri(reverse('pay_ok', args=(event_id,)))
         return render(
             request=request,
