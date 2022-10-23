@@ -38,6 +38,7 @@ class NotifyView(views.View):
                 participant = Participant.objects.get(id=participant_id, event=event)
                 participant.paid = True
                 participant.save()
+                logger.info(f"Pay Notify Success: Event: {event}, Participant: {participant}")
             except (Event.DoesNotExist, Participant.DoesNotExist) as e:
                 logger.error(f"Exception: {e}. {label=}")
         return redirect('pay_notify')
