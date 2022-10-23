@@ -9,7 +9,6 @@ from django.views.decorators.csrf import csrf_exempt
 
 from config import settings
 from events.models import Event, Participant
-from events.exceptions import ParticipantNotFoundError
 
 logger = logging.getLogger(settings.LOGGER)
 
@@ -28,6 +27,7 @@ class NotifyView(views.View):
         if True or 'label' in request.POST:
             label = request.POST['label']
             label = label.split('_')
+            event_id, participant_id = 0, 0
             for part in label:
                 if part.startswith('e'):
                     event_id = int(part[1:])
@@ -38,9 +38,9 @@ class NotifyView(views.View):
                 participant = Participant.objects.get(id=participant_id, event=event)
                 participant.paid = True
                 participant.save()
-            except ParticipantNotFoundError as e:
-                logger.error(e)
-        return HttpResponse(status=200)
+            except (Event.DoesNotExist, Participant.DoesNotExist) as e:
+                logger.error(f"Exception: {e}. {label=}")
+        return redirect('pay_notify')
 
 
 class CreatePay(views.View):
