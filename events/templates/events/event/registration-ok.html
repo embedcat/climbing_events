@@ -6,7 +6,5 @@
 {% endblock %}
 
 {% block body %}
-<p>{{ participant.first_name }} {{ participant.last_name }}, Ваш PIN-код: <strong>{{ participant.pin }}</strong></p>
-<p>PIN-код понадобится Вам для ввода результатов!
-  Также он будет указан в вашей карточке участника.</p>
+{{ msg|safe }}
 {% endblock %}

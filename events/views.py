@@ -372,7 +372,8 @@ class EnterWithoutReg(views.View):
                 'form': ParticipantRegistrationForm(group_list=group_list,
                                                     set_list=set_list,
                                                     registration_fields=services.get_registration_fields(event=event),
-                                                    required_fields=services.get_registration_required_fields(event=event),
+                                                    required_fields=services.get_registration_required_fields(
+                                                        event=event),
                                                     is_enter_form=True)
 
             }
@@ -502,17 +503,15 @@ class RegistrationView(views.View):
                                            registration_fields=registration_fields,
                                            required_fields=required_fields,
                                            is_enter_form=False)
-        logger.info('Registration [POST] ->')
         if form.is_valid():
             try:
                 participant = services.register_participant(event=event, cd=form.cleaned_data)
-                if event.is_view_pin_after_registration:
+                if event.is_view_pin_after_registration or event.is_pay_allowed:
                     return redirect('event_registration_ok', event_id=event_id, participant_id=participant.id)
                 else:
                     return redirect('participants', event_id=event_id)
             except (DuplicateParticipantError, ParticipantTooYoungError) as e:
                 error = e
-        logger.warning(f'-> registration failed, [{form}] is not valid')
         return render(
             request=request,
             template_name='events/event/registration.html',
@@ -529,18 +528,23 @@ class EventRegistrationOkView(views.View):
     def get(request, event_id, participant_id):
         event = Event.objects.get(id=event_id)
         participant = Participant.objects.get(id=participant_id)
+        msg = services.get_registration_msg_html(event=event,
+                                                 participant=participant,
+                                                 pay_url=request.build_absolute_uri(
+                                                     reverse('pay_create', args=(event_id, participant_id, ))))
         if participant.email and event.is_pay_allowed:
             send_mail(subject='Регистрация завершена',
-                      message=f'Оплатите стартовый взнос по ссылке: (link)',
+                      message=msg,
                       from_email=None,
                       recipient_list=[participant.email],
-                      fail_silently=False)
+                      fail_silently=True,
+                      html_message=msg)
         return render(
             request=request,
             template_name='events/event/registration-ok.html',
             context={
                 'event': event,
-                'participant': participant,
+                'msg': msg,
             }
         )
 
@@ -807,6 +811,7 @@ class ProfileView(views.View):
                       context={
                           'form': CustomUserForm(instance=request.user),
                       })
+
     @staticmethod
     def post(request):
         form = CustomUserForm(request.POST)
@@ -823,6 +828,7 @@ class ProfileView(views.View):
                 context={
                     'form': CustomUserForm(request.POST),
                 })
+
 
 class AboutView(views.View):
     @staticmethod

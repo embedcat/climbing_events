@@ -21,6 +21,10 @@ def check_notify_hash(notify: dict, secret: str) -> bool:
     return sha1_hash == notify['sha1_hash']
 
 
+def is_pay_available(event: Event) -> bool:
+    return event.owner.yoomoney_wallet_id and event.owner.yoomoney_secret_key and event.is_pay_allowed
+
+
 class NotifyView(views.View):
     @method_decorator(csrf_exempt)
     def dispatch(self, *args, **kwargs):
@@ -75,6 +79,7 @@ class CreatePay(views.View):
                 'order_id': order_id,
                 'amount': amount,
                 'success_uri': success_uri,
+                'pay_available': is_pay_available(event=event),
             }
         )
 

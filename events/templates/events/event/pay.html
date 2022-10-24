@@ -9,6 +9,7 @@
 <div class="row">
   <h3>Стоимость участия: {{ amount }} ₽</h3>
   <p>Участник: {{ participant.last_name }} {{ participant.first_name }}</p>
+  {% if pay_available %}
   <form method="POST" action="https://yoomoney.ru/quickpay/confirm.xml">
     <input type="hidden" name="receiver" value="{{ user.yoomoney_wallet_id }}"/>
     <input type="hidden" name="label" value="{{ order_id }}"/>
@@ -21,6 +22,9 @@
     <input type="hidden" name="paymentType" value="AC"/>
     <input type="hidden" name="successURL" value="{{ success_uri }}"/>
     <input class="btn btn-primary" type="submit" value="Перейти к оплате"/>
-</form>
+  </form>
+  {% else %}
+  <p>Извините, опалата верменно недосупна.</p>
+  {% endif %}
 </div>
 {% endblock body %}

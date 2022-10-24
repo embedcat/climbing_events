@@ -346,6 +346,14 @@ def enter_results(event: Event, participant: Participant, accents: dict, force_u
         _update_results(event=event, gender=participant.gender, group_index=participant.group_index)
 
 
+def get_registration_msg_html(event: Event, participant: Participant, pay_url: str) -> str:
+    html = f"<h3>Вы успешно зарегистрированы на \"{event.title}\", {event.date}, скалодром {event.gym}</h3><br>" \
+           f"Ваш PIN-код: <strong>{participant.pin}</strong>. " \
+           f"PIN-код понадобится Вам для ввода результатов! Также он будет указан в вашей карточке участника.</p><br>"
+    if event.is_pay_allowed:
+        html += f"Для завершения регистрации Вам необходимо оплатить стартовый взнос по ссылке: <a href=\"{pay_url}\">{pay_url}</a>.<br>"
+    return html
+
 # ================================================
 # =============== Get results ====================
 # ================================================
