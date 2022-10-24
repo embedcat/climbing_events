@@ -1,4 +1,5 @@
 import logging
+import hashlib
 
 from django import views
 from django.http import HttpResponse
@@ -11,6 +12,13 @@ from config import settings
 from events.models import Event, Participant
 
 logger = logging.getLogger(settings.LOGGER)
+
+
+def check_notify_hash(notify: dict, secret: str) -> bool:
+    string = f"{notify['notification_type']}&{notify['operation_id']}&{notify['amount']}&{notify['currency']}&" \
+             f"{notify['datetime']}&{notify['sender']}&{notify['codepro']}&{secret}&{notify['label']}"
+    sha1_hash = hashlib.sha1(bytes(string, "UTF-8")).hexdigest()
+    return sha1_hash == notify['sha1_hash']
 
 
 class NotifyView(views.View):
@@ -36,9 +44,12 @@ class NotifyView(views.View):
             try:
                 event = Event.objects.get(id=event_id)
                 participant = Participant.objects.get(id=participant_id, event=event)
-                participant.paid = True
-                participant.save()
-                logger.info(f"Pay Notify Success: Event: {event}, Participant: {participant}")
+                if check_notify_hash(request.POST, event.owner.yoomoney_secret_key):
+                    participant.paid = True
+                    participant.save()
+                    logger.info(f"Pay Notify Success: Event: {event}, Participant: {participant}")
+                else:
+                    logger.error(f"Pay Notify Error: Notify hash not valid. {request.POST}")
             except (Event.DoesNotExist, Participant.DoesNotExist) as e:
                 logger.error(f"Exception: {e}. {label=}")
         return redirect('pay_notify')
