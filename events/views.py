@@ -16,8 +16,9 @@ from django.urls import reverse
 from config import settings
 from events.exceptions import DuplicateParticipantError, ParticipantTooYoungError
 from events.forms import ParticipantRegistrationForm, AdminDescriptionForm, AccentForm, AccentParticipantForm, \
-    EventAdminSettingsForm, RouteEditForm, ParticipantForm, CreateEventForm, CustomUserForm
-from events.models import Event, Participant, Route, ACCENT_NO
+    EventSettingsForm, RouteEditForm, ParticipantForm, CreateEventForm, CustomUserForm, EventPaySettingsForm, \
+    PromoCodeAddForm
+from events.models import Event, Participant, Route, ACCENT_NO, PromoCode
 from events import services, xl_tools
 from braces import views as braces
 
@@ -199,14 +200,14 @@ class AdminSettingsView(IsOwnerMixin, views.View):
             template_name='events/event/admin-settings.html',
             context={
                 'event': event,
-                'form': EventAdminSettingsForm(instance=event),
+                'form': EventSettingsForm(instance=event),
             }
         )
 
     @staticmethod
     def post(request, event_id):
         event = Event.objects.get(id=event_id)
-        form = EventAdminSettingsForm(request.POST)
+        form = EventSettingsForm(request.POST)
         logger.info('Admin.Settings [POST] ->')
         if form.is_valid():
             services.update_event_settings(event=event, cd=form.cleaned_data)
@@ -219,7 +220,49 @@ class AdminSettingsView(IsOwnerMixin, views.View):
                 template_name='events/event/admin-settings.html',
                 context={
                     'event': event,
-                    'form': EventAdminSettingsForm(request.POST),
+                    'form': EventSettingsForm(request.POST),
+                }
+            )
+
+
+class PaySettingsView(views.View):
+    @staticmethod
+    def get(request, event_id):
+        event = Event.objects.get(id=event_id)
+        return render(
+            request=request,
+            template_name='events/event/pay-settings.html',
+            context={
+                'event': event,
+                'form': EventPaySettingsForm(instance=event),
+                'promocode_form': PromoCodeAddForm(),
+                'promocodes': PromoCode.objects.filter(event__id=event_id),
+            }
+        )
+
+    @staticmethod
+    def post(request, event_id):
+        event = Event.objects.get(id=event_id)
+        form = EventPaySettingsForm(request.POST)
+        promocode_form = PromoCodeAddForm(request.POST)
+        if 'pay_settings' in request.POST and form.is_valid():
+            services.update_event_pay_settings(event=event, cd=form.cleaned_data)
+            return redirect('pay_settings', event_id)
+        elif 'add_promocode' in request.POST and promocode_form.is_valid():
+            print(promocode_form.cleaned_data)
+            PromoCode.objects.create(event=event,
+                                     title=promocode_form.cleaned_data['title'],
+                                     price=promocode_form.cleaned_data['price'])
+            return redirect('pay_settings', event_id)
+        else:
+            return render(
+                request=request,
+                template_name='events/event/pay-settings.html',
+                context={
+                    'event': event,
+                    'form': EventPaySettingsForm(request.POST),
+                    'promocode_form': PromoCodeAddForm(request.POST),
+                    'promocodes': PromoCode.objects.filter(event__id=event_id),
                 }
             )
 
@@ -531,7 +574,7 @@ class EventRegistrationOkView(views.View):
         msg = services.get_registration_msg_html(event=event,
                                                  participant=participant,
                                                  pay_url=request.build_absolute_uri(
-                                                     reverse('pay_create', args=(event_id, participant_id, ))))
+                                                     reverse('pay_create', args=(event_id, participant_id,))))
         if participant.email and event.is_pay_allowed:
             send_mail(subject='Регистрация завершена',
                       message=msg,
@@ -767,6 +810,18 @@ def check_pin_code(request):
     return JsonResponse(response)
 
 
+def check_promo_code(request):
+    promo_code_title = request.GET.get('promocode')
+    event_id = request.GET.get('event_id')
+    try:
+        response = {'result': True,
+                    'price': PromoCode.objects.get(title=promo_code_title, event__id=event_id).price}
+    except PromoCode.DoesNotExist:
+        response = {'result': False,
+                    'price': 0}
+    return JsonResponse(response)
+
+
 def page_not_found_view(request, exception):
     return render(request=request, template_name='events/error.html', status=404,
                   context={'code': '', 'msg': 'Страница не найдена!'})
@@ -828,6 +883,16 @@ class ProfileView(views.View):
                 context={
                     'form': CustomUserForm(request.POST),
                 })
+
+
+class PromoCodeRemove(views.View):
+    @staticmethod
+    def get(request, event_id, promocode_id):
+        try:
+            PromoCode.objects.get(id=promocode_id).delete()
+        except PromoCode.DoesNotExist as e:
+            logger.error(f"PromoCode deleting error: {e}")
+        return redirect('pay_settings', event_id=event_id)
 
 
 class AboutView(views.View):

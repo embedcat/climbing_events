@@ -111,8 +111,6 @@ def update_event_settings(event: Event, cd: dict) -> None:
     event.is_check_result_before_enter = cd['is_check_result_before_enter']
     event.is_update_result_allowed = cd['is_update_result_allowed']
     event.participant_min_age = cd['participant_min_age']
-    event.is_pay_allowed = cd['is_pay_allowed']
-    event.price = cd['price']
 
     event.save()
 
@@ -122,6 +120,11 @@ def update_event_settings(event: Event, cd: dict) -> None:
         remove_routes(event=event)
         create_event_routes(event=event)
 
+
+def update_event_pay_settings(event: Event, cd: dict) -> None:
+    event.is_pay_allowed = cd['is_pay_allowed']
+    event.price = cd['price']
+    event.save()
 
 # ================================================
 # =================== Routes =====================

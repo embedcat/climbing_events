@@ -1,4 +1,4 @@
-function CheckPinCode(event, event_id, pin) {
+function CheckPinCode(event_id, pin) {
   document.getElementById('alert-ok').style.display = 'none'
   document.getElementById('alert-error').style.display = 'none'
   var request = new XMLHttpRequest();

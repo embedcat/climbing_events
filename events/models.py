@@ -203,6 +203,12 @@ class Route(models.Model):
         return f'N={self.number}, score={self.score_json}'
 
 
+class PromoCode(models.Model):
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='PromoCode')
+    title = models.CharField(max_length=32)
+    price = models.IntegerField(default=0)
+
+
 ACCENT_NO = '-'
 ACCENT_FLASH = 'F'
 ACCENT_REDPOINT = 'RP'

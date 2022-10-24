@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from events.models import Event, Participant, Route, CustomUser
+from events.models import Event, Participant, Route, CustomUser, PromoCode
 
 
 class ParticipantAdmin(admin.ModelAdmin):
@@ -33,3 +33,4 @@ admin.site.register(CustomUser, CustomUserAdmin)
 admin.site.register(Event)
 admin.site.register(Participant, ParticipantAdmin)
 admin.site.register(Route, RouteAdmin)
+admin.site.register(PromoCode)

@@ -4,7 +4,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit, Layout
 from django import forms
 
-from events.models import Participant, Event, ACCENT_TYPE, Route, CustomUser
+from events.models import Participant, Event, ACCENT_TYPE, Route, CustomUser, PromoCode
 from tinymce.widgets import TinyMCE
 
 
@@ -102,7 +102,7 @@ class AdminDescriptionForm(forms.ModelForm):
         }
 
 
-class EventAdminSettingsForm(forms.ModelForm):
+class EventSettingsForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
@@ -139,8 +139,6 @@ class EventAdminSettingsForm(forms.ModelForm):
             'registration_fields',
             'required_fields',
             'participant_min_age',
-            'is_pay_allowed',
-            'price',
         ]
         labels = {
             'routes_num': 'Количество трасс',
@@ -170,6 +168,23 @@ class EventAdminSettingsForm(forms.ModelForm):
             'registration_fields': 'Дополнительные поля формы регистрации',
             'required_fields': 'Обязательные поля при регистрации',
             'participant_min_age': 'Минимальный возраст участника',
+        }
+
+
+class EventPaySettingsForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.add_input(Submit('pay_settings', 'Сохранить'))
+
+    class Meta:
+        model = Event
+        fields = [
+            'is_pay_allowed',
+            'price',
+        ]
+        labels = {
             'is_pay_allowed': 'Оплачивать стартовые взносы на сайте',
             'price': 'Стоимость участия',
         }
@@ -340,4 +355,23 @@ class CustomUserForm(forms.ModelForm):
             'yoomoney_wallet_id': 'Yoomoney-кошелек',
             'yoomoney_secret_key': 'Секретный ключ кошелька (для уведомлений об оплате)',
 
+        }
+
+
+class PromoCodeAddForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.add_input(Submit('add_promocode', 'Добавить'))
+
+    class Meta:
+        model = PromoCode
+        fields = [
+            'title',
+            'price',
+        ]
+        labels = {
+            'title': 'Промо Код (Например "SUPERSALE10")',
+            'price': 'Стоимость',
         }
