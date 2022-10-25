@@ -9,8 +9,6 @@
 <div class="row">
   <h3>Стоимость участия: <span id="id_amount">{{ amount }}</span> ₽</h3>
   <p>Участник: {{ participant.last_name }} {{ participant.first_name }}</p>
-  <!--  <form class="form-inline">-->
-
   <div class="form-row">
     <label for="id_promocode" class="col-sm-2 col-form-label">Промокод:</label>
   </div>
@@ -22,13 +20,11 @@
       <button type="submit" class="btn btn-primary mb-2" onclick="CheckPromoCode({{ event.id }}, {{ amount }})">Применить</button>
     </div>
   </div>
-
-
-  <!--</form>-->
   {% if pay_available %}
+  <input type="hidden" value="{{ label }}" id="id_default_label"/>
   <form method="POST" action="https://yoomoney.ru/quickpay/confirm.xml">
     <input type="hidden" name="receiver" value="{{ user.yoomoney_wallet_id }}"/>
-    <input type="hidden" name="label" value="{{ order_id }}"/>
+    <input type="hidden" name="label" value="{{ label }}" id="id_label_send"/>
     <input type="hidden" name="quickpay-form" value="shop"/>
     <input type="hidden" name="sum" value="{{ amount }}" data-type="number" id="id_amount_send"/>
     <input type="hidden" name="need-fio" value="false"/>

@@ -207,6 +207,8 @@ class PromoCode(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='PromoCode')
     title = models.CharField(max_length=32)
     price = models.IntegerField(default=0)
+    applied_num = models.IntegerField(default=0, blank=True, null=True)
+    max_applied_num = models.IntegerField(default=0, blank=True, null=True)
 
 
 ACCENT_NO = '-'

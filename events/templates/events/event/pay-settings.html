@@ -20,6 +20,7 @@
         <th data-field="no" data-sortable="true" style="width:5%">#</th>
         <th data-field="name" data-sortable="true">Промо Код</th>
         <th data-field="action" data-sortable="true">Стоимость</th>
+        <th data-field="action" data-sortable="true">Применено</th>
         <th data-field="action" data-sortable="true">Действия</th>
     </tr>
     </thead>
@@ -29,6 +30,7 @@
         <td>{{ forloop.counter }}</td>
         <td>{{ item.title }}</td>
         <td>{{ item.price }} ₽</td>
+        <td>{{ item.applied_num }} из {{ item.max_applied_num }}</td>
         <td><a href="{% url 'promocode_remove' event.id item.id %}" title="Удалить"><i class="fa-solid fa-trash"></i></a></td>
     </tr>
     {% endfor %}

@@ -249,10 +249,10 @@ class PaySettingsView(views.View):
             services.update_event_pay_settings(event=event, cd=form.cleaned_data)
             return redirect('pay_settings', event_id)
         elif 'add_promocode' in request.POST and promocode_form.is_valid():
-            print(promocode_form.cleaned_data)
             PromoCode.objects.create(event=event,
                                      title=promocode_form.cleaned_data['title'],
-                                     price=promocode_form.cleaned_data['price'])
+                                     price=promocode_form.cleaned_data['price'],
+                                     max_applied_num=promocode_form.cleaned_data['max_applied_num'])
             return redirect('pay_settings', event_id)
         else:
             return render(
@@ -813,12 +813,16 @@ def check_pin_code(request):
 def check_promo_code(request):
     promo_code_title = request.GET.get('promocode')
     event_id = request.GET.get('event_id')
+    response = {'result': False,
+                'price': 0}
     try:
-        response = {'result': True,
-                    'price': PromoCode.objects.get(title=promo_code_title, event__id=event_id).price}
+        promo_code = PromoCode.objects.get(title=promo_code_title, event__id=event_id)
+        if promo_code.max_applied_num == 0 or promo_code.applied_num < promo_code.max_applied_num:
+            response = {'result': True,
+                        'price': promo_code.price,
+                        'promocode_id': promo_code.id}
     except PromoCode.DoesNotExist:
-        response = {'result': False,
-                    'price': 0}
+        pass
     return JsonResponse(response)
 
 

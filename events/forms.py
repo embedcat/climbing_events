@@ -370,8 +370,10 @@ class PromoCodeAddForm(forms.ModelForm):
         fields = [
             'title',
             'price',
+            'max_applied_num',
         ]
         labels = {
             'title': 'Промо Код (Например "SUPERSALE10")',
             'price': 'Стоимость',
+            'max_applied_num': 'Ограничить число применений (0 - не ограничивать)',
         }
