@@ -30,8 +30,8 @@
         <td>{{ forloop.counter }}</td>
         <td>{{ item.title }}</td>
         <td>{{ item.price }} ₽</td>
-        <td>{{ item.applied_num }} из {{ item.max_applied_num }}</td>
-        <td><a href="{% url 'promocode_remove' event.id item.id %}" title="Удалить"><i class="fa-solid fa-trash"></i></a></td>
+        <td>{{ item.applied_num }}{% if item.max_applied_num %} из {{ item.max_applied_num }}{% endif %}</td>
+        <td><a href="{% url 'promocode_remove' event.id item.id %}" title="Удалить" onclick="return confirm_action();"><i class="fa-solid fa-trash"></i></a></td>
     </tr>
     {% endfor %}
     </tbody>
