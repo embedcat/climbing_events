@@ -56,7 +56,7 @@ class NotifyView(views.View):
                     participant.save()
                     promo_code.applied_num = promo_code.applied_num + 1
                     promo_code.save()
-                    logger.info(f"Pay Notify Success: Event: {event}, Participant: {participant}{', PromoCode: ' + promo_code if promocode_id else ''}")
+                    logger.info(f"Pay Notify Success: Event: {event}, Participant: {participant}{', PromoCode: ' + promo_code.title if promocode_id else ''}")
                 else:
                     logger.error(f"Pay Notify Error: Notify hash not valid. {request.POST}")
             except (Event.DoesNotExist, Participant.DoesNotExist, PromoCode.DoesNotExist) as e:
