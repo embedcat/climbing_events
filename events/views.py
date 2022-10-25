@@ -905,7 +905,7 @@ class WalletView(LoginRequiredMixin, views.View):
     def get(request, wallet_id):
         try:
             wallet = Wallet.objects.get(id=wallet_id)
-            if wallet.owner != request.user and request.user.is_superuser:
+            if wallet.owner != request.user and not request.user.is_superuser:
                 return redirect('profile')
             return render(request=request,
                           template_name='events/profile/wallet.html',
