@@ -4,7 +4,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit, Layout
 from django import forms
 
-from events.models import Participant, Event, ACCENT_TYPE, Route, CustomUser, PromoCode
+from events.models import Participant, Event, ACCENT_TYPE, Route, PromoCode, Wallet
 from tinymce.widgets import TinyMCE
 
 
@@ -183,10 +183,12 @@ class EventPaySettingsForm(forms.ModelForm):
         fields = [
             'is_pay_allowed',
             'price',
+            'wallet',
         ]
         labels = {
             'is_pay_allowed': 'Оплачивать стартовые взносы на сайте',
             'price': 'Стоимость участия',
+            'wallet': 'Кошелек для оплаты',
         }
 
 
@@ -338,26 +340,6 @@ class CreateEventForm(forms.ModelForm):
         }
 
 
-class CustomUserForm(forms.ModelForm):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.helper = FormHelper()
-        self.helper.form_method = 'post'
-        self.helper.add_input(Submit('submit', 'Обновить'))
-
-    class Meta:
-        model = CustomUser
-        fields = [
-            'yoomoney_wallet_id',
-            'yoomoney_secret_key',
-        ]
-        labels = {
-            'yoomoney_wallet_id': 'Yoomoney-кошелек',
-            'yoomoney_secret_key': 'Секретный ключ кошелька (для уведомлений об оплате)',
-
-        }
-
-
 class PromoCodeAddForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -376,4 +358,25 @@ class PromoCodeAddForm(forms.ModelForm):
             'title': 'Промо Код (Например "SUPERSALE10")',
             'price': 'Стоимость',
             'max_applied_num': 'Ограничить число применений (0 - не ограничивать)',
+        }
+
+
+class WalletForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.add_input(Submit('wallet', 'Отправить'))
+
+    class Meta:
+        model = Wallet
+        fields = [
+            'title',
+            'wallet_id',
+            'notify_secret_key',
+        ]
+        labels = {
+            'title': 'Название кошелька',
+            'wallet_id': 'ID кошелька',
+            'notify_secret_key': 'Секрет для проверки подлинности',
         }

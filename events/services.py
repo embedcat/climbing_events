@@ -124,6 +124,7 @@ def update_event_settings(event: Event, cd: dict) -> None:
 def update_event_pay_settings(event: Event, cd: dict) -> None:
     event.is_pay_allowed = cd['is_pay_allowed']
     event.price = cd['price']
+    event.wallet = cd['wallet']
     event.save()
 
 # ================================================

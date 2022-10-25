@@ -16,9 +16,9 @@ from django.urls import reverse
 from config import settings
 from events.exceptions import DuplicateParticipantError, ParticipantTooYoungError
 from events.forms import ParticipantRegistrationForm, AdminDescriptionForm, AccentForm, AccentParticipantForm, \
-    EventSettingsForm, RouteEditForm, ParticipantForm, CreateEventForm, CustomUserForm, EventPaySettingsForm, \
-    PromoCodeAddForm
-from events.models import Event, Participant, Route, ACCENT_NO, PromoCode
+    EventSettingsForm, RouteEditForm, ParticipantForm, CreateEventForm, EventPaySettingsForm, \
+    PromoCodeAddForm, WalletForm
+from events.models import Event, Participant, Route, ACCENT_NO, PromoCode, Wallet
 from events import services, xl_tools
 from braces import views as braces
 
@@ -136,13 +136,13 @@ class AdminProtocolsView(IsOwnerMixin, views.View):
         return redirect('admin_protocols', event_id)
 
 
-class ProtocolDownload(views.View):
+class ProtocolDownload(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id, file):
         return services.download_xlsx_response(f'{event_id}/{file}')
 
 
-class ProtocolRemove(views.View):
+class ProtocolRemove(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id, file):
         services.remove_file(f'{event_id}/{file}')
@@ -225,7 +225,7 @@ class AdminSettingsView(IsOwnerMixin, views.View):
             )
 
 
-class PaySettingsView(views.View):
+class PaySettingsView(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
@@ -775,13 +775,6 @@ class ParticipantRemoveView(IsOwnerMixin, views.View):
         )
 
 
-class ProfileView(IsOwnerMixin, views.View):
-    @staticmethod
-    def get(request):
-        return render(request=request,
-                      template_name='events/my-events.html')
-
-
 class MyEventsView(LoginRequiredMixin, views.View):
     @staticmethod
     def get(request):
@@ -862,34 +855,13 @@ class CreateEventView(LoginRequiredMixin, views.View):
                 })
 
 
-class ProfileView(views.View):
+class ProfileView(LoginRequiredMixin, views.View):
     @staticmethod
     def get(request):
-        return render(request=request,
-                      template_name='events/profile/profile.html',
-                      context={
-                          'form': CustomUserForm(instance=request.user),
-                      })
-
-    @staticmethod
-    def post(request):
-        form = CustomUserForm(request.POST)
-        if form.is_valid():
-            cd = form.cleaned_data
-            request.user.yoomoney_wallet_id = cd['yoomoney_wallet_id']
-            request.user.yoomoney_secret_key = cd['yoomoney_secret_key']
-            request.user.save()
-            return redirect('profile')
-        else:
-            return render(
-                request=request,
-                template_name='events/profile/profile.html',
-                context={
-                    'form': CustomUserForm(request.POST),
-                })
+        return redirect('wallets')
 
 
-class PromoCodeRemove(views.View):
+class PromoCodeRemove(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id, promocode_id):
         try:
@@ -899,6 +871,81 @@ class PromoCodeRemove(views.View):
         return redirect('pay_settings', event_id=event_id)
 
 
+class WalletsView(LoginRequiredMixin, views.View):
+    @staticmethod
+    def get(request):
+        return render(request=request,
+                      template_name='events/profile/wallets.html',
+                      context={
+                          'form': WalletForm(),
+                          'wallets': Wallet.objects.filter(owner=request.user)
+                      })
+
+    @staticmethod
+    def post(request):
+        form = WalletForm(request.POST)
+        if form.is_valid():
+            cd = form.cleaned_data
+            Wallet.objects.create(owner=request.user,
+                                  title=cd['title'],
+                                  wallet_id=cd['wallet_id'],
+                                  notify_secret_key=cd['notify_secret_key'])
+            return redirect('wallets')
+        else:
+            return render(
+                request=request,
+                template_name='events/profile/wallets.html',
+                context={
+                    'form': WalletForm(request.POST),
+                })
+
+
+class WalletView(LoginRequiredMixin, views.View):
+    @staticmethod
+    def get(request, wallet_id):
+        try:
+            wallet = Wallet.objects.get(id=wallet_id)
+            if wallet.owner != request.user and request.user.is_superuser:
+                return redirect('profile')
+            return render(request=request,
+                          template_name='events/profile/wallet.html',
+                          context={
+                              'form': WalletForm(instance=wallet),
+                          })
+        except Wallet.DoesNotExist as e:
+            logger.error(f"Wallet deleting error: {e}")
+        return redirect('profile')
+
+    @staticmethod
+    def post(request, wallet_id):
+        wallet = Wallet.objects.get(id=wallet_id)
+        form = WalletForm(request.POST)
+        if form.is_valid() and (wallet.owner == request.user or request.user.is_superuser):
+            wallet.title = form.cleaned_data['title']
+            wallet.wallet_id = form.cleaned_data['wallet_id']
+            wallet.notify_secret_key = form.cleaned_data['notify_secret_key']
+            wallet.save()
+            return redirect('wallet', wallet_id=wallet_id)
+        return render(
+            request=request,
+            template_name='events/profile/wallet.html',
+            context={
+                'form': WalletForm(request.POST),
+            })
+
+
+class WalletRemoveView(LoginRequiredMixin, views.View):
+    @staticmethod
+    def get(request, wallet_id):
+        try:
+            wallet = Wallet.objects.get(id=wallet_id)
+            if wallet.owner == request.user or request.user.is_superuser:
+                wallet.delete()
+        except Wallet.DoesNotExist as e:
+            logger.error(f"Wallet deleting error: {e}")
+        return redirect('profile')
+
+
 class AboutView(views.View):
     @staticmethod
     def get(request):
@@ -906,7 +953,7 @@ class AboutView(views.View):
                       template_name='events/profile/about.html')
 
 
-class HelpView(LoginRequiredMixin, views.View):
+class HelpView(views.View):
     @staticmethod
     def get(request):
         return render(request=request,

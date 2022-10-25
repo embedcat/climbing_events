@@ -22,7 +22,7 @@ def check_notify_hash(notify: dict, secret: str) -> bool:
 
 
 def is_pay_available(event: Event) -> bool:
-    return event.owner.yoomoney_wallet_id and event.owner.yoomoney_secret_key and event.is_pay_allowed
+    return event.wallet and event.is_pay_allowed
 
 
 class NotifyView(views.View):

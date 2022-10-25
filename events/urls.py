@@ -43,6 +43,9 @@ urlpatterns = [
 
     path('e/<int:event_id>/promocode/<int:promocode_id>/remove/', views.PromoCodeRemove.as_view(),
          name='promocode_remove'),
+    path('wallets/', views.WalletsView.as_view(), name='wallets'),
+    path('wallet/<int:wallet_id>/', views.WalletView.as_view(), name='wallet'),
+    path('wallet/<int:wallet_id>/remove/', views.WalletRemoveView.as_view(), name='wallet_remove'),
 
     path('test/', views.async_get_results, name='test'),
 ]

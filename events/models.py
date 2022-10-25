@@ -12,8 +12,17 @@ def _get_blank_json():
 
 
 class CustomUser(AbstractUser):
-    yoomoney_wallet_id = models.CharField(max_length=50, default="", null=True, blank=True)
-    yoomoney_secret_key = models.CharField(max_length=50, default="", null=True, blank=True)
+    pass
+
+
+class Wallet(models.Model):
+    owner = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='wallet', default=1)
+    title = models.CharField(max_length=50)
+    wallet_id = models.CharField(max_length=50)
+    notify_secret_key = models.CharField(max_length=50)
+
+    def __str__(self):
+        return f"{self.title} ({ '*' * 6 + str(self.wallet_id)[-4:]})"
 
 
 class Event(models.Model):
@@ -91,6 +100,7 @@ class Event(models.Model):
     participant_min_age = models.IntegerField(default=0)
     is_pay_allowed = models.BooleanField(default=False)
     price = models.IntegerField(default=0, null=True, blank=True)
+    wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='event', blank=True, null=True)
 
 
 class Participant(models.Model):
