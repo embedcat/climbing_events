@@ -84,6 +84,7 @@ class CreatePay(views.View):
                 'label': label,
                 'amount': amount,
                 'success_uri': success_uri,
+                'receiver': event.wallet.wallet_id,
                 'pay_available': is_pay_available(event=event),
             }
         )
