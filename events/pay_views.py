@@ -51,7 +51,7 @@ class NotifyView(views.View):
                 event = Event.objects.get(id=event_id)
                 participant = Participant.objects.get(id=participant_id, event=event)
                 promo_code = PromoCode.objects.get(id=promocode_id)
-                if check_notify_hash(request.POST, event.owner.yoomoney_secret_key):
+                if check_notify_hash(request.POST, event.wallet.notify_secret_key):
                     participant.paid = True
                     participant.save()
                     promo_code.applied_num = promo_code.applied_num + 1
