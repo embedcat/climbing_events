@@ -8,7 +8,7 @@ from django import views
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.mail import send_mail
 from django.db.models import Count
-from django.forms import formset_factory, modelformset_factory
+from django.forms import formset_factory, modelformset_factory, ModelChoiceField
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse
@@ -229,12 +229,14 @@ class PaySettingsView(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
+        EventPaySettingsForm.base_fields['wallet'] = ModelChoiceField(queryset=Wallet.objects.filter(owner=request.user))
+        form = EventPaySettingsForm(instance=event)
         return render(
             request=request,
             template_name='events/event/pay-settings.html',
             context={
                 'event': event,
-                'form': EventPaySettingsForm(instance=event),
+                'form': form,
                 'promocode_form': PromoCodeAddForm(),
                 'promocodes': PromoCode.objects.filter(event__id=event_id),
             }
@@ -260,8 +262,8 @@ class PaySettingsView(IsOwnerMixin, views.View):
                 template_name='events/event/pay-settings.html',
                 context={
                     'event': event,
-                    'form': EventPaySettingsForm(request.POST),
-                    'promocode_form': PromoCodeAddForm(request.POST),
+                    'form': form,
+                    'promocode_form': promocode_form,
                     'promocodes': PromoCode.objects.filter(event__id=event_id),
                 }
             )

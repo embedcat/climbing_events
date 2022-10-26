@@ -266,7 +266,7 @@ class ParticipantForm(forms.ModelForm):
         group_list = kwargs.pop('group_list')
         set_list = kwargs.pop('set_list')
         registration_fields = kwargs.pop('registration_fields')
-        is_pay_allowd = kwargs.pop('is_pay_allowed')
+        is_pay_allowed = kwargs.pop('is_pay_allowed')
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_method = 'post'
@@ -287,7 +287,7 @@ class ParticipantForm(forms.ModelForm):
         deleting_fields = list(set(Event.OPTIONAL_FIELDS) - set(registration_fields))
         for field in deleting_fields:
             del self.fields[field]
-        if not is_pay_allowd:
+        if not is_pay_allowed:
             del self.fields['paid']
 
     class Meta:
