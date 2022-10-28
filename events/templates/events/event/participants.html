@@ -34,6 +34,9 @@
       <tr>
         <th data-field="num" data-sortable="true" style="width:10%">#</th>
         <th data-field="name" dattable-lighta-sortable="true">Участник</th>
+        {% if event.is_pay_allowed %}
+        <th>Оплата</th>
+        {% endif %}
         {% if user == event.owner or user.is_superuser %}
         <th>Pin</th>
         {% endif %}
@@ -71,6 +74,15 @@
           <span class="small"><em><a href="{% url 'participant' event.id participant.id %}">(ред.)</a></em></span>
           {% endif %}
         </td>
+        {% if event.is_pay_allowed %}
+        <td>
+          {% if participant.paid %}
+          <span title="Оплата подтверждена"><i class="fa-solid fa-check text-success "></i></span>
+        {% else %}
+          <a href="{% url 'pay_create' event.id participant.id %}" title="Перейти к оплате"><i class="fa-solid fa-cart-shopping text-danger"></i></a>
+          {% endif %}
+        </td>
+        {% endif %}
         {% if user.is_superuser %}
         <td>{{ participant.pin }}</td>
         {% endif %}

@@ -1,0 +1,39 @@
+{% extends 'events/event/base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}
+Настройки оплаты
+{% endblock %}
+{% block body %}
+{% crispy form %}
+<hr>
+<h4>Добавить Промо Код:</h4>
+{% crispy promocode_form %}
+<hr>
+<h4>Промокоды</h4>
+<table class="table table-sm table-striped table-bordered"
+               data-toggle="table"
+               data-sort-name="no"
+               data-sortable="true"
+               id="dataTableProtocols" width="100%">
+    <thead class="table-dark">
+    <tr>
+        <th data-field="no" data-sortable="true" style="width:5%">#</th>
+        <th data-field="name" data-sortable="true">Промо Код</th>
+        <th data-field="action" data-sortable="true">Стоимость</th>
+        <th data-field="action" data-sortable="true">Применено</th>
+        <th data-field="action" data-sortable="true">Действия</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for item in promocodes %}
+    <tr>
+        <td>{{ forloop.counter }}</td>
+        <td>{{ item.title }}</td>
+        <td>{{ item.price }} ₽</td>
+        <td>{{ item.applied_num }}{% if item.max_applied_num %} из {{ item.max_applied_num }}{% endif %}</td>
+        <td><a href="{% url 'promocode_remove' event.id item.id %}" title="Удалить" onclick="return confirm_action();"><i class="fa-solid fa-trash"></i></a></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

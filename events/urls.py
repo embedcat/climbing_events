@@ -1,6 +1,6 @@
 from django.urls import path
 
-from events import views
+from events import views, pay_views
 
 urlpatterns = [
     path('', views.MainView.as_view(), name='main'),
@@ -9,6 +9,7 @@ urlpatterns = [
     path('e/<int:event_id>/admin_description/', views.AdminDescriptionView.as_view(),
          name='admin_description'),
     path('e/<int:event_id>/admin_settings/', views.AdminSettingsView.as_view(), name='admin_settings'),
+    path('e/<int:event_id>/pay_settings/', views.PaySettingsView.as_view(), name='pay_settings'),
     path('e/<int:event_id>/admin_protocols', views.AdminProtocolsView.as_view(), name='admin_protocols'),
     path('e/<int:event_id>/admin_protocols/<str:file>', views.ProtocolDownload.as_view(), name='protocol_download'),
     path('e/<int:event_id>/admin_protocols/<str:file>/remove', views.ProtocolRemove.as_view(), name='protocol_remove'),
@@ -29,10 +30,22 @@ urlpatterns = [
 
     path('create/', views.CreateEventView.as_view(), name='create'),
     path('my_events/', views.MyEventsView.as_view(), name='my_events'),
+    path('profile/', views.ProfileView.as_view(), name='profile'),
     path('about/', views.AboutView.as_view(), name='about'),
     path('help/', views.HelpView.as_view(), name='help'),
 
     path('ajax/check_pin_code/', views.check_pin_code, name='check_pin_code'),
+    path('ajax/check_promo_code/', views.check_promo_code, name='check_promo_code'),
+
+    path('pay/notify/', pay_views.NotifyView.as_view(), name='pay_notify'),
+    path('pay/<int:event_id>/<int:p_id>/', pay_views.CreatePay.as_view(), name='pay_create'),
+    path('pay/ok/<int:event_id>/', pay_views.PayOk.as_view(), name='pay_ok'),
+
+    path('e/<int:event_id>/promocode/<int:promocode_id>/remove/', views.PromoCodeRemove.as_view(),
+         name='promocode_remove'),
+    path('wallets/', views.WalletsView.as_view(), name='wallets'),
+    path('wallet/<int:wallet_id>/', views.WalletView.as_view(), name='wallet'),
+    path('wallet/<int:wallet_id>/remove/', views.WalletRemoveView.as_view(), name='wallet_remove'),
 
     path('test/', views.async_get_results, name='test'),
 ]

@@ -1,5 +1,6 @@
 from colorfield.fields import ColorField
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AbstractUser
 from django.db import models
 from multiselectfield import MultiSelectField
 
@@ -8,6 +9,20 @@ from config import settings
 
 def _get_blank_json():
     return {}
+
+
+class CustomUser(AbstractUser):
+    pass
+
+
+class Wallet(models.Model):
+    owner = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='wallet', default=1)
+    title = models.CharField(max_length=50)
+    wallet_id = models.CharField(max_length=50)
+    notify_secret_key = models.CharField(max_length=50)
+
+    def __str__(self):
+        return f"{self.title} ({ '*' * 6 + str(self.wallet_id)[-4:]})"
 
 
 class Event(models.Model):
@@ -51,10 +66,20 @@ class Event(models.Model):
     FIELD_TEAM = 'team'
     FIELD_GENDER = 'gender'
     FIELD_GRADE = 'grade'
+    FIELD_EMAIL = 'email'
+    OPTIONAL_FIELDS = [
+        FIELD_BIRTH_YEAR,
+        FIELD_CITY,
+        FIELD_TEAM,
+        FIELD_GENDER,
+        FIELD_GRADE,
+        FIELD_EMAIL,
+    ]
     REQUIRED_FIELDS = [
         (FIELD_BIRTH_YEAR, 'Год рождения'),
         (FIELD_CITY, 'Город'),
         (FIELD_TEAM, 'Команда'),
+        (FIELD_EMAIL, 'Email'),
     ]
     REGISTRATION_FIELDS = [
         (FIELD_GENDER, 'Пол'),
@@ -62,6 +87,7 @@ class Event(models.Model):
         (FIELD_CITY, 'Город'),
         (FIELD_TEAM, 'Команда'),
         (FIELD_GRADE, 'Разряд'),
+        (FIELD_EMAIL, 'Email')
     ]
     registration_fields = MultiSelectField(choices=REGISTRATION_FIELDS,
                                            default=f'{FIELD_GENDER},{FIELD_BIRTH_YEAR},{FIELD_CITY},{FIELD_TEAM}',
@@ -72,6 +98,9 @@ class Event(models.Model):
     is_check_result_before_enter = models.BooleanField(default=False)
     is_update_result_allowed = models.BooleanField(default=True)
     participant_min_age = models.IntegerField(default=0)
+    is_pay_allowed = models.BooleanField(default=False)
+    price = models.IntegerField(default=0, null=True, blank=True)
+    wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='event', blank=True, null=True)
 
 
 class Participant(models.Model):
@@ -120,6 +149,8 @@ class Participant(models.Model):
 
     accents = models.JSONField(default=_get_blank_json)
     place = models.IntegerField(default=0)
+    email = models.EmailField(max_length=100, blank=True, null=True)
+    paid = models.BooleanField(default=False)
 
     def __str__(self):
         return f'<Part-t: Name={self.last_name}, PIN={self.pin}, Score={self.score}, set={self.set_index}>'
@@ -180,6 +211,14 @@ class Route(models.Model):
 
     def __str__(self):
         return f'N={self.number}, score={self.score_json}'
+
+
+class PromoCode(models.Model):
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='PromoCode')
+    title = models.CharField(max_length=32)
+    price = models.IntegerField(default=0)
+    applied_num = models.IntegerField(default=0, blank=True, null=True)
+    max_applied_num = models.IntegerField(default=0, blank=True, null=True)
 
 
 ACCENT_NO = '-'

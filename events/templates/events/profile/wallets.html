@@ -1,0 +1,37 @@
+{% extends 'events/profile/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+Кошельки пользователя {{ user.email }}
+{% endblock title %}
+
+{% block body %}
+<h4>Добавить кошелёк</h4>
+{% crispy form %}
+<hr>
+<h4>Кошельки:</h4>
+<table class="table table-sm table-striped table-bordered"
+       data-toggle="table"
+       data-sort-name="no"
+       data-sortable="true"
+       id="dataTableProtocols" width="100%">
+  <thead class="table-dark">
+  <tr>
+    <th data-field="no" data-sortable="true" style="width:5%">#</th>
+    <th data-field="name" data-sortable="true">Название</th>
+    <th data-field="action" data-sortable="true">Действия</th>
+  </tr>
+  </thead>
+  <tbody>
+  {% for item in wallets %}
+  <tr>
+    <td>{{ forloop.counter }}</td>
+    <td>{{ item }}</td>
+    <td><a href="{% url 'wallet' item.id %}" title="Редактировать"><i class="fa-solid fa-pen-to-square"></i></a> <a href="{% url 'wallet_remove' item.id %}" title="Удалить" onclick="return confirm_action();"><i class="fa-solid fa-trash"></i></a>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{% endblock body %}

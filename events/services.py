@@ -121,6 +121,12 @@ def update_event_settings(event: Event, cd: dict) -> None:
         create_event_routes(event=event)
 
 
+def update_event_pay_settings(event: Event, cd: dict) -> None:
+    event.is_pay_allowed = cd['is_pay_allowed']
+    event.price = cd['price']
+    event.wallet = cd['wallet']
+    event.save()
+
 # ================================================
 # =================== Routes =====================
 # ================================================
@@ -173,6 +179,8 @@ def get_registration_fields(event: Event) -> list:
     registration_fields = event.registration_fields
     if event.participant_min_age:
         registration_fields.append(Event.FIELD_BIRTH_YEAR)
+    if Event.FIELD_EMAIL not in registration_fields and event.is_pay_allowed:
+        registration_fields.append(Event.FIELD_EMAIL)
     return registration_fields
 
 
@@ -180,6 +188,8 @@ def get_registration_required_fields(event: Event) -> list:
     required_fields = event.required_fields
     if event.participant_min_age:
         required_fields.append(Event.FIELD_BIRTH_YEAR)
+    if Event.FIELD_EMAIL not in required_fields and event.is_pay_allowed:
+        required_fields.append(Event.FIELD_EMAIL)
     return required_fields
 
 
@@ -198,6 +208,8 @@ def update_participant(event: Event, participant: Participant, cd: dict) -> Part
     participant.grade = cd[Event.FIELD_GRADE] if Event.FIELD_GRADE in cd else Participant.GRADE_BR
     participant.group_index = new_group_index
     participant.set_index = get_set_list(event=event).index(cd['set_index']) if 'set_index' in cd else 0
+    participant.paid = cd['paid'] if 'paid' in cd else False
+    participant.email = cd['email'] if 'email' in cd else ''
     participant.save()
 
     if need_update_results:
@@ -219,6 +231,7 @@ def _create_participant(event: Event, first_name: str, last_name: str,
                         grade: Participant.GRADES = Participant.GRADE_BR,
                         group_index: int = 0,
                         set_index: int = 0,
+                        email: str = '',
                         ) -> Participant or None:
     if 0 < event.set_max_participants <= event.participant.filter(set_index=set_index).count():
         return None
@@ -237,6 +250,7 @@ def _create_participant(event: Event, first_name: str, last_name: str,
         pin=pin,
         group_index=group_index,
         set_index=set_index,
+        email=email,
     )
     return participant
 
@@ -244,7 +258,7 @@ def _create_participant(event: Event, first_name: str, last_name: str,
 def register_participant(event: Event, cd: dict) -> Participant:
     if event.participant.filter(first_name=cd['first_name'], last_name=cd['last_name']):
         raise DuplicateParticipantError
-    if datetime.today().year - cd[Event.FIELD_BIRTH_YEAR] < event.participant_min_age:
+    if event.participant_min_age and datetime.today().year - cd[Event.FIELD_BIRTH_YEAR] < event.participant_min_age:
         raise ParticipantTooYoungError(event.participant_min_age)
     participant = _create_participant(
         event=event,
@@ -257,6 +271,7 @@ def register_participant(event: Event, cd: dict) -> Participant:
         grade=cd[Event.FIELD_GRADE] if Event.FIELD_GRADE in cd else Participant.GRADE_BR,
         group_index=get_group_list(event=event).index(cd['group_index']) if 'group_index' in cd else 0,
         set_index=get_set_list(event=event).index(cd['set_index']) if 'set_index' in cd else 0,
+        email=cd[Event.FIELD_EMAIL] if Event.FIELD_EMAIL in cd else '',
     )
     _check_participants_number_to_close_registration(event=event)
     return participant
@@ -334,6 +349,14 @@ def enter_results(event: Event, participant: Participant, accents: dict, force_u
     if event.is_update_results_after_enter or force_update:
         _update_results(event=event, gender=participant.gender, group_index=participant.group_index)
 
+
+def get_registration_msg_html(event: Event, participant: Participant, pay_url: str) -> str:
+    html = f"<h3>Вы успешно зарегистрированы на \"{event.title}\", {event.date}, скалодром {event.gym}</h3><br>" \
+           f"Ваш PIN-код: <strong>{participant.pin}</strong>. " \
+           f"PIN-код понадобится Вам для ввода результатов! Также он будет указан в вашей карточке участника.</p><br>"
+    if event.is_pay_allowed:
+        html += f"Для завершения регистрации Вам необходимо оплатить стартовый взнос по ссылке: <a href=\"{pay_url}\">{pay_url}</a>.<br>"
+    return html
 
 # ================================================
 # =============== Get results ====================

@@ -4,7 +4,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit, Layout
 from django import forms
 
-from events.models import Participant, Event, ACCENT_TYPE, Route
+from events.models import Participant, Event, ACCENT_TYPE, Route, PromoCode, Wallet
 from tinymce.widgets import TinyMCE
 
 
@@ -40,6 +40,9 @@ class ParticipantRegistrationForm(forms.ModelForm):
         if Event.FIELD_GRADE in registration_fields:
             self.fields[Event.FIELD_GRADE] = forms.ChoiceField(choices=Participant.GRADES, label='Разряд',
                                                                required=False)
+        if Event.FIELD_EMAIL in registration_fields:
+            self.fields[Event.FIELD_EMAIL] = forms.EmailField(label='Email',
+                                                              required=Event.FIELD_EMAIL in required_fields)
 
         if group_list != ['']:
             self.fields['group_index'] = forms.ChoiceField(choices=tuple([(name, name) for name in group_list]),
@@ -99,7 +102,7 @@ class AdminDescriptionForm(forms.ModelForm):
         }
 
 
-class EventAdminSettingsForm(forms.ModelForm):
+class EventSettingsForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
@@ -165,6 +168,27 @@ class EventAdminSettingsForm(forms.ModelForm):
             'registration_fields': 'Дополнительные поля формы регистрации',
             'required_fields': 'Обязательные поля при регистрации',
             'participant_min_age': 'Минимальный возраст участника',
+        }
+
+
+class EventPaySettingsForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.add_input(Submit('pay_settings', 'Сохранить'))
+
+    class Meta:
+        model = Event
+        fields = [
+            'is_pay_allowed',
+            'price',
+            'wallet',
+        ]
+        labels = {
+            'is_pay_allowed': 'Оплачивать стартовые взносы на сайте',
+            'price': 'Стоимость участия',
+            'wallet': 'Кошелек для оплаты',
         }
 
 
@@ -241,16 +265,17 @@ class ParticipantForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         group_list = kwargs.pop('group_list')
         set_list = kwargs.pop('set_list')
+        registration_fields = kwargs.pop('registration_fields')
+        is_pay_allowed = kwargs.pop('is_pay_allowed')
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.add_input(Submit('submit', 'Сохранить'))
         self.fields['pin'].widget.attrs['readonly'] = True
-        self.fields[Event.FIELD_GENDER].required = False
-        self.fields[Event.FIELD_BIRTH_YEAR].required = False
-        self.fields[Event.FIELD_CITY].required = False
-        self.fields[Event.FIELD_TEAM].required = False
-        self.fields[Event.FIELD_GRADE].required = False
+        self.fields['email'].widget.attrs['readonly'] = True
+
+        for field in self.Meta.fields:
+            self.fields[field].required = False
         if group_list:
             self.fields['group_index'] = forms.ChoiceField(choices=tuple([(name, name) for name in group_list]),
                                                            label='Категория',
@@ -259,6 +284,11 @@ class ParticipantForm(forms.ModelForm):
             self.fields['set_index'] = forms.ChoiceField(choices=tuple([(name, name) for name in set_list]),
                                                          label='Сет',
                                                          required=False)
+        deleting_fields = list(set(Event.OPTIONAL_FIELDS) - set(registration_fields))
+        for field in deleting_fields:
+            del self.fields[field]
+        if not is_pay_allowed:
+            del self.fields['paid']
 
     class Meta:
         model = Participant
@@ -271,7 +301,21 @@ class ParticipantForm(forms.ModelForm):
             Event.FIELD_CITY,
             Event.FIELD_TEAM,
             Event.FIELD_GRADE,
+            Event.FIELD_EMAIL,
+            'paid',
         ]
+        labels = {
+            'last_name': 'Фамилия',
+            'first_name': 'Имя',
+            'pin': 'Пин-код',
+            Event.FIELD_GENDER: 'Пол',
+            Event.FIELD_BIRTH_YEAR: 'Год рождения',
+            Event.FIELD_CITY: 'Город',
+            Event.FIELD_TEAM: 'Команда',
+            Event.FIELD_GRADE: 'Спортивный разряд',
+            Event.FIELD_EMAIL: 'E-mail',
+            'paid': 'Оплата произведена',
+        }
 
 
 class CreateEventForm(forms.ModelForm):
@@ -293,4 +337,46 @@ class CreateEventForm(forms.ModelForm):
         }
         widgets = {
             'date': DatePickerInput(),
+        }
+
+
+class PromoCodeAddForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.add_input(Submit('add_promocode', 'Добавить'))
+
+    class Meta:
+        model = PromoCode
+        fields = [
+            'title',
+            'price',
+            'max_applied_num',
+        ]
+        labels = {
+            'title': 'Промо Код (Например "SUPERSALE10")',
+            'price': 'Стоимость',
+            'max_applied_num': 'Ограничить число применений (0 - не ограничивать)',
+        }
+
+
+class WalletForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.add_input(Submit('wallet', 'Отправить'))
+
+    class Meta:
+        model = Wallet
+        fields = [
+            'title',
+            'wallet_id',
+            'notify_secret_key',
+        ]
+        labels = {
+            'title': 'Название кошелька',
+            'wallet_id': 'ID кошелька',
+            'notify_secret_key': 'Секрет для проверки подлинности',
         }

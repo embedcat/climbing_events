@@ -6,8 +6,9 @@ import operator
 from asgiref.sync import sync_to_async
 from django import views
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.mail import send_mail
 from django.db.models import Count
-from django.forms import formset_factory, modelformset_factory
+from django.forms import formset_factory, modelformset_factory, ModelChoiceField
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse
@@ -15,8 +16,9 @@ from django.urls import reverse
 from config import settings
 from events.exceptions import DuplicateParticipantError, ParticipantTooYoungError
 from events.forms import ParticipantRegistrationForm, AdminDescriptionForm, AccentForm, AccentParticipantForm, \
-    EventAdminSettingsForm, RouteEditForm, ParticipantForm, CreateEventForm
-from events.models import Event, Participant, Route, ACCENT_NO
+    EventSettingsForm, RouteEditForm, ParticipantForm, CreateEventForm, EventPaySettingsForm, \
+    PromoCodeAddForm, WalletForm
+from events.models import Event, Participant, Route, ACCENT_NO, PromoCode, Wallet
 from events import services, xl_tools
 from braces import views as braces
 
@@ -134,13 +136,13 @@ class AdminProtocolsView(IsOwnerMixin, views.View):
         return redirect('admin_protocols', event_id)
 
 
-class ProtocolDownload(views.View):
+class ProtocolDownload(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id, file):
         return services.download_xlsx_response(f'{event_id}/{file}')
 
 
-class ProtocolRemove(views.View):
+class ProtocolRemove(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id, file):
         services.remove_file(f'{event_id}/{file}')
@@ -198,14 +200,14 @@ class AdminSettingsView(IsOwnerMixin, views.View):
             template_name='events/event/admin-settings.html',
             context={
                 'event': event,
-                'form': EventAdminSettingsForm(instance=event),
+                'form': EventSettingsForm(instance=event),
             }
         )
 
     @staticmethod
     def post(request, event_id):
         event = Event.objects.get(id=event_id)
-        form = EventAdminSettingsForm(request.POST)
+        form = EventSettingsForm(request.POST)
         logger.info('Admin.Settings [POST] ->')
         if form.is_valid():
             services.update_event_settings(event=event, cd=form.cleaned_data)
@@ -218,7 +220,51 @@ class AdminSettingsView(IsOwnerMixin, views.View):
                 template_name='events/event/admin-settings.html',
                 context={
                     'event': event,
-                    'form': EventAdminSettingsForm(request.POST),
+                    'form': EventSettingsForm(request.POST),
+                }
+            )
+
+
+class PaySettingsView(IsOwnerMixin, views.View):
+    @staticmethod
+    def get(request, event_id):
+        event = Event.objects.get(id=event_id)
+        EventPaySettingsForm.base_fields['wallet'] = ModelChoiceField(queryset=Wallet.objects.filter(owner=request.user))
+        form = EventPaySettingsForm(instance=event)
+        return render(
+            request=request,
+            template_name='events/event/pay-settings.html',
+            context={
+                'event': event,
+                'form': form,
+                'promocode_form': PromoCodeAddForm(),
+                'promocodes': PromoCode.objects.filter(event__id=event_id),
+            }
+        )
+
+    @staticmethod
+    def post(request, event_id):
+        event = Event.objects.get(id=event_id)
+        form = EventPaySettingsForm(request.POST)
+        promocode_form = PromoCodeAddForm(request.POST)
+        if 'pay_settings' in request.POST and form.is_valid():
+            services.update_event_pay_settings(event=event, cd=form.cleaned_data)
+            return redirect('pay_settings', event_id)
+        elif 'add_promocode' in request.POST and promocode_form.is_valid():
+            PromoCode.objects.create(event=event,
+                                     title=promocode_form.cleaned_data['title'],
+                                     price=promocode_form.cleaned_data['price'],
+                                     max_applied_num=promocode_form.cleaned_data['max_applied_num'])
+            return redirect('pay_settings', event_id)
+        else:
+            return render(
+                request=request,
+                template_name='events/event/pay-settings.html',
+                context={
+                    'event': event,
+                    'form': form,
+                    'promocode_form': promocode_form,
+                    'promocodes': PromoCode.objects.filter(event__id=event_id),
                 }
             )
 
@@ -305,7 +351,7 @@ class EnterCheckView(views.View):
                 'result': result.get(str(i), ACCENT_NO),
             })
         for i in range(0, event.routes_num, 5):
-            items.append(temp[i:i+5])
+            items.append(temp[i:i + 5])
         return render(
             request=request,
             template_name='events/event/enter-check.html',
@@ -370,8 +416,9 @@ class EnterWithoutReg(views.View):
                 'routes': routes,
                 'form': ParticipantRegistrationForm(group_list=group_list,
                                                     set_list=set_list,
-                                                    registration_fields=event.registration_fields,
-                                                    required_fields=event.required_fields,
+                                                    registration_fields=services.get_registration_fields(event=event),
+                                                    required_fields=services.get_registration_required_fields(
+                                                        event=event),
                                                     is_enter_form=True)
 
             }
@@ -386,8 +433,8 @@ class EnterWithoutReg(views.View):
                                            request.FILES,
                                            group_list=group_list,
                                            set_list=set_list,
-                                           registration_fields=event.registration_fields,
-                                           required_fields=event.required_fields,
+                                           registration_fields=services.get_registration_fields(event=event),
+                                           required_fields=services.get_registration_required_fields(event=event),
                                            is_enter_form=True)
         AccentFormSet = formset_factory(AccentForm)
         accent_formset = AccentFormSet(request.POST, prefix='accents')
@@ -395,7 +442,8 @@ class EnterWithoutReg(views.View):
             participant = services.register_participant(event=event, cd=form.cleaned_data)
             services.enter_results(event=event,
                                    participant=participant,
-                                   accents=services.accent_form_to_results(form_cleaned_data=accent_formset.cleaned_data))
+                                   accents=services.accent_form_to_results(
+                                       form_cleaned_data=accent_formset.cleaned_data))
             return redirect('enter_results_ok', event_id=event_id)
         return render(
             request=request,
@@ -457,7 +505,7 @@ class ParticipantsView(views.View):
                 'chart_set_data': json.dumps(chart_set_data),
                 'chart_group_data': json.dumps(chart_group_data),
                 'chart_city_data': json.dumps(chart_city_data),
-                'fields': event.registration_fields,
+                'fields': services.get_registration_fields(event=event),
             }
         )
 
@@ -500,17 +548,15 @@ class RegistrationView(views.View):
                                            registration_fields=registration_fields,
                                            required_fields=required_fields,
                                            is_enter_form=False)
-        logger.info('Registration [POST] ->')
         if form.is_valid():
             try:
                 participant = services.register_participant(event=event, cd=form.cleaned_data)
-                if event.is_view_pin_after_registration:
+                if event.is_view_pin_after_registration or event.is_pay_allowed:
                     return redirect('event_registration_ok', event_id=event_id, participant_id=participant.id)
                 else:
                     return redirect('participants', event_id=event_id)
             except (DuplicateParticipantError, ParticipantTooYoungError) as e:
                 error = e
-        logger.warning(f'-> registration failed, [{form}] is not valid')
         return render(
             request=request,
             template_name='events/event/registration.html',
@@ -527,12 +573,23 @@ class EventRegistrationOkView(views.View):
     def get(request, event_id, participant_id):
         event = Event.objects.get(id=event_id)
         participant = Participant.objects.get(id=participant_id)
+        msg = services.get_registration_msg_html(event=event,
+                                                 participant=participant,
+                                                 pay_url=request.build_absolute_uri(
+                                                     reverse('pay_create', args=(event_id, participant_id,))))
+        if participant.email and event.is_pay_allowed:
+            send_mail(subject='Регистрация завершена',
+                      message=msg,
+                      from_email=None,
+                      recipient_list=[participant.email],
+                      fail_silently=True,
+                      html_message=msg)
         return render(
             request=request,
             template_name='events/event/registration-ok.html',
             context={
                 'event': event,
-                'participant': participant,
+                'msg': msg,
             }
         )
 
@@ -601,7 +658,9 @@ class ParticipantView(IsOwnerMixin, views.View):
                                         group_list=group_list,
                                         set_list=set_list,
                                         initial={'group_index': group_list_value,
-                                                 'set_index': set_index_value}
+                                                 'set_index': set_index_value},
+                                        is_pay_allowed=event.is_pay_allowed,
+                                        registration_fields=services.get_registration_fields(event=event),
                                         ),
             }
         )
@@ -614,6 +673,8 @@ class ParticipantView(IsOwnerMixin, views.View):
                                request.FILES,
                                group_list=services.get_group_list(event=event),
                                set_list=services.get_set_list_for_registration_available(event=event),
+                               is_pay_allowed=event.is_pay_allowed,
+                               registration_fields=services.get_registration_fields(event=event),
                                )
         if form.is_valid():
             services.update_participant(event=event, participant=participant, cd=form.cleaned_data)
@@ -625,9 +686,12 @@ class ParticipantView(IsOwnerMixin, views.View):
                 context={
                     'title': f'{participant.last_name} {participant.first_name}',
                     'event': event,
+                    'participant': participant,
                     'form': ParticipantForm(request.POST,
                                             group_list=services.get_group_list(event=event),
                                             set_list=services.get_set_list_for_registration_available(event=event),
+                                            is_pay_allowed=event.is_pay_allowed,
+                                            registration_fields=services.get_registration_fields(event=event),
                                             ),
                 }
             )
@@ -662,7 +726,8 @@ class ParticipantRoutesView(IsOwnerMixin, views.View):
         if accent_formset.is_valid():
             services.enter_results(event=event,
                                    participant=participant,
-                                   accents=services.accent_form_to_results(form_cleaned_data=accent_formset.cleaned_data),
+                                   accents=services.accent_form_to_results(
+                                       form_cleaned_data=accent_formset.cleaned_data),
                                    force_update=True)
             return redirect('results', event_id=event_id)
         return render(
@@ -712,13 +777,6 @@ class ParticipantRemoveView(IsOwnerMixin, views.View):
         )
 
 
-class ProfileView(IsOwnerMixin, views.View):
-    @staticmethod
-    def get(request):
-        return render(request=request,
-                      template_name='events/my-events.html')
-
-
 class MyEventsView(LoginRequiredMixin, views.View):
     @staticmethod
     def get(request):
@@ -736,11 +794,30 @@ def check_pin_code(request):
     try:
         participant = Participant.objects.get(pin=pin, event__id=event_id)
         if participant.is_entered_result and not Event.objects.get(id=event_id).is_update_result_allowed:
-            response = {'result': False, 'reason': f'Найден участник: {participant.first_name} {participant.last_name}, но повторный ввод результатов запрещён.'}
+            response = {'result': False,
+                        'reason': f'Найден участник: {participant.first_name} {participant.last_name}, но повторный ввод результатов запрещён.'}
         else:
-            response = {'result': True, 'participant': f'{participant.first_name} {participant.last_name}', 'accents': participant.accents}
+            response = {'result': True, 'participant': f'{participant.first_name} {participant.last_name}',
+                        'accents': participant.accents}
     except Participant.DoesNotExist:
-        response = {'result': False, 'reason': 'Участник не найден. Проверьте PIN-код, или <a href="{% url \'registration\' event.id %}">зарегистрируйтесь</a>!'}
+        response = {'result': False,
+                    'reason': 'Участник не найден. Проверьте PIN-код, или <a href="{% url \'registration\' event.id %}">зарегистрируйтесь</a>!'}
+    return JsonResponse(response)
+
+
+def check_promo_code(request):
+    promo_code_title = request.GET.get('promocode')
+    event_id = request.GET.get('event_id')
+    response = {'result': False,
+                'price': 0}
+    try:
+        promo_code = PromoCode.objects.get(title=promo_code_title, event__id=event_id)
+        if promo_code.max_applied_num == 0 or promo_code.applied_num < promo_code.max_applied_num:
+            response = {'result': True,
+                        'price': promo_code.price,
+                        'promocode_id': promo_code.id}
+    except PromoCode.DoesNotExist:
+        pass
     return JsonResponse(response)
 
 
@@ -777,8 +854,98 @@ class CreateEventView(LoginRequiredMixin, views.View):
                 template_name='events/profile/create.html',
                 context={
                     'form': CreateEventForm(request.POST),
-                }
-            )
+                })
+
+
+class ProfileView(LoginRequiredMixin, views.View):
+    @staticmethod
+    def get(request):
+        return redirect('wallets')
+
+
+class PromoCodeRemove(IsOwnerMixin, views.View):
+    @staticmethod
+    def get(request, event_id, promocode_id):
+        try:
+            PromoCode.objects.get(id=promocode_id).delete()
+        except PromoCode.DoesNotExist as e:
+            logger.error(f"PromoCode deleting error: {e}")
+        return redirect('pay_settings', event_id=event_id)
+
+
+class WalletsView(LoginRequiredMixin, views.View):
+    @staticmethod
+    def get(request):
+        return render(request=request,
+                      template_name='events/profile/wallets.html',
+                      context={
+                          'form': WalletForm(),
+                          'wallets': Wallet.objects.filter(owner=request.user)
+                      })
+
+    @staticmethod
+    def post(request):
+        form = WalletForm(request.POST)
+        if form.is_valid():
+            cd = form.cleaned_data
+            Wallet.objects.create(owner=request.user,
+                                  title=cd['title'],
+                                  wallet_id=cd['wallet_id'],
+                                  notify_secret_key=cd['notify_secret_key'])
+            return redirect('wallets')
+        else:
+            return render(
+                request=request,
+                template_name='events/profile/wallets.html',
+                context={
+                    'form': WalletForm(request.POST),
+                })
+
+
+class WalletView(LoginRequiredMixin, views.View):
+    @staticmethod
+    def get(request, wallet_id):
+        try:
+            wallet = Wallet.objects.get(id=wallet_id)
+            if wallet.owner != request.user and not request.user.is_superuser:
+                return redirect('profile')
+            return render(request=request,
+                          template_name='events/profile/wallet.html',
+                          context={
+                              'form': WalletForm(instance=wallet),
+                          })
+        except Wallet.DoesNotExist as e:
+            logger.error(f"Wallet deleting error: {e}")
+        return redirect('profile')
+
+    @staticmethod
+    def post(request, wallet_id):
+        wallet = Wallet.objects.get(id=wallet_id)
+        form = WalletForm(request.POST)
+        if form.is_valid() and (wallet.owner == request.user or request.user.is_superuser):
+            wallet.title = form.cleaned_data['title']
+            wallet.wallet_id = form.cleaned_data['wallet_id']
+            wallet.notify_secret_key = form.cleaned_data['notify_secret_key']
+            wallet.save()
+            return redirect('wallet', wallet_id=wallet_id)
+        return render(
+            request=request,
+            template_name='events/profile/wallet.html',
+            context={
+                'form': WalletForm(request.POST),
+            })
+
+
+class WalletRemoveView(LoginRequiredMixin, views.View):
+    @staticmethod
+    def get(request, wallet_id):
+        try:
+            wallet = Wallet.objects.get(id=wallet_id)
+            if wallet.owner == request.user or request.user.is_superuser:
+                wallet.delete()
+        except Wallet.DoesNotExist as e:
+            logger.error(f"Wallet deleting error: {e}")
+        return redirect('profile')
 
 
 class AboutView(views.View):
@@ -788,7 +955,7 @@ class AboutView(views.View):
                       template_name='events/profile/about.html')
 
 
-class HelpView(LoginRequiredMixin, views.View):
+class HelpView(views.View):
     @staticmethod
     def get(request):
         return render(request=request,

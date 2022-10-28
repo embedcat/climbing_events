@@ -1,0 +1,44 @@
+{% extends 'events/event/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+Оплата стартового взноса
+{% endblock title %}
+
+{% block body %}
+<div class="row">
+  <h3>Стоимость участия: <span id="id_amount">{{ amount }}</span> ₽</h3>
+  <p>Участник: {{ participant.last_name }} {{ participant.first_name }}</p>
+  <div class="form-row">
+    <label for="id_promocode" class="col-sm-2 col-form-label">Промокод:</label>
+  </div>
+  <div class="form-row">
+    <div class="col">
+      <input type="text" class="form-control" id="id_promocode">
+    </div>
+    <div class="col">
+      <button type="submit" class="btn btn-primary mb-2" onclick="CheckPromoCode({{ event.id }}, {{ amount }})">Применить</button>
+    </div>
+  </div>
+  {% if pay_available %}
+  <input type="hidden" value="{{ label }}" id="id_default_label"/>
+  <form method="POST" action="https://yoomoney.ru/quickpay/confirm.xml">
+    <input type="hidden" name="receiver" value="{{ receiver }}"/>
+    <input type="hidden" name="label" value="{{ label }}" id="id_label_send"/>
+    <input type="hidden" name="quickpay-form" value="shop"/>
+    <input type="hidden" name="sum" value="{{ amount }}" data-type="number" id="id_amount_send"/>
+    <input type="hidden" name="need-fio" value="false"/>
+    <input type="hidden" name="need-email" value="false"/>
+    <input type="hidden" name="need-phone" value="false"/>
+    <input type="hidden" name="need-address" value="false"/>
+    <input type="hidden" name="paymentType" value="AC"/>
+    <input type="hidden" name="successURL" value="{{ success_uri }}"/>
+    <input class="btn btn-primary" type="submit" value="Перейти к оплате"/>
+  </form>
+  {% else %}
+  <p>Извините, опалата верменно недосупна.</p>
+  {% endif %}
+</div>
+<script src="/static/events/js/check_promo_code.js" type="text/javascript"></script>
+
+{% endblock body %}

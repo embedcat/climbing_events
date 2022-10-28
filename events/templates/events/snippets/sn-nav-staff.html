@@ -1,6 +1,6 @@
 <div class="sb-sidenav-menu-heading">Для организаторов</div>
 {% if user.is_authenticated %}
-<p class="nav-link">{{ user.email }}</p>
+<a class="nav-link" href="{% url 'profile' %}">{{ user.email }}</a>
 <a class="nav-link" href="{% url 'my_events' %}">Мои события</a>
 <a class="nav-link" href="{% url 'create' %}">Создать событие</a>
 <a class="nav-link" href="{% url 'account_logout' %}">Выход</a>
