@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'maintenance_mode',
     'active_link',
     'crispy_forms',
+    'crispy_bootstrap5',
     'tinymce',
     'colorfield',
     'multiselectfield',
@@ -144,7 +145,8 @@ MEDIA_POSTERS_DIR = 'posters'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
-CRISPY_TEMPLATE_PACK = 'bootstrap4'
+CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
+CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
 LOGGER = 'EventLogger'
 LOGGING = {
