@@ -11,7 +11,7 @@ from django.db.models import QuerySet
 from django.http import HttpResponse
 
 from config import settings
-from events import xl_tools
+from events import xl_tools, mock
 from events.exceptions import DuplicateParticipantError, ParticipantTooYoungError
 from events.models import Event, Route, Participant
 from events.models import ACCENT_NO, ACCENT_FLASH
@@ -126,6 +126,7 @@ def update_event_pay_settings(event: Event, cd: dict) -> None:
     event.price = cd['price']
     event.wallet = cd['wallet']
     event.save()
+
 
 # ================================================
 # =================== Routes =====================
@@ -358,6 +359,7 @@ def get_registration_msg_html(event: Event, participant: Participant, pay_url: s
         html += f"Для завершения регистрации Вам необходимо оплатить стартовый взнос по ссылке: <a href=\"{pay_url}\">{pay_url}</a>.<br>"
     return html
 
+
 # ================================================
 # =============== Get results ====================
 # ================================================
@@ -447,14 +449,15 @@ def _get_random_string(length):
 
 
 def _debug_create_random_participant(event: Event) -> Participant:
+    gender = random.choice([g[0] for g in Participant.GENDERS])
     return _create_participant(
         event=event,
-        first_name=_get_random_string(4),
-        last_name=_get_random_string(6),
-        gender=random.choice([g[0] for g in Participant.GENDERS]),
+        first_name=random.choice(mock.male_names) if gender == Participant.GENDER_MALE else random.choice(mock.female_names),
+        last_name=random.choice(mock.last_names) + ("а" if gender == Participant.GENDER_FEMALE else ""),
+        gender=gender,
         birth_year=random.randint(1950, 2020),
-        city=_get_random_string(5),
-        team=_get_random_string(5),
+        city=random.choice(mock.cities),
+        team=f"Команда №{random.randrange(5)}",
         grade=random.choice([g[0] for g in Participant.GRADES]),
         group_index=random.randrange(event.group_num),
         set_index=random.randrange(event.set_num),
@@ -467,9 +470,16 @@ def debug_create_participants(event: Event, num: int) -> None:
 
 
 def debug_apply_random_results(event: Event) -> None:
+    is_update = event.is_update_result_allowed
+    if is_update:
+        event.is_update_result_allowed = False
+        event.save()
     for participant in event.participant.all():
-        accents = [{'accent': random.choice(['F', 'RP', '-'])} for _ in range(event.routes_num)]
-        enter_results(event=event, participant=participant, accents_cleaned_data=accents)
+        accents = {i: random.choice(['F', 'RP', '-']) for i in range(event.routes_num)}
+        enter_results(event=event, participant=participant, accents=accents, force_update=False)
+    if is_update:
+        event.is_update_result_allowed = True
+        event.save()
 
 
 # ================================================

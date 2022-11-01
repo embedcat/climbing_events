@@ -361,8 +361,7 @@ h4 {
     background: #a51a1a;
 }
 */
-.red,
-a {
+.red{
     color: #bb1e1e;
 }
 
@@ -1146,4 +1145,13 @@ form div.mb-3 {
 
 .alert h4 {
     margin-bottom: 0;
+}
+
+.accent_- {
+}
+.accent_F {
+    background-color: #D8F2FF !important;
+}
+.accent_RP {
+    background-color: #FFFED6 !important;
 }

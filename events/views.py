@@ -86,7 +86,9 @@ class AdminActionsView(IsOwnerMixin, views.View):
         if 'remove_event' in request.POST:
             services.remove_event(event=event)
             return redirect('my_events')
-        if 'test' in request.POST:
+        if 'mock_data' in request.POST:
+            services.clear_event(event=event)
+            services.debug_create_participants(event=event, num=50)
             services.debug_apply_random_results(event=event)
         return redirect('admin_actions', event_id)
 
@@ -946,17 +948,3 @@ class WalletRemoveView(LoginRequiredMixin, views.View):
         except Wallet.DoesNotExist as e:
             logger.error(f"Wallet deleting error: {e}")
         return redirect('profile')
-
-
-class AboutView(views.View):
-    @staticmethod
-    def get(request):
-        return render(request=request,
-                      template_name='events/profile/about.html')
-
-
-class HelpView(views.View):
-    @staticmethod
-    def get(request):
-        return render(request=request,
-                      template_name='events/profile/help.html')
