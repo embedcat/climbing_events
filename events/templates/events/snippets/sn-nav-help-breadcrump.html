@@ -1,0 +1,13 @@
+{% load active_link_tags %}
+<nav aria-label="breadcrumb">
+   <ol class="breadcrumb">
+     <li class="breadcrumb-item"><a href="{% url 'help' type='about' %}" class="breadcrumb-item {% active_link 'help' strict=True type='about' %}">О проекте</a></li>
+     <li class="breadcrumb-item"><a href="{% url 'help' type='create' %}" class="breadcrumb-item {% active_link 'help' strict=True type='create' %}">Создание события</a></li>
+     <li class="breadcrumb-item"><a href="{% url 'help' type='settings' %}" class="breadcrumb-item {% active_link 'help' strict=True type='settings' %}">Настройки</a></li>
+     <li class="breadcrumb-item"><a href="{% url 'help' type='description' %}" class="breadcrumb-item {% active_link 'help' strict=True type='description' %}">Описание</a></li>
+     <li class="breadcrumb-item"><a href="{% url 'help' type='actions' %}" class="breadcrumb-item {% active_link 'help' strict=True type='actions' %}">Управление</a></li>
+     <li class="breadcrumb-item"><a href="{% url 'help' type='payment' %}" class="breadcrumb-item {% active_link 'help' strict=True type='payment' %}">Оплата</a></li>
+     <li class="breadcrumb-item"><a href="{% url 'help' type='routes' %}" class="breadcrumb-item {% active_link 'help' strict=True type='routes' %}">Трассы</a></li>
+     <li class="breadcrumb-item"><a href="{% url 'help' type='files' %}" class="breadcrumb-item {% active_link 'help' strict=True type='files' %}">Протоколы</a></li>
+   </ol>
+ </nav>

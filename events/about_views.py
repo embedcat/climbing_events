@@ -11,6 +11,6 @@ class AboutView(views.View):
 
 class HelpView(views.View):
     @staticmethod
-    def get(request):
+    def get(request, type):
         return render(request=request,
-                      template_name='events/about/help.html')
+                      template_name=f"events/about/{type}.html")

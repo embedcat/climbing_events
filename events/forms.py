@@ -167,6 +167,10 @@ class EventSettingsForm(forms.ModelForm):
             'required_fields': 'Обязательные поля при регистрации',
             'participant_min_age': 'Минимальный возраст участника',
         }
+        help_texts = {
+            'group_list': 'Например: "Спорт, Любители, Новички"',
+            'set_list': 'Например: "Утренний сет (8:00), Дневной сет (13:00), Вечерний сет (18:00)"',
+        }
 
 
 class EventPaySettingsForm(forms.ModelForm):
@@ -353,9 +357,13 @@ class PromoCodeAddForm(forms.ModelForm):
             'max_applied_num',
         ]
         labels = {
-            'title': 'Промо Код (Например "SUPERSALE10")',
+            'title': 'Промо Код',
             'price': 'Стоимость',
-            'max_applied_num': 'Ограничить число применений (0 - не ограничивать)',
+            'max_applied_num': 'Ограничить число применений',
+        }
+        help_texts = {
+            'title': 'Например "SUPERSALE10"',
+            'max_applied_num': '0 - не ограничивать',
         }
 
 

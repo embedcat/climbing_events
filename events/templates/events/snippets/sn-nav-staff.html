@@ -10,8 +10,5 @@
 <a class="nav-link {% active_link 'account_signup' strict=True %}" href="{% url 'account_signup' %}">Регистрация</a>
 {% endif %}
 <hr>
-{% if user.is_authenticated %}
-<a class="nav-link" href="{% url 'help' %}">Инструкции</a>
-{% endif %}
-<a class="nav-link" href="{% url 'about' %}">О проекте</a>
+<a class="nav-link {% active_link 'help' type='about' %}" href="{% url 'help' type='about' %}">{% if user.is_authenticated %}Инструкции{% else %}О проекте{% endif %}</a>
 <hr>
