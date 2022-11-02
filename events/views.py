@@ -729,8 +729,7 @@ class ParticipantRoutesView(IsOwnerMixin, views.View):
             services.enter_results(event=event,
                                    participant=participant,
                                    accents=services.accent_form_to_results(
-                                       form_cleaned_data=accent_formset.cleaned_data),
-                                   force_update=True)
+                                       form_cleaned_data=accent_formset.cleaned_data))
             return redirect('results', event_id=event_id)
         return render(
             request=request,

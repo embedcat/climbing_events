@@ -95,7 +95,6 @@ def update_event_settings(event: Event, cd: dict) -> None:
     event.is_view_route_grade = cd['is_view_route_grade']
     event.is_view_route_score = cd['is_view_route_score']
     event.is_separate_score_by_groups = cd['is_separate_score_by_groups']
-    event.is_update_results_after_enter = cd['is_update_results_after_enter']
     event.score_type = cd['score_type']
     event.flash_points = cd['flash_points']
     event.redpoint_points = cd['redpoint_points']
@@ -341,13 +340,13 @@ def update_results(event: Event):
             _update_results(event=event, gender=gender, group_index=group_index)
 
 
-def enter_results(event: Event, participant: Participant, accents: dict, force_update: bool = False):
+def enter_results(event: Event, participant: Participant, accents: dict, force_update_disable: bool = False):
     # save participant accents:
     participant.accents = accents
     participant.is_entered_result = True
     participant.save()
 
-    if event.is_update_results_after_enter or force_update:
+    if not force_update_disable:
         _update_results(event=event, gender=participant.gender, group_index=participant.group_index)
 
 
@@ -470,16 +469,10 @@ def debug_create_participants(event: Event, num: int) -> None:
 
 
 def debug_apply_random_results(event: Event) -> None:
-    is_update = event.is_update_result_allowed
-    if is_update:
-        event.is_update_result_allowed = False
-        event.save()
     for participant in event.participant.all():
         accents = {i: random.choice(['F', 'RP', '-']) for i in range(event.routes_num)}
-        enter_results(event=event, participant=participant, accents=accents, force_update=False)
-    if is_update:
-        event.is_update_result_allowed = True
-        event.save()
+        enter_results(event=event, participant=participant, accents=accents, force_update_disable=True)
+    update_results(event=event)
 
 
 # ================================================

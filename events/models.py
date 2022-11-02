@@ -45,7 +45,6 @@ class Event(models.Model):
     is_view_route_grade = models.BooleanField(default=False)
     is_view_route_score = models.BooleanField(default=False)
     is_separate_score_by_groups = models.BooleanField(default=False)
-    is_update_results_after_enter = models.BooleanField(default=True)
 
     SCORE_SIMPLE_SUM = 'SUM'
     SCORE_PROPORTIONAL = 'PROP'
