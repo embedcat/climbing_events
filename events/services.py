@@ -293,8 +293,7 @@ def _update_participant_score(event: Event, participant: Participant, routes: Qu
     participant.score = 0
     for no, accent in participant.accents.items():
         if accent != ACCENT_NO:
-            base_route_points = 1.0 if event.score_type == Event.SCORE_SIMPLE_SUM \
-                else routes[int(no)].score_json.get(json_key, 0)
+            base_route_points = routes[int(no)].score_json.get(json_key, 0)
             participant.score += base_route_points * (
                 event.flash_points if accent == ACCENT_FLASH else event.redpoint_points)
     participant.score = round(participant.score, 2)
@@ -312,12 +311,18 @@ def _update_results(event: Event, gender: Participant.GENDERS, group_index: int)
     for no, route in enumerate(routes):
         accents_num = 0
         # get num of accents of route:
-        for p in participants:
-            accent = p.accents.get(str(no), ACCENT_NO)
-            accents_num += 0 if accent == ACCENT_NO else 1
+        if event.is_count_only_entered_results:
+            for p in participants:
+                accent = p.accents.get(str(no), ACCENT_NO) if p.is_entered_result else ACCENT_NO
+                accents_num += 0 if accent == ACCENT_NO else 1
+        else:
+            accents_num = len(participants)
 
         # update_route_score:
-        route_score = 1 / accents_num if accents_num != 0 else 0
+        if event.score_type == Event.SCORE_SIMPLE_SUM:
+            route_score = 1.0
+        elif event.score_type == Event.SCORE_PROPORTIONAL:
+            route_score = 1 / accents_num if accents_num != 0 else 0
         route.score_json.update({f'{json_key}': route_score})
         route.save()
 
