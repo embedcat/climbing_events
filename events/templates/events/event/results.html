@@ -6,7 +6,7 @@
 {% block body %}
 {% if event.is_published %}
 {% if event.is_results_allowed %}
-
+<div class="table-responsive">
 <nav>
   <div class="nav nav-tabs" id="nav-tab" role="tablist">
     <a class="nav-link active" id="male-tab" data-bs-toggle="tab" href="#tabResultMale" role="tab" aria-controls="tabResultMale" aria-selected="true">Мужчины</a>
@@ -24,6 +24,7 @@
       {% include 'events/snippets/sn-result-table.html' with event=event routes=routes sorted_bunch=group.data routes_score=group.scores caption=group.name %}
     {% endfor %}
   </div>
+</div>
 </div>
 
 {% else %}

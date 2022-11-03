@@ -2,6 +2,7 @@
 <nav aria-label="breadcrumb">
    <ol class="breadcrumb">
      <li class="breadcrumb-item"><a href="{% url 'help' type='about' %}" class="breadcrumb-item {% active_link 'help' strict=True type='about' %}">О проекте</a></li>
+     <li class="breadcrumb-item"><a href="{% url 'help' type='workflow' %}" class="breadcrumb-item {% active_link 'help' strict=True type='workflow' %}">Общее</a></li>
      <li class="breadcrumb-item"><a href="{% url 'help' type='create' %}" class="breadcrumb-item {% active_link 'help' strict=True type='create' %}">Создание события</a></li>
      <li class="breadcrumb-item"><a href="{% url 'help' type='settings' %}" class="breadcrumb-item {% active_link 'help' strict=True type='settings' %}">Настройки</a></li>
      <li class="breadcrumb-item"><a href="{% url 'help' type='description' %}" class="breadcrumb-item {% active_link 'help' strict=True type='description' %}">Описание</a></li>
