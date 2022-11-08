@@ -45,7 +45,7 @@ urlpatterns = [
     path('wallet/<int:wallet_id>/', views.WalletView.as_view(), name='wallet'),
     path('wallet/<int:wallet_id>/remove/', views.WalletRemoveView.as_view(), name='wallet_remove'),
 
-#     path('about/', about_views.AboutView.as_view(), name='about'),
+    path('about/', about_views.AboutView.as_view(), name='about'),
     path('help/<str:type>/', about_views.HelpView.as_view(), name='help'),
 
     # path('test/', views.async_get_results, name='test'),
