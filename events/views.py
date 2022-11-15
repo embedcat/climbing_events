@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import json
 import logging
 import operator
@@ -846,8 +847,8 @@ class CreateEventView(LoginRequiredMixin, views.View):
     def post(request):
         form = CreateEventForm(request.POST)
         if form.is_valid():
-            cd = form.cleaned_data
-            event = services.create_event(owner=request.user, title=cd['title'], date=cd['date'])
+            date=datetime.datetime.strptime(request.POST['date'], "%m/%d/%Y").date()
+            event = services.create_event(owner=request.user, title=form.cleaned_data['title'], date=date)
             return redirect('admin_description', event.id)
         else:
             return render(

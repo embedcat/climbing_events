@@ -48,9 +48,13 @@ class Event(models.Model):
 
     SCORE_SIMPLE_SUM = 'SUM'
     SCORE_PROPORTIONAL = 'PROP'
+    SCORE_GRADE = 'TBL'
+    SCORE_NUM_ACCENTS = 'NUM'
     SCORE_TYPE = [
         (SCORE_SIMPLE_SUM, 'Сумма баллов'),
-        (SCORE_PROPORTIONAL, 'От кол-ва пролазов'),
+        (SCORE_PROPORTIONAL, 'От количества пролазов'),
+        (SCORE_GRADE, 'По таблице категорий'),
+        (SCORE_NUM_ACCENTS, 'По количеству Всего/Flash'),
     ]
     score_type = models.CharField(max_length=4, choices=SCORE_TYPE, default=SCORE_SIMPLE_SUM)
     flash_points = models.IntegerField(default=100)

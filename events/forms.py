@@ -3,6 +3,7 @@ from crispy_forms.bootstrap import InlineRadios
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit, Layout
 from django import forms
+from config import settings
 
 from events.models import Participant, Event, ACCENT_TYPE, Route, PromoCode, Wallet
 from tinymce.widgets import TinyMCE
@@ -77,8 +78,8 @@ class AdminDescriptionForm(forms.ModelForm):
         self.helper.form_method = 'post'
         self.helper.add_input(Submit('submit', 'Сохранить'))
 
-        self.fields['description'] = forms.CharField(widget=TinyMCE(attrs={'cols': 80, 'rows': 30}),
-                                                     label='Описание')
+        self.fields['description'] = forms.CharField(widget=TinyMCE(attrs={'rows': 30}), label='Описание')
+        self.fields['date'].input_formats = settings.INPUT_DATE_FORMATS
 
     class Meta:
         model = Event
@@ -326,6 +327,7 @@ class CreateEventForm(forms.ModelForm):
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.add_input(Submit('submit', 'Создать'))
+        self.fields['date'].input_formats = settings.INPUT_DATE_FORMATS
 
     class Meta:
         model = Event
@@ -335,7 +337,7 @@ class CreateEventForm(forms.ModelForm):
         ]
         labels = {
             'title': 'Название',
-            'date': 'Дата (YYYY-MM-DD)',
+            'date': 'Дата',
         }
         widgets = {
             'date': DatePickerInput(),

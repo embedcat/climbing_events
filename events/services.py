@@ -4,6 +4,7 @@ import os
 import random
 import string
 from datetime import datetime
+from typing import Iterable
 
 import segno
 from django.contrib.auth import get_user_model
@@ -43,6 +44,9 @@ def get_group_list(event: Event) -> list:
 def get_set_list(event: Event) -> list:
     return [item.strip() for item in event.set_list.split(',')][:event.set_num] if event.set_num > 1 else []
 
+
+def _get_all_json_keys(event: Event) -> Iterable:
+    return (f"{gender[0]}_{group_index}" for group_index in range(event.group_num) for gender in Participant.GENDERS)
 
 # ================================================
 # =================== Clear ======================
@@ -142,6 +146,13 @@ def create_event_routes(event: Event) -> None:
 
 def get_route_score(route: Route, json_key: str) -> float:
     return route.score_json.get(json_key, 0)
+
+'''
+def update_route_scores_from_score_table(event: Event, routes: QuerySet, table: RouteScoreTable) -> None:
+    for route in routes:
+        for json_key in _get_all_json_keys(event=event):
+            route.score_json.update({f'{json_key}': route_score})
+'''
 
 
 # ================================================
@@ -309,20 +320,24 @@ def _update_results(event: Event, gender: Participant.GENDERS, group_index: int)
     # update routes:
     routes = event.route.all().order_by('number')
     for no, route in enumerate(routes):
-        accents_num = 0
-        # get num of accents of route:
-        if event.is_count_only_entered_results:
-            for p in participants:
-                accent = p.accents.get(str(no), ACCENT_NO) if p.is_entered_result else ACCENT_NO
-                accents_num += 0 if accent == ACCENT_NO else 1
-        else:
-            accents_num = len(participants)
-
         # update_route_score:
+        route_score = 1
         if event.score_type == Event.SCORE_SIMPLE_SUM:
             route_score = 1.0
         elif event.score_type == Event.SCORE_PROPORTIONAL:
+            accents_num = 0
+            # get num of accents of route:
+            if event.is_count_only_entered_results:
+                for p in participants:
+                    accent = p.accents.get(str(no), ACCENT_NO) if p.is_entered_result else ACCENT_NO
+                    accents_num += 0 if accent == ACCENT_NO else 1
+            else:
+                accents_num = len(participants)
             route_score = 1 / accents_num if accents_num != 0 else 0
+        elif event.score_type == Event.SCORE_GRADE:
+            route_score = 1
+        elif event.score_type == Event.SCORE_NUM_ACCENTS:
+            route_score = 1
         route.score_json.update({f'{json_key}': route_score})
         route.save()
 
@@ -456,7 +471,8 @@ def _debug_create_random_participant(event: Event) -> Participant:
     gender = random.choice([g[0] for g in Participant.GENDERS])
     return _create_participant(
         event=event,
-        first_name=random.choice(mock.male_names) if gender == Participant.GENDER_MALE else random.choice(mock.female_names),
+        first_name=random.choice(
+            mock.male_names) if gender == Participant.GENDER_MALE else random.choice(mock.female_names),
         last_name=random.choice(mock.last_names) + ("а" if gender == Participant.GENDER_FEMALE else ""),
         gender=gender,
         birth_year=random.randint(1950, 2020),

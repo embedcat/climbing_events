@@ -5,7 +5,13 @@
 {% endblock %}
 {% block body %}
 
+{% if routes_score_form %}
+<h4>Стоимость трасс по категориям</h4>
+{% crispy routes_score_form %}
+{% endif %}
+
 <hr>
+<h4>Настройки трасс</h4>
 <form action="" method="post">
   {% csrf_token %}
   {{ formset.management_form }}
@@ -26,7 +32,7 @@
     </tbody>
   </table>
   <div class="form-actions">
-    <input class="btn btn-primary" id="submit-save" name="submit" type="submit" value="Сохранить результат">
+    <input class="btn btn-primary" id="submit-save" name="submit" type="submit" value="Сохранить">
   </div>
 </form>
 
