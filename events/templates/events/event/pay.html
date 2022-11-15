@@ -9,15 +9,16 @@
 <div class="row">
   <h3>Стоимость участия: <span id="id_amount">{{ amount }}</span> ₽</h3>
   <p>Участник: {{ participant.last_name }} {{ participant.first_name }}</p>
-  <div class="form-row">
+  <div class="row">
     <label for="id_promocode" class="col-sm-2 col-form-label">Промокод:</label>
   </div>
-  <div class="form-row">
+  <div class="row">
     <div class="col">
       <input type="text" class="form-control" id="id_promocode">
     </div>
     <div class="col">
-      <button type="submit" class="btn btn-primary mb-2" onclick="CheckPromoCode({{ event.id }}, {{ amount }})">Применить</button>
+      <button type="submit" class="btn btn-primary mb-2" onclick="CheckPromoCode({{ event.id }}, {{ amount }})" style="width:160px;">
+        <span class="spinner-border spinner-border-sm mx-2" id="id_spinner" style="display:none"></span>Применить</button>
     </div>
   </div>
   {% if pay_available %}

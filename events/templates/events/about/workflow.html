@@ -1,9 +1,20 @@
 {% extends 'events/about/base.html' %}
 
 {% block title %}
-Сценарий использования
+Общие сведения
 {% endblock title %}
 
 {% block body %}
-
+Порядок действий при проведения события:
+<ol class="list-group list-group-numbered list-group-flush">
+    <li class="list-group-item"><a href="{% url 'help' type='create' %}">Создать</a> событие - выбрать названия, дату проведения.</li>
+    <li class="list-group-item">Определить <a href="{% url 'help' type='description' %}">базовые</a> настройки - указать скалодром, загрузить афишу, заполнить краткое и полное описание.</li>
+    <li class="list-group-item">Определить <a href="{% url 'help' type='settings' %}">основные</a> настройки - здесь самые важные настройки события, например сеты и группы, способ подсчета результатов, необходимые поля регистрации.</li>
+    <li class="list-group-item">Настроить <a href="{% url 'help' type='payment' %}">оплату</a> и промокоды - если хотите принимать взносы с участников прямо на сайте.</li>
+    <li class="list-group-item">Настроить <a href="{% url 'help' type='routes' %}">трассы</a> - чтобы участники видели категории и цвета трасс при внесении результатов и в протоколе.</li>
+    <li class="list-group-item"><a href="{% url 'help' type='settings' %}">Опубликовать</a> событие, разослать ссылку на регистрацию, а также распечатать <a href="{% url 'help' type='files' %}">QR-коды</a> со ссылками на событие и на страницу ввода результатов.</li>
+    <li class="list-group-item">В день соревнований можно <a href="{% url 'help' type='settings' %}">закрыть</a> регистрацию и открыть возможность внесения результатов, <a href="{% url 'help' type='files' %}">распечатать</a> стартовый лист и карточки участников.</li>
+    <li class="list-group-item">После окончания соревнований можно проверить результаты участников, при необходимости перенести их из группы в группу или исправить их результат.</li>
+    <li class="list-group-item">Если необходимо, загрузить <a href="{% url 'help' type='files' %}">итоговый</a> протокол и отформатировать его по своему желанию.</li>
+</ol>
 {% endblock body %}
