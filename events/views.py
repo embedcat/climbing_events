@@ -214,10 +214,8 @@ class AdminSettingsView(IsOwnerMixin, views.View):
         logger.info('Admin.Settings [POST] ->')
         if form.is_valid():
             services.update_event_settings(event=event, cd=form.cleaned_data)
-            logger.info(f'-> Event [{event}] update OK')
             return redirect('admin_settings', event_id)
         else:
-            logger.warning(f'-> Event [{event}] not updated. Form [{form}] is not valid')
             return render(
                 request=request,
                 template_name='events/event/admin-settings.html',
@@ -614,7 +612,7 @@ class RouteEditor(IsOwnerMixin, views.View):
             context={
                 'event': event,
                 'formset': formset,
-                'score_table_formset': score_table_formset,
+                'score_table_formset': score_table_formset if event.score_type == Event.SCORE_GRADE else None,
                 'score_table_grades': GRADES,
             }
         )
@@ -632,7 +630,10 @@ class RouteEditor(IsOwnerMixin, views.View):
                 route.grade = formset.cleaned_data[index]['grade']
                 route.color = formset.cleaned_data[index]['color']
                 route.save()
-            event.score_table = {GRADES[i][0]: score_table_formset.cleaned_data[i]['score'] for i in range(len(GRADES))}
+            score_table = {GRADES[i][0]: score_table_formset.cleaned_data[i]['score'] for i in range(len(GRADES))}
+            if score_table != event.score_table:
+                services.update_results(event=event)
+            event.score_table = score_table
             event.save()
             return redirect('route_editor', event_id=event_id)
         return render(

@@ -87,6 +87,7 @@ def clear_results(event: Event) -> None:
 
 def update_event_settings(event: Event, cd: dict) -> None:
     old_routes_num = event.routes_num
+    need_update_results = event.score_type != cd['score_type'] or event.redpoint_points != cd['redpoint_points'] or event.flash_points_pc != cd['flash_points_pc']
 
     event.routes_num = cd['routes_num']
     event.is_published = cd['is_published']
@@ -100,8 +101,8 @@ def update_event_settings(event: Event, cd: dict) -> None:
     event.is_view_route_score = cd['is_view_route_score']
     event.is_separate_score_by_groups = cd['is_separate_score_by_groups']
     event.score_type = cd['score_type']
-    event.flash_points_pc = cd['flash_points_pc']
     event.redpoint_points = cd['redpoint_points']
+    event.flash_points_pc = cd['flash_points_pc']
     event.group_num = cd['group_num']
     event.group_list = cd['group_list']
     event.set_num = cd['set_num']
@@ -122,6 +123,8 @@ def update_event_settings(event: Event, cd: dict) -> None:
         clear_results(event=event)
         remove_routes(event=event)
         create_event_routes(event=event)
+    if need_update_results:
+        update_results(event=event)
 
 
 def update_event_pay_settings(event: Event, cd: dict) -> None:
