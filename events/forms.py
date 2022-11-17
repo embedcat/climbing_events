@@ -1,7 +1,7 @@
 from bootstrap_datepicker_plus.widgets import DatePickerInput
 from crispy_forms.bootstrap import InlineRadios
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Submit, Layout
+from crispy_forms.layout import Submit, Layout, Field
 from django import forms
 from config import settings
 
@@ -129,8 +129,8 @@ class EventSettingsForm(forms.ModelForm):
             'is_check_result_before_enter',
             'is_update_result_allowed',
             'score_type',
-            'flash_points',
             'redpoint_points',
+            'flash_points_pc',
             'group_num',
             'group_list',
             'set_num',
@@ -157,8 +157,8 @@ class EventSettingsForm(forms.ModelForm):
             'is_check_result_before_enter': 'При вводе результата показывать участнику страницу потверждения',
             'is_update_result_allowed': 'Разрешить участнику обновлять свои результаты',
             'score_type': 'Тип подсчёта результатов',
-            'flash_points': 'Очки за Flash',
-            'redpoint_points': 'Очки за Redpoint',
+            'redpoint_points': 'Очки за трассу',
+            'flash_points_pc': 'Увеличение баллов за Flash в %',
             'group_num': 'Количество групп участников',
             'group_list': 'Список групп через запятую',
             'set_num': 'Количество сетов',
@@ -240,6 +240,19 @@ class AccentParticipantForm(forms.ModelForm):
             'first_name': 'Имя',
             'last_name': 'Фамилия',
         }
+
+
+class ScoreTableForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['score'] = forms.IntegerField(label='')
+
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+        self.helper.disable_csrf = True
+        self.helper.layout = Layout(
+            Field('score'),
+        )
 
 
 class RouteEditForm(forms.ModelForm):

@@ -14,9 +14,9 @@ function CheckPinCode(event_id, pin) {
         document.getElementById('alert-ok').innerHTML = 'Найден участник: ' + resp['participant']
         document.getElementById('enter-result-form').style.display = 'block'
         for ([key, value] of Object.entries(resp['accents'])) {
-            document.getElementById("id_accents-" + key + "-accent_1").checked = value == "-";
-            document.getElementById("id_accents-" + key + "-accent_2").checked = value == "F";
-            document.getElementById("id_accents-" + key + "-accent_3").checked = value == "RP";
+            document.getElementById("id_accents-" + key + "-accent_1").checked = value == "0";
+            document.getElementById("id_accents-" + key + "-accent_2").checked = value == "1";
+            document.getElementById("id_accents-" + key + "-accent_3").checked = value == "2";
         }
       } else {
         document.getElementById('alert-error').innerHTML = resp['reason']

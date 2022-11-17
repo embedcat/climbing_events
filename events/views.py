@@ -18,8 +18,8 @@ from config import settings
 from events.exceptions import DuplicateParticipantError, ParticipantTooYoungError
 from events.forms import ParticipantRegistrationForm, AdminDescriptionForm, AccentForm, AccentParticipantForm, \
     EventSettingsForm, RouteEditForm, ParticipantForm, CreateEventForm, EventPaySettingsForm, \
-    PromoCodeAddForm, WalletForm
-from events.models import Event, Participant, Route, ACCENT_NO, PromoCode, Wallet
+    PromoCodeAddForm, WalletForm, ScoreTableForm
+from events.models import GRADES, Event, Participant, Route, ACCENT_NO, PromoCode, Wallet
 from events import services, xl_tools
 from braces import views as braces
 
@@ -232,7 +232,8 @@ class PaySettingsView(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
-        EventPaySettingsForm.base_fields['wallet'] = ModelChoiceField(queryset=Wallet.objects.filter(owner=request.user))
+        EventPaySettingsForm.base_fields['wallet'] = ModelChoiceField(
+            queryset=Wallet.objects.filter(owner=request.user))
         form = EventPaySettingsForm(instance=event)
         return render(
             request=request,
@@ -472,6 +473,7 @@ class ResultsView(views.View):
                 'routes': event.route.all().order_by('number'),
                 'male': results[Participant.GENDER_MALE],
                 'female': results[Participant.GENDER_FEMALE],
+                'view_scores': event.is_view_full_results and event.is_view_route_score and event.score_type != Event.SCORE_NUM_ACCENTS,
             }
         )
 
@@ -603,12 +605,17 @@ class RouteEditor(IsOwnerMixin, views.View):
         event = Event.objects.get(id=event_id)
         RouteEditFormSet = modelformset_factory(Route, form=RouteEditForm, extra=0)
         formset = RouteEditFormSet(queryset=event.route.all().order_by('number'), prefix='routes')
+        ScoreTableFormset = formset_factory(form=ScoreTableForm, extra=0)
+        initial = [{'id': i, 'score': event.score_table.get(GRADES[i][0], 0)} for i in range(len(GRADES))]
+        score_table_formset = ScoreTableFormset(initial=initial, prefix='score')
         return render(
             request=request,
             template_name='events/event/route-editor.html',
             context={
                 'event': event,
                 'formset': formset,
+                'score_table_formset': score_table_formset,
+                'score_table_grades': GRADES,
             }
         )
 
@@ -617,16 +624,17 @@ class RouteEditor(IsOwnerMixin, views.View):
         event = Event.objects.get(id=event_id)
         RouteEditFormSet = modelformset_factory(Route, form=RouteEditForm, extra=0)
         formset = RouteEditFormSet(request.POST, prefix='routes')
-        logger.info('Route Editor [POST] ->')
-        if formset.is_valid():
+        ScoreTableFormset = formset_factory(form=ScoreTableForm, extra=0)
+        score_table_formset = ScoreTableFormset(request.POST, prefix='score')
+        if formset.is_valid() and score_table_formset.is_valid():
             routes = event.route.all().order_by('number')
             for index, route in enumerate(routes):
                 route.grade = formset.cleaned_data[index]['grade']
                 route.color = formset.cleaned_data[index]['color']
                 route.save()
-            logger.info(f'-> updated {len(routes)} routes')
+            event.score_table = {GRADES[i][0]: score_table_formset.cleaned_data[i]['score'] for i in range(len(GRADES))}
+            event.save()
             return redirect('route_editor', event_id=event_id)
-        logger.warning(f'-> update failed, [{formset}] is not valid')
         return render(
             request=request,
             template_name='events/event/route-editor.html',
@@ -847,7 +855,7 @@ class CreateEventView(LoginRequiredMixin, views.View):
     def post(request):
         form = CreateEventForm(request.POST)
         if form.is_valid():
-            date=datetime.datetime.strptime(request.POST['date'], "%m/%d/%Y").date()
+            date = datetime.datetime.strptime(request.POST['date'], "%m/%d/%Y").date()
             event = services.create_event(owner=request.user, title=form.cleaned_data['title'], date=date)
             return redirect('admin_description', event.id)
         else:

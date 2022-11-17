@@ -100,7 +100,7 @@ def update_event_settings(event: Event, cd: dict) -> None:
     event.is_view_route_score = cd['is_view_route_score']
     event.is_separate_score_by_groups = cd['is_separate_score_by_groups']
     event.score_type = cd['score_type']
-    event.flash_points = cd['flash_points']
+    event.flash_points_pc = cd['flash_points_pc']
     event.redpoint_points = cd['redpoint_points']
     event.group_num = cd['group_num']
     event.group_list = cd['group_list']
@@ -146,13 +146,6 @@ def create_event_routes(event: Event) -> None:
 
 def get_route_score(route: Route, json_key: str) -> float:
     return route.score_json.get(json_key, 0)
-
-'''
-def update_route_scores_from_score_table(event: Event, routes: QuerySet, table: RouteScoreTable) -> None:
-    for route in routes:
-        for json_key in _get_all_json_keys(event=event):
-            route.score_json.update({f'{json_key}': route_score})
-'''
 
 
 # ================================================
@@ -304,9 +297,15 @@ def _update_participant_score(event: Event, participant: Participant, routes: Qu
     participant.score = 0
     for no, accent in participant.accents.items():
         if accent != ACCENT_NO:
-            base_route_points = routes[int(no)].score_json.get(json_key, 0)
-            participant.score += base_route_points * (
-                event.flash_points if accent == ACCENT_FLASH else event.redpoint_points)
+            if event.score_type == Event.SCORE_NUM_ACCENTS:
+                participant.score += 100 + (1 if accent == ACCENT_FLASH else 0)
+            else:
+                base_route_points = routes[int(no)].score_json.get(json_key, 0)
+                flash_k = 1 + event.flash_points_pc / 100
+                base_score_with_flash = base_route_points * flash_k if accent == ACCENT_FLASH else base_route_points
+                if event.score_type != Event.SCORE_GRADE:
+                    base_score_with_flash *= event.redpoint_points
+                participant.score += base_score_with_flash
     participant.score = round(participant.score, 2)
     participant.save()
 
@@ -335,7 +334,7 @@ def _update_results(event: Event, gender: Participant.GENDERS, group_index: int)
                 accents_num = len(participants)
             route_score = 1 / accents_num if accents_num != 0 else 0
         elif event.score_type == Event.SCORE_GRADE:
-            route_score = 1
+            route_score = int(event.score_table.get(route.grade, 1))
         elif event.score_type == Event.SCORE_NUM_ACCENTS:
             route_score = 1
         route.score_json.update({f'{json_key}': route_score})
@@ -382,6 +381,20 @@ def get_registration_msg_html(event: Event, participant: Participant, pay_url: s
 # ================================================
 # =============== Get results ====================
 # ================================================
+def _accent_attempt_to_literal(attempt: str) -> str:
+    if attempt == '0':
+        return '-'
+    if attempt == '1':
+        return 'F'
+    if attempt == '2':
+        return 'RP'
+    return attempt
+
+
+def _accents_to_string(event: Event, accents: list) -> list:
+    if event.score_type == Event.SCORE_PROPORTIONAL or event.score_type == Event.SCORE_SIMPLE_SUM or event.score_type == Event.SCORE_GRADE or event.score_type == Event.SCORE_NUM_ACCENTS:
+        return [_accent_attempt_to_literal(attempt) for attempt in accents]
+    return accents
 
 
 def _get_sorted_participants_results(event: Event, participants: QuerySet, full_results: bool = False) -> list:
@@ -391,9 +404,11 @@ def _get_sorted_participants_results(event: Event, participants: QuerySet, full_
         if (not event.is_count_only_entered_results) or participant.is_entered_result:
             accents = [participant.accents.get(str(i), ACCENT_NO) for i in
                        range(event.routes_num)] if full_results else []
+            accents = _accents_to_string(event=event, accents=accents)
             data.append(dict(participant=participant,
                              accents=accents,
-                             score=participant.score))
+                             score=participant.score,
+                             score_view=f'{int(participant.score / 100)}/{int(participant.score % 100)}' if event.score_type == Event.SCORE_NUM_ACCENTS else participant.score))
     return sorted(data, key=lambda k: (-k['score'], k['participant'].last_name), reverse=False)
 
 
@@ -404,7 +419,7 @@ def get_results(event: Event, full_results: bool = False) -> dict:
         'MALE': [
             {
                 'name': 'Спорт',
-                'data': [{'participant': Participant, 'accents': ['NO', 'FL', 'RP', ...], 'score': 100.0}, {...}],
+                'data': [{'participant': Participant, 'accents': ['NO', 'FL', 'RP', ...], 'score': 100.0, 'score_view': 100.0}, {...}],
                 'scores': ['100.00\n80.00', '0 0', ...]
             },
             {...},
@@ -420,8 +435,8 @@ def get_results(event: Event, full_results: bool = False) -> dict:
         for group_index, group in enumerate(get_group_list(event=event)):
             json_key = _get_participant_json_key(gender=gender, group_index=group_index)
             scores = [
-                f"{round(get_route_score(route=route, json_key=json_key) * event.flash_points, 2)}\n"
-                f"{round(get_route_score(route=route, json_key=json_key) * event.redpoint_points, 2)}"
+                f"{round(get_route_score(route=route, json_key=json_key) * (event.redpoint_points if event.score_type != Event.SCORE_GRADE else 1) * (1 + event.flash_points_pc / 100), 2)}\n"
+                f"{round(get_route_score(route=route, json_key=json_key) * (event.redpoint_points if event.score_type != Event.SCORE_GRADE else 1), 2)}"
                 for route in event.route.all().order_by('number')] if full_results else []
 
             gender_data.append(dict(name=group,
@@ -491,7 +506,7 @@ def debug_create_participants(event: Event, num: int) -> None:
 
 def debug_apply_random_results(event: Event) -> None:
     for participant in event.participant.all():
-        accents = {i: random.choice(['F', 'RP', '-']) for i in range(event.routes_num)}
+        accents = {i: random.choice(['1', '2', '0']) for i in range(event.routes_num)}
         enter_results(event=event, participant=participant, accents=accents, force_update_disable=True)
     update_results(event=event)
 

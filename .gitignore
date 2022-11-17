@@ -136,4 +136,5 @@ dmypy.json
 /media/
 /events/protocols/*
 *.backup
-
+.vscode
+test.py

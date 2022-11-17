@@ -16,12 +16,12 @@
 <div class="tab-content" id="myTabContent">
   <div class="tab-pane fade show active" id="tabResultMale" role="tabpanel" aria-labelledby="male-tab">
     {% for group in male %}
-      {% include 'events/snippets/sn-result-table.html' with event=event routes=routes sorted_bunch=group.data routes_score=group.scores caption=group.name %}
+      {% include 'events/snippets/sn-result-table.html' with event=event routes=routes sorted_bunch=group.data routes_score=group.scores caption=group.name view_scores=view_scores %}
     {% endfor %}
   </div>
   <div class="tab-pane fade" id="tabResultFemale" role="tabpanel" aria-labelledby="female-tab">
     {% for group in female %}
-      {% include 'events/snippets/sn-result-table.html' with event=event routes=routes sorted_bunch=group.data routes_score=group.scores caption=group.name %}
+      {% include 'events/snippets/sn-result-table.html' with event=event routes=routes sorted_bunch=group.data routes_score=group.scores caption=group.name view_scores=view_scores %}
     {% endfor %}
   </div>
 </div>

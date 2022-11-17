@@ -36,10 +36,10 @@
     <td class="align-middle accent_{{ accent }}"><p class="text-center">{{ accent }}</p></td>
     {% endfor %}
     {% endif %}
-    <td class="align-middle">{{ d.score }}</td>
+    <td class="align-middle">{{ d.score_view }}</td>
   </tr>
   {% endfor %}
-  {% if event.is_view_full_results and event.is_view_route_score %}
+  {% if view_scores %}
   <tr>
     <td></td>
     <td>FL/RP:</td>
