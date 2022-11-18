@@ -56,6 +56,12 @@
     src: url(/static/events/fonts/Roboto-Bold.ttf) format("truetype");
 }
 
+@font-face {
+    font-family: Upbolters;
+    font-style: bold;
+    font-weight: 700;
+    src: url(/static/events/fonts/upbolters-new.regular.otf) format("truetype");
+}
 
 @font-face {
     font-family: FontAwesome;
@@ -777,9 +783,13 @@ html:not(.platform-mac) .site-sidebar .block-blog {
     }
 }
 
-.main-navigation .navigation-extend-bar a {
+.navigation-extend-bar a .mobile-link {
     display: inline-block;
-    font-size: 24px;
+    font-family: Upbolters;
+    font-size: 36px;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    margin-left: 10px;
 }
 
 .main-navigation ul,
@@ -1087,6 +1097,7 @@ html:not(.platform-mac) .site-sidebar .block-blog {
 }
 
 .social-icons {
+    height: 0;
     float: left;
 }
 
