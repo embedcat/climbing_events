@@ -1,0 +1,9 @@
+{% extends 'events/base.html' %}
+
+{% block nav-staff %} {% include 'events/snippets/sn-nav-staff.html' %}{% endblock %}
+
+{% block container %}
+<h2 class="">{% block title %} {% endblock title %}</h2>
+{% include 'events/snippets/sn-nav-help-breadcrump.html' %}
+{% block body %} {% endblock body %}
+{% endblock container %}

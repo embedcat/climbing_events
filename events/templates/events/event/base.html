@@ -5,13 +5,9 @@
 {% block nav-staff %} {% include 'events/snippets/sn-nav-staff.html' %}{% endblock %}
 
 {% block container %}
-<div class="container-fluid mb-4">
-  <h4 class="mt-4">{{ event.title }}</h4>
-  <ol class="breadcrumb mb-4">
-    <li class="breadcrumb-item active">
-      {% block title %} {% endblock title %}
-    </li>
-  </ol>
-  {% block body %} {% endblock body %}
+<h2 class="">{{ event.title }}</h2>
+<div class="alert alert-secondary" class="my-4">
+  <h4>{% block title %} {% endblock title %}</h4>
 </div>
+{% block body %} {% endblock body %}
 {% endblock %}

@@ -1,13 +1,26 @@
 {% extends 'events/event/base.html' %}
 {% load crispy_forms_tags %}
+{% load events_tags %}
 {% block title %}
 Редактор трасс
 {% endblock %}
 {% block body %}
 
-<hr>
 <form action="" method="post">
   {% csrf_token %}
+  {% if score_table_formset %}
+  {{ score_table_formset.management_form }}
+  <h4>Стоимость трасс по категориям</h4>
+  {% for form, grade in score_table_formset|zip:score_table_grades %}
+  <div class="row">
+    <label for="id_form-{{ forloop.counter }}-score" class="col-form-label col-1">{{ grade.0 }}:</label>
+    <div class="col">{% crispy form %}</div>
+  </div>
+    
+  {% endfor %}
+  <hr>
+  {% endif %}
+  <h4>Настройки трасс</h4>
   {{ formset.management_form }}
   <table cellspacing="0" class="table table-bordered table-hover table-striped table-sm" id="dataTable" width="100%">
     <thead>
@@ -26,7 +39,7 @@
     </tbody>
   </table>
   <div class="form-actions">
-    <input class="btn btn-primary" id="submit-save" name="submit" type="submit" value="Сохранить результат">
+    <input class="btn btn-primary" id="submit-save" name="submit" type="submit" value="Сохранить">
   </div>
 </form>
 

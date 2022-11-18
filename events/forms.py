@@ -1,8 +1,9 @@
 from bootstrap_datepicker_plus.widgets import DatePickerInput
 from crispy_forms.bootstrap import InlineRadios
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Submit, Layout
+from crispy_forms.layout import Submit, Layout, Field
 from django import forms
+from config import settings
 
 from events.models import Participant, Event, ACCENT_TYPE, Route, PromoCode, Wallet
 from tinymce.widgets import TinyMCE
@@ -77,8 +78,8 @@ class AdminDescriptionForm(forms.ModelForm):
         self.helper.form_method = 'post'
         self.helper.add_input(Submit('submit', 'Сохранить'))
 
-        self.fields['description'] = forms.CharField(widget=TinyMCE(attrs={'cols': 80, 'rows': 30}),
-                                                     label='Описание')
+        self.fields['description'] = forms.CharField(widget=TinyMCE(attrs={'rows': 30}), label='Описание')
+        self.fields['date'].input_formats = settings.INPUT_DATE_FORMATS
 
     class Meta:
         model = Event
@@ -125,12 +126,11 @@ class EventSettingsForm(forms.ModelForm):
             'is_separate_score_by_groups',
             'is_without_registration',
             'is_view_pin_after_registration',
-            'is_update_results_after_enter',
             'is_check_result_before_enter',
             'is_update_result_allowed',
             'score_type',
-            'flash_points',
             'redpoint_points',
+            'flash_points_pc',
             'group_num',
             'group_list',
             'set_num',
@@ -149,17 +149,16 @@ class EventSettingsForm(forms.ModelForm):
             'is_count_only_entered_results': 'Учитывать только введённые результаты',
             'is_view_full_results': 'Показывать полные результаты',
             'is_view_route_color': 'Показывать цвет трассы',
-            'is_view_route_grade': 'Показывать ктегорию трассы',
+            'is_view_route_grade': 'Показывать категорию трассы',
             'is_view_route_score': 'Показывать стоимость трассы',
             'is_separate_score_by_groups': 'Рассчитывать стоимость трассы отдельно по каждой группе',
             'is_without_registration': 'Ввод результатов без регистрации',
             'is_view_pin_after_registration': 'Показывать участнику пин-код после регистрации',
-            'is_update_results_after_enter': 'Пересчитывать результаты после ввода участником (может быть долго)',
             'is_check_result_before_enter': 'При вводе результата показывать участнику страницу потверждения',
             'is_update_result_allowed': 'Разрешить участнику обновлять свои результаты',
             'score_type': 'Тип подсчёта результатов',
-            'flash_points': 'Очки за Flash',
-            'redpoint_points': 'Очки за Redpoint',
+            'redpoint_points': 'Очки за трассу',
+            'flash_points_pc': 'Увеличение баллов за Flash в %',
             'group_num': 'Количество групп участников',
             'group_list': 'Список групп через запятую',
             'set_num': 'Количество сетов',
@@ -168,6 +167,10 @@ class EventSettingsForm(forms.ModelForm):
             'registration_fields': 'Дополнительные поля формы регистрации',
             'required_fields': 'Обязательные поля при регистрации',
             'participant_min_age': 'Минимальный возраст участника',
+        }
+        help_texts = {
+            'group_list': 'Например: "Спорт, Любители, Новички"',
+            'set_list': 'Например: "Утренний сет (8:00), Дневной сет (13:00), Вечерний сет (18:00)"',
         }
 
 
@@ -237,6 +240,19 @@ class AccentParticipantForm(forms.ModelForm):
             'first_name': 'Имя',
             'last_name': 'Фамилия',
         }
+
+
+class ScoreTableForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['score'] = forms.IntegerField(label='')
+
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+        self.helper.disable_csrf = True
+        self.helper.layout = Layout(
+            Field('score'),
+        )
 
 
 class RouteEditForm(forms.ModelForm):
@@ -324,6 +340,7 @@ class CreateEventForm(forms.ModelForm):
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.add_input(Submit('submit', 'Создать'))
+        self.fields['date'].input_formats = settings.INPUT_DATE_FORMATS
 
     class Meta:
         model = Event
@@ -333,7 +350,7 @@ class CreateEventForm(forms.ModelForm):
         ]
         labels = {
             'title': 'Название',
-            'date': 'Дата (YYYY-MM-DD)',
+            'date': 'Дата',
         }
         widgets = {
             'date': DatePickerInput(),
@@ -355,9 +372,13 @@ class PromoCodeAddForm(forms.ModelForm):
             'max_applied_num',
         ]
         labels = {
-            'title': 'Промо Код (Например "SUPERSALE10")',
+            'title': 'Промо Код',
             'price': 'Стоимость',
-            'max_applied_num': 'Ограничить число применений (0 - не ограничивать)',
+            'max_applied_num': 'Ограничить число применений',
+        }
+        help_texts = {
+            'title': 'Например "SUPERSALE10"',
+            'max_applied_num': '0 - не ограничивать',
         }
 
 

@@ -4,7 +4,30 @@
 {% endblock %}
 {% block body %}
 {% if event.is_published %}
-{{ event.description|safe }}
+<div class='container-fluid'>
+  <div class="row">
+    <div class="col-md-3">
+      <div class="card" >
+        <img src="{{ event.poster.url }}" class="card-img-top" alt="{{ event.title }}">
+      </div>
+    </div>
+    <div class="col">
+      <ul class="">
+        <li><strong>Дата: </strong>{{ event.date|date:'d E Y' }}</li>
+        <li><strong>Скалодром: </strong>{{ event.gym }}</li>
+        {% if event.group_num > 1 %}<li><strong>Сеты: </strong>{{ event.group_list }}</li>{% endif %}
+        {% if event.set_num > 1 %}<li><strong>Группы: </strong>{{ event.set_list }}</li>{% endif %}
+        {% if event.price > 0 %}<li><strong>Стоимость: </strong>{{ event.price }} ₽</li>{% endif %}
+      </ul>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col">
+      <hr>
+      Описание{{ event.description|safe }}
+    </div>
+  </div>
+</div>
 {% else %}
   {% include 'events/snippets/sn-card-banner.html' with message='Событие не опубликовано!' %}
 {% endif %}

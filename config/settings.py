@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'maintenance_mode',
     'active_link',
     'crispy_forms',
+    'crispy_bootstrap5',
     'tinymce',
     'colorfield',
     'multiselectfield',
@@ -121,7 +122,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/3.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'ru-ru'
 
 TIME_ZONE = 'Europe/Moscow'
 
@@ -144,7 +145,8 @@ MEDIA_POSTERS_DIR = 'posters'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
-CRISPY_TEMPLATE_PACK = 'bootstrap4'
+CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
+CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
 LOGGER = 'EventLogger'
 LOGGING = {
@@ -243,3 +245,5 @@ EMAIL_HOST_USER = env('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
+
+INPUT_DATE_FORMATS = ['%m/%d/%Y']

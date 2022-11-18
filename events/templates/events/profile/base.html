@@ -3,12 +3,6 @@
 {% block nav-staff %} {% include 'events/snippets/sn-nav-staff.html' %}{% endblock %}
 
 {% block container %}
-<div class="container mt-4">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item active">
-      <h4>{% block title %} {% endblock title %}</h4>
-    </li>
-  </ol>
-  {% block body %} {% endblock body %}
-</div>
-{% endblock container %}
+<h2 class="">{% block title %} {% endblock title %}</h2>
+{% block body %} {% endblock body %}
+{% endblock %}

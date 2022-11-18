@@ -1,9 +1,9 @@
-{% extends 'events/profile/base.html' %}
+{% extends 'events/base.html' %}
 
-{% block title %}
-О проекте
-{% endblock title %}
+{% block nav-staff %} {% include 'events/snippets/sn-nav-staff.html' %}{% endblock %}
 
+{% block container %}
+<h2 class="">О проекте</h2>
 {% block body %}
 <div class="row">
   <div>
@@ -34,4 +34,7 @@
     </p>
   </div>
 </div>
+
 {% endblock body %}
+{% endblock container %}
+

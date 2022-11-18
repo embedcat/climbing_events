@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import json
 import logging
 import operator
@@ -17,8 +18,8 @@ from config import settings
 from events.exceptions import DuplicateParticipantError, ParticipantTooYoungError
 from events.forms import ParticipantRegistrationForm, AdminDescriptionForm, AccentForm, AccentParticipantForm, \
     EventSettingsForm, RouteEditForm, ParticipantForm, CreateEventForm, EventPaySettingsForm, \
-    PromoCodeAddForm, WalletForm
-from events.models import Event, Participant, Route, ACCENT_NO, PromoCode, Wallet
+    PromoCodeAddForm, WalletForm, ScoreTableForm
+from events.models import GRADES, Event, Participant, Route, ACCENT_NO, PromoCode, Wallet
 from events import services, xl_tools
 from braces import views as braces
 
@@ -86,7 +87,9 @@ class AdminActionsView(IsOwnerMixin, views.View):
         if 'remove_event' in request.POST:
             services.remove_event(event=event)
             return redirect('my_events')
-        if 'test' in request.POST:
+        if 'mock_data' in request.POST:
+            services.clear_event(event=event)
+            services.debug_create_participants(event=event, num=50)
             services.debug_apply_random_results(event=event)
         return redirect('admin_actions', event_id)
 
@@ -211,10 +214,8 @@ class AdminSettingsView(IsOwnerMixin, views.View):
         logger.info('Admin.Settings [POST] ->')
         if form.is_valid():
             services.update_event_settings(event=event, cd=form.cleaned_data)
-            logger.info(f'-> Event [{event}] update OK')
             return redirect('admin_settings', event_id)
         else:
-            logger.warning(f'-> Event [{event}] not updated. Form [{form}] is not valid')
             return render(
                 request=request,
                 template_name='events/event/admin-settings.html',
@@ -229,7 +230,8 @@ class PaySettingsView(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
-        EventPaySettingsForm.base_fields['wallet'] = ModelChoiceField(queryset=Wallet.objects.filter(owner=request.user))
+        EventPaySettingsForm.base_fields['wallet'] = ModelChoiceField(
+            queryset=Wallet.objects.filter(owner=request.user))
         form = EventPaySettingsForm(instance=event)
         return render(
             request=request,
@@ -469,6 +471,7 @@ class ResultsView(views.View):
                 'routes': event.route.all().order_by('number'),
                 'male': results[Participant.GENDER_MALE],
                 'female': results[Participant.GENDER_FEMALE],
+                'view_scores': event.is_view_full_results and event.is_view_route_score and event.score_type != Event.SCORE_NUM_ACCENTS,
             }
         )
 
@@ -600,12 +603,17 @@ class RouteEditor(IsOwnerMixin, views.View):
         event = Event.objects.get(id=event_id)
         RouteEditFormSet = modelformset_factory(Route, form=RouteEditForm, extra=0)
         formset = RouteEditFormSet(queryset=event.route.all().order_by('number'), prefix='routes')
+        ScoreTableFormset = formset_factory(form=ScoreTableForm, extra=0)
+        initial = [{'id': i, 'score': event.score_table.get(GRADES[i][0], 0)} for i in range(len(GRADES))]
+        score_table_formset = ScoreTableFormset(initial=initial, prefix='score')
         return render(
             request=request,
             template_name='events/event/route-editor.html',
             context={
                 'event': event,
                 'formset': formset,
+                'score_table_formset': score_table_formset if event.score_type == Event.SCORE_GRADE else None,
+                'score_table_grades': GRADES,
             }
         )
 
@@ -614,16 +622,20 @@ class RouteEditor(IsOwnerMixin, views.View):
         event = Event.objects.get(id=event_id)
         RouteEditFormSet = modelformset_factory(Route, form=RouteEditForm, extra=0)
         formset = RouteEditFormSet(request.POST, prefix='routes')
-        logger.info('Route Editor [POST] ->')
-        if formset.is_valid():
+        ScoreTableFormset = formset_factory(form=ScoreTableForm, extra=0)
+        score_table_formset = ScoreTableFormset(request.POST, prefix='score')
+        if formset.is_valid() and score_table_formset.is_valid():
             routes = event.route.all().order_by('number')
             for index, route in enumerate(routes):
                 route.grade = formset.cleaned_data[index]['grade']
                 route.color = formset.cleaned_data[index]['color']
                 route.save()
-            logger.info(f'-> updated {len(routes)} routes')
+            score_table = {GRADES[i][0]: score_table_formset.cleaned_data[i]['score'] for i in range(len(GRADES))}
+            if score_table != event.score_table:
+                services.update_results(event=event)
+            event.score_table = score_table
+            event.save()
             return redirect('route_editor', event_id=event_id)
-        logger.warning(f'-> update failed, [{formset}] is not valid')
         return render(
             request=request,
             template_name='events/event/route-editor.html',
@@ -727,8 +739,7 @@ class ParticipantRoutesView(IsOwnerMixin, views.View):
             services.enter_results(event=event,
                                    participant=participant,
                                    accents=services.accent_form_to_results(
-                                       form_cleaned_data=accent_formset.cleaned_data),
-                                   force_update=True)
+                                       form_cleaned_data=accent_formset.cleaned_data))
             return redirect('results', event_id=event_id)
         return render(
             request=request,
@@ -845,8 +856,8 @@ class CreateEventView(LoginRequiredMixin, views.View):
     def post(request):
         form = CreateEventForm(request.POST)
         if form.is_valid():
-            cd = form.cleaned_data
-            event = services.create_event(owner=request.user, title=cd['title'], date=cd['date'])
+            date = datetime.datetime.strptime(request.POST['date'], "%m/%d/%Y").date()
+            event = services.create_event(owner=request.user, title=form.cleaned_data['title'], date=date)
             return redirect('admin_description', event.id)
         else:
             return render(
@@ -946,17 +957,3 @@ class WalletRemoveView(LoginRequiredMixin, views.View):
         except Wallet.DoesNotExist as e:
             logger.error(f"Wallet deleting error: {e}")
         return redirect('profile')
-
-
-class AboutView(views.View):
-    @staticmethod
-    def get(request):
-        return render(request=request,
-                      template_name='events/profile/about.html')
-
-
-class HelpView(views.View):
-    @staticmethod
-    def get(request):
-        return render(request=request,
-                      template_name='events/profile/help.html')
