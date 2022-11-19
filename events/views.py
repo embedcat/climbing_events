@@ -441,11 +441,17 @@ class EnterWithoutReg(views.View):
         AccentFormSet = formset_factory(AccentForm)
         accent_formset = AccentFormSet(request.POST, prefix='accents')
         if form.is_valid() and accent_formset.is_valid():
-            participant = services.register_participant(event=event, cd=form.cleaned_data)
+            try:
+                participant = event.participant.get(first_name=form.cleaned_data['first_name'],
+                last_name=form.cleaned_data['last_name'])
+                if not event.is_update_result_allowed:
+                    return redirect('results', event_id=event_id)
+            except Participant.DoesNotExist:
+                participant = services.register_participant(event=event, cd=form.cleaned_data)
             services.enter_results(event=event,
-                                   participant=participant,
-                                   accents=services.accent_form_to_results(
-                                       form_cleaned_data=accent_formset.cleaned_data))
+                                participant=participant,
+                                accents=services.accent_form_to_results(
+                                    form_cleaned_data=accent_formset.cleaned_data))
             return redirect('enter_results_ok', event_id=event_id)
         return render(
             request=request,
