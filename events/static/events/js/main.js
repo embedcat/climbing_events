@@ -13,3 +13,7 @@ function onReady() {
     e && (e.className += " " + platformClassName);
 }
 document.addEventListener("DOMContentLoaded", onReady);
+
+function confirm_action() {
+    return confirm("Вы уверены?");
+}
