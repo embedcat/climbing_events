@@ -6,6 +6,12 @@
 {% endblock title %}
 
 {% block body %}
+<label for="notify_link" class="form-label">Ссылка для уведомлений:</label>
+<div class="input-group mb-3">
+  <input type="text" class="form-control" value="{{ notify_link }}" id="text_notify_link" disabled readonly>
+  <button class="btn btn-outline-secondary" type="button" id="notify_link" onclick="copy_to_clipboard('text_notify_link')">Скопировать</button>
+</div>
+<hr>
 <h4>Добавить кошелёк</h4>
 {% crispy form %}
 <hr>

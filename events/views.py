@@ -16,12 +16,14 @@ from django.urls import reverse
 
 from config import settings
 from events.exceptions import DuplicateParticipantError, ParticipantTooYoungError
-from events.forms import ParticipantRegistrationForm, AdminDescriptionForm, AccentForm, AccentParticipantForm, \
+from events.forms import EventPremiumSettingsForm, ParticipantRegistrationForm, AdminDescriptionForm, AccentForm, AccentParticipantForm, \
     EventSettingsForm, RouteEditForm, ParticipantForm, CreateEventForm, EventPaySettingsForm, \
     PromoCodeAddForm, WalletForm, ScoreTableForm
 from events.models import GRADES, Event, Participant, Route, ACCENT_NO, PromoCode, Wallet
 from events import services, xl_tools
 from braces import views as braces
+
+from events.pay_views import get_notify_link
 
 logger = logging.getLogger(settings.LOGGER)
 
@@ -32,6 +34,14 @@ class IsOwnerMixin(braces.UserPassesTestMixin):
     def test_func(self, user):
         event_id = self.kwargs.get('event_id')
         return user.is_superuser or user.id is Event.objects.get(id=event_id).owner.id
+
+
+class IsSuperuserMixin(braces.UserPassesTestMixin):
+    redirect_field_name = ''
+
+    def test_func(self, user):
+        event_id = self.kwargs.get('event_id')
+        return user.is_superuser
 
 
 class MainView(views.View):
@@ -66,11 +76,13 @@ class AdminActionsView(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
+        entered_num = event.participant.filter(is_entered_result=True).count()
         return render(
             request=request,
             template_name='events/event/admin-actions.html',
             context={
                 'event': event,
+                'entered_num': entered_num,
             }
         )
 
@@ -126,7 +138,10 @@ class AdminProtocolsView(IsOwnerMixin, views.View):
         if 'export_startlist' in request.POST:
             return services.get_startlist_response(event=event)
         if 'export_result' in request.POST:
-            return redirect('async_get_results', event_id)
+            if event.is_premium:
+                return redirect('async_get_results', event_id)
+            else:
+                return services.get_result_example_response(event=event)
         if 'qr_description' in request.POST:
             url = request.build_absolute_uri(reverse('event', args=(event_id,)))
             return services.qr_create(text=url, title='qr_event')
@@ -222,6 +237,37 @@ class AdminSettingsView(IsOwnerMixin, views.View):
                 context={
                     'event': event,
                     'form': EventSettingsForm(request.POST),
+                }
+            )
+
+
+class PremiumSettingsView(IsSuperuserMixin, views.View):
+    @staticmethod
+    def get(request, event_id):
+        event = Event.objects.get(id=event_id)
+        return render(
+            request=request,
+            template_name='events/event/premium-settings.html',
+            context={
+                'event': event,
+                'form': EventPremiumSettingsForm(instance=event),
+            }
+        )
+
+    @staticmethod
+    def post(request, event_id):
+        event = Event.objects.get(id=event_id)
+        form = EventPremiumSettingsForm(request.POST)
+        if form.is_valid():
+            services.update_event_premium_settings(event=event, cd=form.cleaned_data)
+            return redirect('premium_settings', event_id)
+        else:
+            return render(
+                request=request,
+                template_name='events/event/premium-settings.html',
+                context={
+                    'event': event,
+                    'form': EventPremiumSettingsForm(request.POST),
                 }
             )
 
@@ -403,6 +449,8 @@ class EnterWithoutReg(views.View):
     @staticmethod
     def get(request, event_id):
         event = Event.objects.get(id=event_id)
+        if not services.is_registration_open(event=event):
+            return redirect('event', event_id=event_id)
         initial = [{'label': i, 'accent': ACCENT_NO} for i in range(event.routes_num)]
         AccentFormSet = formset_factory(AccentForm, extra=0)
         formset = AccentFormSet(initial=initial, prefix='accents')
@@ -534,6 +582,7 @@ class RegistrationView(views.View):
             template_name='events/event/registration.html',
             context={
                 'event': event,
+                'is_registration_open': services.is_registration_open(event=event),
                 'form': ParticipantRegistrationForm(group_list=group_list,
                                                     set_list=set_list,
                                                     registration_fields=registration_fields,
@@ -571,6 +620,7 @@ class RegistrationView(views.View):
             template_name='events/event/registration.html',
             context={
                 'event': event,
+                'is_registration_open': True,
                 'form': form,
                 'error': error,
             }
@@ -630,26 +680,19 @@ class RouteEditor(IsOwnerMixin, views.View):
         formset = RouteEditFormSet(request.POST, prefix='routes')
         ScoreTableFormset = formset_factory(form=ScoreTableForm, extra=0)
         score_table_formset = ScoreTableFormset(request.POST, prefix='score')
-        if formset.is_valid() and score_table_formset.is_valid():
+        if formset.is_valid():
             routes = event.route.all().order_by('number')
             for index, route in enumerate(routes):
                 route.grade = formset.cleaned_data[index]['grade']
                 route.color = formset.cleaned_data[index]['color']
                 route.save()
+        if score_table_formset.is_valid():
             score_table = {GRADES[i][0]: score_table_formset.cleaned_data[i]['score'] for i in range(len(GRADES))}
             if score_table != event.score_table:
                 services.update_results(event=event)
             event.score_table = score_table
             event.save()
-            return redirect('route_editor', event_id=event_id)
-        return render(
-            request=request,
-            template_name='events/event/route-editor.html',
-            context={
-                'event': event,
-                'formset': formset,
-            }
-        )
+        return redirect('route_editor', event_id=event_id)
 
 
 class ParticipantView(IsOwnerMixin, views.View):
@@ -897,7 +940,8 @@ class WalletsView(LoginRequiredMixin, views.View):
                       template_name='events/profile/wallets.html',
                       context={
                           'form': WalletForm(),
-                          'wallets': Wallet.objects.filter(owner=request.user)
+                          'wallets': Wallet.objects.filter(owner=request.user),
+                          'notify_link': get_notify_link(request=request),
                       })
 
     @staticmethod
