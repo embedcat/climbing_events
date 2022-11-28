@@ -83,6 +83,8 @@ class AdminActionsView(IsOwnerMixin, views.View):
             context={
                 'event': event,
                 'entered_num': entered_num,
+                'male_link': str(request.build_absolute_uri(reverse('results', args=(event_id,)))) + '?autorefresh&m',
+                'female_link': str(request.build_absolute_uri(reverse('results', args=(event_id,)))) + '?autorefresh&f',
             }
         )
 
@@ -526,6 +528,9 @@ class ResultsView(views.View):
                 'male': results[Participant.GENDER_MALE],
                 'female': results[Participant.GENDER_FEMALE],
                 'view_scores': event.is_view_full_results and event.is_view_route_score and event.score_type != Event.SCORE_NUM_ACCENTS,
+                'autorefresh': 'autorefresh' in request.GET,
+                'active_male': 'm' in request.GET or 'f' not in request.GET,
+                'active_female': 'f' in request.GET,
             }
         )
 
