@@ -1170,3 +1170,6 @@ form div.mb-3 {
 .logo-mobile {
     height: 60px;
 }
+p.list-item {
+    margin-bottom: 4px;
+}
