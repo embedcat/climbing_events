@@ -850,6 +850,7 @@ class MyEventsView(LoginRequiredMixin, views.View):
                       template_name='events/profile/my-events.html',
                       context={
                           'events': events,
+                          'all_events': Event.objects.exclude(owner=request.user.id) if request.user.is_superuser else None,
                       })
 
 
