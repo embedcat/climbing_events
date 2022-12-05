@@ -9,9 +9,13 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 
 from config import settings
-from events.models import Event, Participant, PromoCode
+from events.models import CustomUser, Event, Participant, PromoCode, Wallet
 
 logger = logging.getLogger(settings.LOGGER)
+
+
+def get_notify_link(request) -> str:
+    return request.build_absolute_uri(reverse('pay_notify'))
 
 
 def check_notify_hash(notify: dict, secret: str) -> bool:
@@ -25,6 +29,10 @@ def is_pay_available(event: Event) -> bool:
     return event.wallet and event.is_pay_allowed
 
 
+def is_premium_pay_available(event: Event) -> bool:
+    return not event.is_premium
+
+
 class NotifyView(views.View):
     @method_decorator(csrf_exempt)
     def dispatch(self, *args, **kwargs):
@@ -36,7 +44,7 @@ class NotifyView(views.View):
 
     @staticmethod
     def post(request):
-        if True or 'label' in request.POST:
+        if 'label' in request.POST:
             label = request.POST['label']
             label = label.split('_')
             event_id, participant_id, promocode_id = 0, 0, 0
@@ -97,6 +105,77 @@ class PayOk(views.View):
         return render(
             request=request,
             template_name='events/event/pay-ok.html',
+            context={
+                'event': event,
+            }
+        )
+
+
+class PremiumCreatePayView(views.View):
+    @staticmethod
+    def get(request, event_id):
+        event = Event.objects.get(id=event_id)
+        if event.is_premium:
+            return redirect('admin_actions', event_id)
+        superuser = CustomUser.objects.get(id=1)
+        wallet = Wallet.objects.filter(owner=superuser).first()
+        label = f"e{event_id}_w{int(wallet.id)}"
+        success_uri = request.build_absolute_uri(reverse('pay_premium_ok', args=(event_id,)))
+        return render(
+            request=request,
+            template_name='events/event/pay-premium.html',
+            context={
+                'event': event,
+                'label': label,
+                'amount': event.premium_price,
+                'success_uri': success_uri,
+                'receiver': wallet.wallet_id,
+                'pay_available': is_premium_pay_available(event=event),
+            }
+        )
+
+class PremiumNotifyView(views.View):
+    @method_decorator(csrf_exempt)
+    def dispatch(self, *args, **kwargs):
+        return super(PremiumNotifyView, self).dispatch(*args, **kwargs)
+
+    @staticmethod
+    def get(request):
+        return HttpResponse(status=200)
+
+    @staticmethod
+    def post(request):
+        if 'label' in request.POST:
+            label = request.POST['label']
+            label = label.split('_')
+            event_id, wallet_id = 0, 0
+            for part in label:
+                if part.startswith('e'):
+                    event_id = int(part[1:])
+                if part.startswith('w'):
+                    wallet_id = int(part[1:])
+            try:
+                event = Event.objects.get(id=event_id)
+                wallet = Wallet.objects.get(id=wallet_id)
+                if check_notify_hash(request.POST, wallet.notify_secret_key):
+                    event.is_premium = True
+                    event.is_premium_used = False
+                    event.save()
+                    logger.info(f"Pay Premium Notify Success: Event: {event}, Wallet: {wallet}")
+                else:
+                    logger.error(f"Pay Premium Notify Error: Notify hash not valid. {request.POST}")
+            except (Event.DoesNotExist, Wallet.DoesNotExist) as e:
+                logger.error(f"Exception: {e}. {label=}")
+        return redirect('pay_notify')
+
+
+class PayPremiumOk(views.View):
+    @staticmethod
+    def get(request, event_id):
+        event = Event.objects.get(id=event_id)
+        return render(
+            request=request,
+            template_name='events/event/pay-premium-ok.html',
             context={
                 'event': event,
             }

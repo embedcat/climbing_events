@@ -5,6 +5,8 @@ import random
 import string
 from datetime import datetime
 from typing import Iterable
+from openpyxl import load_workbook
+from openpyxl.writer.excel import save_virtual_workbook
 
 import segno
 from django.contrib.auth import get_user_model
@@ -14,15 +16,17 @@ from django.http import HttpResponse
 from config import settings
 from events import xl_tools, mock
 from events.exceptions import DuplicateParticipantError, ParticipantTooYoungError
-from events.models import Event, Route, Participant
+from events.models import CustomUser, Event, Route, Participant
 from events.models import ACCENT_NO, ACCENT_FLASH
 
 
 def create_event(owner: get_user_model(), title: str, date: datetime) -> Event:
+    superuser = CustomUser.objects.get(id=1)
     event = Event.objects.create(
         owner=owner,
         title=title,
         date=date,
+        premium_price=superuser.premium_price,
     )
     create_event_routes(event=event)
     return event
@@ -87,7 +91,8 @@ def clear_results(event: Event) -> None:
 
 def update_event_settings(event: Event, cd: dict) -> None:
     old_routes_num = event.routes_num
-    need_update_results = event.score_type != cd['score_type'] or event.redpoint_points != cd['redpoint_points'] or event.flash_points_pc != cd['flash_points_pc']
+    need_update_results = event.score_type != cd['score_type'] or event.redpoint_points != cd[
+        'redpoint_points'] or event.flash_points_pc != cd['flash_points_pc']
 
     event.routes_num = cd['routes_num']
     event.is_published = cd['is_published']
@@ -125,6 +130,13 @@ def update_event_settings(event: Event, cd: dict) -> None:
         create_event_routes(event=event)
     if need_update_results:
         update_results(event=event)
+
+
+def update_event_premium_settings(event: Event, cd: dict) -> None:
+    event.premium_price = cd['premium_price']
+    event.is_premium = cd['is_premium']
+    event.is_premium_used = cd['is_premium_used']
+    event.save()
 
 
 def update_event_pay_settings(event: Event, cd: dict) -> None:
@@ -290,6 +302,9 @@ def _clear_participant_score(participant: Participant) -> None:
     participant.is_entered_result = False
     participant.save()
 
+
+def is_registration_open(event: Event) -> bool:
+    return event.is_published and event.is_registration_open and (event.participant.count() < event.max_participants or event.is_premium)
 
 # ================================================
 # ========== Calc and update results =============
@@ -471,6 +486,15 @@ def get_result_response(event: Event) -> HttpResponse:
     response = HttpResponse(content=book,
                             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = 'attachment; filename=result.xlsx'
+    return response
+
+
+def get_result_example_response(event: Event) -> HttpResponse:
+    book = load_workbook(filename='static/events/xl_templates/results_example.xlsx')
+    content = save_virtual_workbook(book)
+    response = HttpResponse(content=content,
+                            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=results_example.xlsx'
     return response
 
 

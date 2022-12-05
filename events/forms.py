@@ -174,6 +174,28 @@ class EventSettingsForm(forms.ModelForm):
         }
 
 
+class EventPremiumSettingsForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.add_input(Submit('submit', 'Сохранить'))
+
+    class Meta:
+        model = Event
+        fields = [
+            'premium_price',
+            'is_premium',
+            'is_premium_used',
+
+        ]
+        labels = {
+            'premium_price': 'Стоимость премиум-доступа',
+            'is_premium': 'Премиум-доступ',
+            'is_premium_used': 'Премиум-доступ был использован',
+        }
+
+
 class EventPaySettingsForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

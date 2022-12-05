@@ -71,7 +71,7 @@ def _get_default_score_table_json():
 
 
 class CustomUser(AbstractUser):
-    pass
+    premium_price = models.IntegerField(default=0, null=True, blank=True)
 
 
 class Wallet(models.Model):
@@ -164,6 +164,10 @@ class Event(models.Model):
     price = models.IntegerField(default=0, null=True, blank=True)
     wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='event', blank=True, null=True)
     score_table = models.JSONField(default=_get_default_score_table_json)
+    premium_price = models.IntegerField(default=0, blank=True, null=True)
+    is_premium = models.BooleanField(default=False)
+    is_premium_used = models.BooleanField(default=False)
+    max_participants = models.IntegerField(default=50, blank=True, null=True)
 
 
 class Participant(models.Model):

@@ -27,6 +27,7 @@ urlpatterns = [
     path('e/<int:event_id>/p/<int:p_id>/', views.ParticipantView.as_view(), name='participant'),
     path('e/<int:event_id>/p/<int:p_id>/routes', views.ParticipantRoutesView.as_view(), name='participant_routes'),
     path('e/<int:event_id>/p/<int:p_id>/remove', views.ParticipantRemoveView.as_view(), name='participant_remove'),
+    path('e/<int:event_id>/premium/', views.PremiumSettingsView.as_view(), name='premium_settings'),
 
     path('create/', views.CreateEventView.as_view(), name='create'),
     path('my_events/', views.MyEventsView.as_view(), name='my_events'),
@@ -38,6 +39,10 @@ urlpatterns = [
     path('pay/notify/', pay_views.NotifyView.as_view(), name='pay_notify'),
     path('pay/<int:event_id>/<int:p_id>/', pay_views.CreatePay.as_view(), name='pay_create'),
     path('pay/ok/<int:event_id>/', pay_views.PayOk.as_view(), name='pay_ok'),
+
+    path('pay_premium/notify/', pay_views.PremiumNotifyView.as_view(), name='pay_premium_notify'),
+    path('pay_premium/<int:event_id>/', pay_views.PremiumCreatePayView.as_view(), name='pay_premium_create'),
+    path('pay_premium/ok/<int:event_id>/', pay_views.PayPremiumOk.as_view(), name='pay_premium_ok'),
 
     path('e/<int:event_id>/promocode/<int:promocode_id>/remove/', views.PromoCodeRemove.as_view(),
          name='promocode_remove'),

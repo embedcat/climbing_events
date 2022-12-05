@@ -1,0 +1,14 @@
+{% extends 'events/event/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+Оплата полного доступа
+{% endblock title %}
+
+{% block body %}
+<div class="row">
+<h2>Платёж успешно исполнен</h2>
+  <p>Подтверждение платежа происходит обычно в течение нескольких минут. При возникновении вопросов - свяжитесь с <a href="{% url 'about' %}">администрацией</a></p>
+  <p>Перейти к <a href="{% url 'admin_actions' event.id %}">управлению событием</a></p>
+</div>
+{% endblock body %}

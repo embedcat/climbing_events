@@ -27,8 +27,9 @@
                  id="submit-id-export_result"
                  name="export_result"
                  type="submit"
-                 value="Получить итоговый протокол"/></td>
-      <td>Получаем итоговый протокол в *.xlsx (Вниминие, протокол будет сформирован в течение 5 минут)</td>
+                 value="Получить {% if event.is_premium %}итоговый протокол {% else %} пример протокола {% endif %}"/></td>
+      <td>Получаем итоговый протокол в *.xlsx <br>
+        {% if not event.is_premium %} Событие с базовым доступом, для получения итоговых протоколов необходим <a href="{% url 'pay_premium_create' event.id %}">полный доступ</a> {% endif %}</td>
     </tr>
     <tr>
       <td><input class="btn btn-primary"
