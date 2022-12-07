@@ -5,5 +5,9 @@
 {% endblock title %}
 
 {% block body %}
-
+<h2>Создание события</h2>
+<p>Для создания события необходимо перейти в раздел <a target="_blank" href="{% url 'create' %}">Создать событие</a>, ввести название события и дату в формате ММ/ДД/ГГГГ (можно воспользоваться всплывающим помощником выбора даты), и нажать "Создать".</p>
+<p class="list-item"><img src="/static/events/img/create1.png" class="img-thumbnail img-thumbnail-help" alt="Создание события"></p>
+<h2>Описание события</h2>
+<p>Далее необходимо заполнить описание события, как указано в разделе помощи <a href="{% url 'help' type='description' %}">Описание</a>.</p>
 {% endblock body %}

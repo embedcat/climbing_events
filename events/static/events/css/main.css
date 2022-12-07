@@ -1173,3 +1173,6 @@ form div.mb-3 {
 p.list-item {
     margin-bottom: 4px;
 }
+.img-thumbnail-help {
+    border: 3px solid #586471;
+}
