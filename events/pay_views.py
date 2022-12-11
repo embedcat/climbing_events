@@ -69,11 +69,12 @@ class NotifyView(views.View):
                         logger.info(f"Pay Premium Notify Success: Event: {event}, Wallet: {wallet}")
                     else:
                         participant = Participant.objects.get(id=participant_id, event=event)
-                        promo_code = PromoCode.objects.get(id=promocode_id)
                         participant.paid = True
                         participant.save()
-                        promo_code.applied_num = promo_code.applied_num + 1
-                        promo_code.save()
+                        if promocode_id:
+                            promo_code = PromoCode.objects.get(id=promocode_id)
+                            promo_code.applied_num = promo_code.applied_num + 1
+                            promo_code.save()
                         logger.info(f"Pay Notify Success: Event: {event}, Participant: {participant}{', PromoCode: ' + promo_code.title if promocode_id else ''}")
                 else:
                     logger.error(f"Pay Notify Error: Notify hash not valid. {request.POST}")
