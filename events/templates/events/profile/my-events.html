@@ -6,37 +6,10 @@
 {% endblock title %}
 
 {% block body %}
-<table class="table table-sm table-striped table-bordered"
-               data-toggle="table"
-               data-sort-name="no"
-               data-sortable="true"
-               id="dataTableProtocols" width="100%">
-    <thead class="table-dark">
-    <tr>
-        <th data-field="no" data-sortable="true" style="width:5%">#</th>
-        <th data-field="name" data-sortable="true">Событие</th>
-        <th data-field="date" data-sortable="true">Дата</th>
-    </tr>
-    </thead>
-    <tbody>
-    {% for event in events %}
-    <tr>
-        <td>{{ forloop.counter }}</td>
-        <td>
-            <a href="{% url 'admin_actions' event.id %}">{{ event.title }}</a><br>
-            <small><em>
-                (<a href="{% url 'admin_settings' event.id %}">Настройки</a>,
-                <a href="{% url 'participants' event.id %}">Участники</a>,
-                <a href="{% url 'results' event.id %}">Результаты</a>,
-                <a href="{% url 'admin_protocols' event.id %}">Протоколы</a>,
-                <a href="{% url 'admin_description' event.id %}">Описание</a>,
-                <a href="{% url 'route_editor' event.id %}">Трассы</a>)
-            </em></small>
-        </td>
-        <td>{{ event.date }}</td>
-    </tr>
-    {% endfor %}
-    </tbody>
-</table>
+{% include 'events/snippets/sn-my-events-table.html' with events=events %}
+{% if all_events %}
+<h4>Все события</h4>
+{% include 'events/snippets/sn-my-events-table.html' with events=all_events %}
+{% endif %}
 
 {% endblock body %}

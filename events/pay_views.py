@@ -47,7 +47,7 @@ class NotifyView(views.View):
         if 'label' in request.POST:
             label = request.POST['label']
             label = label.split('_')
-            event_id, participant_id, promocode_id = 0, 0, 0
+            event_id, participant_id, promocode_id, wallet_id = 0, 0, 0, 0
             for part in label:
                 if part.startswith('e'):
                     event_id = int(part[1:])
@@ -55,19 +55,29 @@ class NotifyView(views.View):
                     participant_id = int(part[1:])
                 if part.startswith('c'):
                     promocode_id = int(part[1:])
+                if part.startswith('w'):
+                    wallet_id = int(part[1:])
             try:
                 event = Event.objects.get(id=event_id)
-                participant = Participant.objects.get(id=participant_id, event=event)
-                promo_code = PromoCode.objects.get(id=promocode_id)
-                if check_notify_hash(request.POST, event.wallet.notify_secret_key):
-                    participant.paid = True
-                    participant.save()
-                    promo_code.applied_num = promo_code.applied_num + 1
-                    promo_code.save()
-                    logger.info(f"Pay Notify Success: Event: {event}, Participant: {participant}{', PromoCode: ' + promo_code.title if promocode_id else ''}")
+                wallet = Wallet.objects.get(id=wallet_id) if wallet_id else event.wallet
+                    
+                if check_notify_hash(request.POST, wallet.notify_secret_key):
+                    if wallet_id:
+                        event.is_premium = True
+                        event.is_premium_used = False
+                        event.save()
+                        logger.info(f"Pay Premium Notify Success: Event: {event}, Wallet: {wallet}")
+                    else:
+                        participant = Participant.objects.get(id=participant_id, event=event)
+                        promo_code = PromoCode.objects.get(id=promocode_id)
+                        participant.paid = True
+                        participant.save()
+                        promo_code.applied_num = promo_code.applied_num + 1
+                        promo_code.save()
+                        logger.info(f"Pay Notify Success: Event: {event}, Participant: {participant}{', PromoCode: ' + promo_code.title if promocode_id else ''}")
                 else:
                     logger.error(f"Pay Notify Error: Notify hash not valid. {request.POST}")
-            except (Event.DoesNotExist, Participant.DoesNotExist, PromoCode.DoesNotExist) as e:
+            except (Event.DoesNotExist, Participant.DoesNotExist, PromoCode.DoesNotExist, Wallet.DoesNotExist) as e:
                 logger.error(f"Exception: {e}. {label=}")
         return redirect('pay_notify')
 
@@ -133,40 +143,6 @@ class PremiumCreatePayView(views.View):
                 'pay_available': is_premium_pay_available(event=event),
             }
         )
-
-class PremiumNotifyView(views.View):
-    @method_decorator(csrf_exempt)
-    def dispatch(self, *args, **kwargs):
-        return super(PremiumNotifyView, self).dispatch(*args, **kwargs)
-
-    @staticmethod
-    def get(request):
-        return HttpResponse(status=200)
-
-    @staticmethod
-    def post(request):
-        if 'label' in request.POST:
-            label = request.POST['label']
-            label = label.split('_')
-            event_id, wallet_id = 0, 0
-            for part in label:
-                if part.startswith('e'):
-                    event_id = int(part[1:])
-                if part.startswith('w'):
-                    wallet_id = int(part[1:])
-            try:
-                event = Event.objects.get(id=event_id)
-                wallet = Wallet.objects.get(id=wallet_id)
-                if check_notify_hash(request.POST, wallet.notify_secret_key):
-                    event.is_premium = True
-                    event.is_premium_used = False
-                    event.save()
-                    logger.info(f"Pay Premium Notify Success: Event: {event}, Wallet: {wallet}")
-                else:
-                    logger.error(f"Pay Premium Notify Error: Notify hash not valid. {request.POST}")
-            except (Event.DoesNotExist, Wallet.DoesNotExist) as e:
-                logger.error(f"Exception: {e}. {label=}")
-        return redirect('pay_notify')
 
 
 class PayPremiumOk(views.View):
