@@ -15,6 +15,7 @@ id="dataTableProtocols" width="100%">
 <tr>
 <td>{{ forloop.counter }}</td>
 <td>
+{% if event.is_premium %}<i class="fa-solid fa-star text-warning"></i>{% endif %}
 <a href="{% url 'admin_actions' event.id %}">{{ event.title }}</a><br>
 <small><em>
  (<a href="{% url 'admin_settings' event.id %}">Настройки</a>,

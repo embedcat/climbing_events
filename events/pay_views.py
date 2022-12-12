@@ -3,7 +3,7 @@ import hashlib
 
 from django import views
 from django.http import HttpResponse
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
@@ -86,8 +86,8 @@ class NotifyView(views.View):
 class CreatePay(views.View):
     @staticmethod
     def get(request, event_id, p_id):
-        event = Event.objects.get(id=event_id)
-        participant = Participant.objects.get(id=p_id)
+        event = get_object_or_404(Event, id=event_id)
+        participant = get_object_or_404(Participant, id=p_id)
         if participant.paid:
             return redirect('pay_ok', event_id)
         amount = event.price
@@ -112,7 +112,7 @@ class CreatePay(views.View):
 class PayOk(views.View):
     @staticmethod
     def get(request, event_id):
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         return render(
             request=request,
             template_name='events/event/pay-ok.html',
@@ -125,7 +125,7 @@ class PayOk(views.View):
 class PremiumCreatePayView(views.View):
     @staticmethod
     def get(request, event_id):
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         if event.is_premium:
             return redirect('admin_actions', event_id)
         superuser = CustomUser.objects.get(id=1)
@@ -149,7 +149,7 @@ class PremiumCreatePayView(views.View):
 class PayPremiumOk(views.View):
     @staticmethod
     def get(request, event_id):
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         return render(
             request=request,
             template_name='events/event/pay-premium-ok.html',
