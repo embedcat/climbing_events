@@ -15,3 +15,6 @@
 {% endif %}
 <a class="nav-link {% active_link 'about' %}" href="{% url 'about' %}">О проекте</a>
 <hr>
+{% if user.is_superuser %}
+<a class="nav-link" href="/dja">dj-admin</a>
+{% endif %}

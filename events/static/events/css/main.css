@@ -877,13 +877,15 @@ html:not(.platform-mac) .site-sidebar .block-blog {
 
 @media screen and (max-width: 1000px) {
     .main-navigation .navigation-extendable {
-        height: 0;
-        -webkit-transition: height 0.5s;
-        transition: height 0.5s;
+        max-height: 0;
+        -webkit-transition: max-height 0.25s;
+        transition: max-height 0.25s;
     }
-
+    
     .main-navigation.extended .navigation-extendable {
-        height: 700px;
+        max-height: 1000px;
+        -webkit-transition: max-height 1s;
+        transition: max-height 1s;
     }
 
     .site-main {
