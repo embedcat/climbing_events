@@ -1,7 +1,7 @@
 {% extends 'events/event/base.html' %}
 {% load crispy_forms_tags %}
 {% block title %}
-Протоколы и файлы
+Протоколы и файлы <small><em>(<a href="{% url 'help' type='files' %}">инструкции</a>)</em></small>
 {% endblock %}
 {% block body %}
 <form method="post">

@@ -1,7 +1,7 @@
 {% extends 'events/event/base.html' %}
 {% load crispy_forms_tags %}
 {% block title %}
-Настройки оплаты
+Настройки оплаты <small><em>(<a href="{% url 'help' type='payment' %}">инструкции</a>)</em></small>
 {% endblock %}
 {% block body %}
 {% if event.is_premium %}

@@ -7,6 +7,9 @@ id="dataTableProtocols" width="100%">
 <tr>
 <th data-field="no" data-sortable="true" style="width:5%">#</th>
 <th data-field="name" data-sortable="true">Событие</th>
+{% if user.is_superuser %}
+<th data-field="owner" data-sortable="true">Владалец</th>
+{% endif %}
 <th data-field="date" data-sortable="true">Дата</th>
 </tr>
 </thead>
@@ -26,6 +29,9 @@ id="dataTableProtocols" width="100%">
  <a href="{% url 'route_editor' event.id %}">Трассы</a>)
 </em></small>
 </td>
+{% if user.is_superuser %}
+<td>{{ event.owner }}</td>
+{% endif %}
 <td>{{ event.date }}</td>
 </tr>
 {% endfor %}

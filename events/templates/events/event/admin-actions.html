@@ -1,4 +1,11 @@
-{% extends 'events/event/base.html' %} {% load crispy_forms_tags %} {% block title %} Управление {% endblock %} {% block body %}
+{% extends 'events/event/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+Управление <small><em>(<a href="{% url 'help' type='actions' %}">инструкции</a>)</em></small>
+{% endblock title %}
+
+{% block body %}
 <h3>{% if event.is_premium %}<i class="fa-solid fa-star text-warning"></i> Событие с полным {% else %} Событие с базовым {% endif %}доступом:</h3>
 {% if event.is_premium %}
 <p>Вам доступен полный функционал!</p>
@@ -79,4 +86,4 @@
         <div><a href="{{ female_link }}">Женщины</a></div>
     </li>
 </ol>
-{% endblock %}
+{% endblock body %}
