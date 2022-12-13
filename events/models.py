@@ -87,23 +87,23 @@ class Wallet(models.Model):
 class Event(models.Model):
     owner = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='owner', default=1)
     title = models.CharField(max_length=128)
-    gym = models.CharField(max_length=128)
+    gym = models.CharField(max_length=128, default="Скалодром")
     date = models.DateField(null=True)
     poster = models.ImageField(upload_to=settings.MEDIA_POSTERS_DIR,
                                default=f'..{settings.STATIC_URL}events/img/default_poster.png')
-    description = models.TextField(null=True)
-    short_description = models.TextField(null=True, max_length=200)
+    description = models.TextField(null=True, default="Регламент")
+    short_description = models.TextField(null=True, max_length=200, default="Краткое описание")
     routes_num = models.IntegerField(null=True, default=10)
     is_published = models.BooleanField(default=False)
     is_registration_open = models.BooleanField(default=False)
     is_results_allowed = models.BooleanField(default=False)
     is_enter_result_allowed = models.BooleanField(default=False)
-    is_count_only_entered_results = models.BooleanField(default=False)
-    is_view_full_results = models.BooleanField(default=False)
+    is_count_only_entered_results = models.BooleanField(default=True)
+    is_view_full_results = models.BooleanField(default=True)
     is_view_route_color = models.BooleanField(default=False)
     is_view_route_grade = models.BooleanField(default=False)
-    is_view_route_score = models.BooleanField(default=False)
-    is_separate_score_by_groups = models.BooleanField(default=False)
+    is_view_route_score = models.BooleanField(default=True)
+    is_separate_score_by_groups = models.BooleanField(default=True)
 
     SCORE_SIMPLE_SUM = 'SUM'
     SCORE_PROPORTIONAL = 'PROP'
