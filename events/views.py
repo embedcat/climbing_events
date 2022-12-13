@@ -11,7 +11,7 @@ from django.core.mail import send_mail
 from django.db.models import Count
 from django.forms import formset_factory, modelformset_factory, ModelChoiceField
 from django.http import JsonResponse
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
 
 from config import settings
@@ -62,7 +62,7 @@ class MainView(views.View):
 class EventView(views.View):
     @staticmethod
     def get(request, event_id):
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         return render(
             request=request,
             template_name='events/event/description.html',
@@ -75,7 +75,7 @@ class EventView(views.View):
 class AdminActionsView(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id):
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         entered_num = event.participant.filter(is_entered_result=True).count()
         return render(
             request=request,
@@ -90,8 +90,7 @@ class AdminActionsView(IsOwnerMixin, views.View):
 
     @staticmethod
     def post(request, event_id):
-        event = Event.objects.get(id=event_id)
-        logger.info('Admin.Services [POST]')
+        event = get_object_or_404(Event, id=event_id)
         if 'update_score' in request.POST:
             services.update_results(event=event)
         if 'clear_results' in request.POST:
@@ -110,7 +109,7 @@ class AdminActionsView(IsOwnerMixin, views.View):
 
 @sync_to_async
 def export_results(event_id: int):
-    event = Event.objects.get(id=event_id)
+    event = get_object_or_404(Event, id=event_id)
     xl_tools.export_result(event=event)
 
 
@@ -123,7 +122,7 @@ async def async_get_results(request, event_id):
 class AdminProtocolsView(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id):
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         return render(
             request=request,
             template_name='events/event/admin-protocols.html',
@@ -135,8 +134,7 @@ class AdminProtocolsView(IsOwnerMixin, views.View):
 
     @staticmethod
     def post(request, event_id):
-        event = Event.objects.get(id=event_id)
-        logger.info('Admin.Protocols [POST]')
+        event = get_object_or_404(Event, id=event_id)
         if 'export_startlist' in request.POST:
             return services.get_startlist_response(event=event)
         if 'export_result' in request.POST:
@@ -172,7 +170,7 @@ class ProtocolRemove(IsOwnerMixin, views.View):
 class AdminDescriptionView(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id):
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         return render(
             request=request,
             template_name='events/event/admin-description.html',
@@ -184,9 +182,8 @@ class AdminDescriptionView(IsOwnerMixin, views.View):
 
     @staticmethod
     def post(request, event_id):
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         form = AdminDescriptionForm(request.POST, request.FILES)
-        logger.info('Admin.Description [POST] ->')
         if form.is_valid():
             cd = form.cleaned_data
             if 'poster' in request.FILES:
@@ -197,10 +194,8 @@ class AdminDescriptionView(IsOwnerMixin, views.View):
             event.description = cd['description']
             event.short_description = cd['short_description']
             event.save()
-            logger.info(f'-> Event [{event}] update OK')
             return redirect('admin_description', event_id)
         else:
-            logger.warning(f'-> Event [{event}] not updated. Form [{form}] is not valid')
             return render(
                 request=request,
                 template_name='events/event/admin-description.html',
@@ -214,7 +209,7 @@ class AdminDescriptionView(IsOwnerMixin, views.View):
 class AdminSettingsView(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id):
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         return render(
             request=request,
             template_name='events/event/admin-settings.html',
@@ -226,9 +221,8 @@ class AdminSettingsView(IsOwnerMixin, views.View):
 
     @staticmethod
     def post(request, event_id):
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         form = EventSettingsForm(request.POST)
-        logger.info('Admin.Settings [POST] ->')
         if form.is_valid():
             services.update_event_settings(event=event, cd=form.cleaned_data)
             return redirect('admin_settings', event_id)
@@ -246,7 +240,7 @@ class AdminSettingsView(IsOwnerMixin, views.View):
 class PremiumSettingsView(IsSuperuserMixin, views.View):
     @staticmethod
     def get(request, event_id):
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         return render(
             request=request,
             template_name='events/event/premium-settings.html',
@@ -258,7 +252,7 @@ class PremiumSettingsView(IsSuperuserMixin, views.View):
 
     @staticmethod
     def post(request, event_id):
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         form = EventPremiumSettingsForm(request.POST)
         if form.is_valid():
             services.update_event_premium_settings(event=event, cd=form.cleaned_data)
@@ -277,7 +271,7 @@ class PremiumSettingsView(IsSuperuserMixin, views.View):
 class PaySettingsView(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id):
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         EventPaySettingsForm.base_fields['wallet'] = ModelChoiceField(
             queryset=Wallet.objects.filter(owner=request.user))
         form = EventPaySettingsForm(instance=event)
@@ -294,7 +288,7 @@ class PaySettingsView(IsOwnerMixin, views.View):
 
     @staticmethod
     def post(request, event_id):
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         form = EventPaySettingsForm(request.POST)
         promocode_form = PromoCodeAddForm(request.POST)
         if 'pay_settings' in request.POST and form.is_valid():
@@ -324,7 +318,7 @@ class EnterResultsView(views.View):
     def get(request, event_id):
         saved_accents = request.session.pop("accents", None)
         pin = request.session.pop("pin", None)
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         if event.is_without_registration:
             return redirect('enter_wo_reg', event_id=event_id)
         if pin and len(saved_accents) == event.routes_num:
@@ -347,21 +341,17 @@ class EnterResultsView(views.View):
 
     @staticmethod
     def post(request, event_id):
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         participant_form = AccentParticipantForm(request.POST, prefix='participant')
         AccentFormSet = formset_factory(AccentForm)
         accent_formset = AccentFormSet(request.POST, prefix='accents')
-        logger.info('Enter Result [POST] ->')
         if participant_form.is_valid() and accent_formset.is_valid():
             entered_results = services.accent_form_to_results(form_cleaned_data=accent_formset.cleaned_data)
             pin = participant_form.cleaned_data['pin']
-            logger.info(f'-> pin={pin} ->')
             try:
                 participant = event.participant.get(pin=int(pin))
             except (Participant.DoesNotExist, TypeError):
-                logger.warning('-> Participant not found')
                 return redirect('enter_results', event_id=event_id)
-            logger.info(f'-> participant found: [{participant}] ->')
 
             if event.is_check_result_before_enter:
                 request.session['pin'] = pin
@@ -372,9 +362,7 @@ class EnterResultsView(views.View):
                                    participant=participant,
                                    accents=entered_results)
 
-            logger.info('-> update participant accents')
             return redirect('enter_results_ok', event_id=event_id)
-        logger.warning(f'-> {participant_form} or {accent_formset} are not valid')
         return render(
             request=request,
             template_name='events/event/enter.html',
@@ -390,7 +378,7 @@ class EnterResultsView(views.View):
 class EnterCheckView(views.View):
     @staticmethod
     def get(request, event_id):
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         routes = event.route.all().order_by('number')
         result = request.session.get("accents")
         temp, items = [], []
@@ -413,7 +401,7 @@ class EnterCheckView(views.View):
 
     @staticmethod
     def post(request, event_id):
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         if 'cancel' in request.POST:
             return redirect('enter_results', event_id=event_id)
         if 'submit' in request.POST:
@@ -422,22 +410,19 @@ class EnterCheckView(views.View):
             try:
                 participant = event.participant.get(pin=int(pin))
             except (Participant.DoesNotExist, TypeError):
-                logger.warning('-> Participant not found')
                 return redirect('enter_results', event_id=event_id)
-            logger.info(f'-> participant found: [{participant}] ->')
 
             services.enter_results(event=event,
                                    participant=participant,
                                    accents=result)
 
-            logger.info('-> update participant accents')
             return redirect('enter_results_ok', event_id=event_id)
 
 
 class EnterResultsOKView(views.View):
     @staticmethod
     def get(request, event_id):
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         return render(
             request=request,
             template_name='events/event/enter-ok.html',
@@ -450,7 +435,7 @@ class EnterResultsOKView(views.View):
 class EnterWithoutReg(views.View):
     @staticmethod
     def get(request, event_id):
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         if not services.is_registration_open(event=event):
             return redirect('event', event_id=event_id)
         initial = [{'label': i, 'accent': ACCENT_NO} for i in range(event.routes_num)]
@@ -478,7 +463,7 @@ class EnterWithoutReg(views.View):
 
     @staticmethod
     def post(request, event_id):
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         group_list = services.get_group_list(event=event)
         set_list = services.get_set_list(event=event)
         form = ParticipantRegistrationForm(request.POST,
@@ -517,7 +502,7 @@ class EnterWithoutReg(views.View):
 class ResultsView(views.View):
     @staticmethod
     def get(request, event_id):
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         results = services.get_results(event=event, full_results=True)
         return render(
             request=request,
@@ -538,7 +523,7 @@ class ResultsView(views.View):
 class ParticipantsView(views.View):
     @staticmethod
     def get(request, event_id):
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         queryset = Participant.objects.filter(event__id=event_id)
         participants = sorted(queryset, key=operator.attrgetter('last_name'))
         set_list = services.get_set_list(event=event)
@@ -575,7 +560,7 @@ class ParticipantsView(views.View):
 class RegistrationView(views.View):
     @staticmethod
     def get(request, event_id):
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         if event.is_without_registration:
             return redirect('enter_results', event_id=event_id)
         group_list = services.get_group_list(event=event)
@@ -599,7 +584,7 @@ class RegistrationView(views.View):
     @staticmethod
     def post(request, event_id):
         error = None
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         group_list = services.get_group_list(event=event)
         set_list = services.get_set_list(event=event)
         registration_fields = services.get_registration_fields(event=event)
@@ -635,8 +620,8 @@ class RegistrationView(views.View):
 class EventRegistrationOkView(views.View):
     @staticmethod
     def get(request, event_id, participant_id):
-        event = Event.objects.get(id=event_id)
-        participant = Participant.objects.get(id=participant_id)
+        event = get_object_or_404(Event, id=event_id)
+        participant = get_object_or_404(Participant, id=participant_id)
         msg = services.get_registration_msg_html(event=event,
                                                  participant=participant,
                                                  pay_url=request.build_absolute_uri(
@@ -661,7 +646,7 @@ class EventRegistrationOkView(views.View):
 class RouteEditor(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id):
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         RouteEditFormSet = modelformset_factory(Route, form=RouteEditForm, extra=0)
         formset = RouteEditFormSet(queryset=event.route.all().order_by('number'), prefix='routes')
         ScoreTableFormset = formset_factory(form=ScoreTableForm, extra=0)
@@ -680,7 +665,7 @@ class RouteEditor(IsOwnerMixin, views.View):
 
     @staticmethod
     def post(request, event_id):
-        event = Event.objects.get(id=event_id)
+        event = get_object_or_404(Event, id=event_id)
         RouteEditFormSet = modelformset_factory(Route, form=RouteEditForm, extra=0)
         formset = RouteEditFormSet(request.POST, prefix='routes')
         ScoreTableFormset = formset_factory(form=ScoreTableForm, extra=0)
@@ -703,8 +688,8 @@ class RouteEditor(IsOwnerMixin, views.View):
 class ParticipantView(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id, p_id):
-        event = Event.objects.get(id=event_id)
-        participant = Participant.objects.get(id=p_id)
+        event = get_object_or_404(Event, id=event_id)
+        participant = get_object_or_404(Participant, id=p_id)
         group_list = services.get_group_list(event=event) if event.group_num > 1 else ""
         group_list_value = group_list[participant.group_index] if event.group_num > 1 else ""
         set_list = services.get_set_list_for_change_available(event=event, participant=participant)
@@ -733,8 +718,8 @@ class ParticipantView(IsOwnerMixin, views.View):
 
     @staticmethod
     def post(request, event_id, p_id):
-        event = Event.objects.get(id=event_id)
-        participant = Participant.objects.get(id=p_id)
+        event = get_object_or_404(Event, id=event_id)
+        participant = get_object_or_404(Participant, id=p_id)
         form = ParticipantForm(request.POST,
                                request.FILES,
                                group_list=services.get_group_list(event=event),
@@ -766,8 +751,8 @@ class ParticipantView(IsOwnerMixin, views.View):
 class ParticipantRoutesView(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id, p_id):
-        event = Event.objects.get(id=event_id)
-        participant = Participant.objects.get(id=p_id)
+        event = get_object_or_404(Event, id=event_id)
+        participant = get_object_or_404(Participant, id=p_id)
         initial = [{'label': i, 'accent': participant.accents.get(str(i), ACCENT_NO)} for i in range(event.routes_num)]
         AccentFormSet = formset_factory(form=AccentForm, extra=0)
         formset = AccentFormSet(initial=initial, prefix='accents')
@@ -785,8 +770,8 @@ class ParticipantRoutesView(IsOwnerMixin, views.View):
 
     @staticmethod
     def post(request, event_id, p_id):
-        event = Event.objects.get(id=event_id)
-        participant = Participant.objects.get(id=p_id)
+        event = get_object_or_404(Event, id=event_id)
+        participant = get_object_or_404(Participant, id=p_id)
         AccentFormSet = formset_factory(form=AccentForm, extra=0)
         accent_formset = AccentFormSet(request.POST, request.FILES, prefix='accents')
         if accent_formset.is_valid():
@@ -811,8 +796,8 @@ class ParticipantRoutesView(IsOwnerMixin, views.View):
 class ParticipantRemoveView(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id, p_id):
-        event = Event.objects.get(id=event_id)
-        participant = Participant.objects.get(id=p_id)
+        event = get_object_or_404(Event, id=event_id)
+        participant = get_object_or_404(Participant, id=p_id)
         return render(
             request=request,
             template_name='events/event/participant-remove.html',
@@ -825,8 +810,8 @@ class ParticipantRemoveView(IsOwnerMixin, views.View):
 
     @staticmethod
     def post(request, event_id, p_id):
-        event = Event.objects.get(id=event_id)
-        participant = Participant.objects.get(id=p_id)
+        event = get_object_or_404(Event, id=event_id)
+        participant = get_object_or_404(Participant, id=p_id)
         if 'participant_remove' in request.POST:
             participant.delete()
             services.update_results(event=event)
@@ -888,13 +873,21 @@ def check_promo_code(request):
 
 
 def page_not_found_view(request, exception):
-    return render(request=request, template_name='events/error.html', status=404,
-                  context={'code': '', 'msg': 'Страница не найдена!'})
+    return render(request=request,
+                  template_name='events/profile/error.html',
+                  status=404,
+                  context={
+                      'code': '404',
+                      'error_title': 'Событие не найдено',
+                      'msg': f"<p>Вернуться к списку <a href=\"{request.build_absolute_uri(reverse('main'))}\">всех событий</a> или <a href=\"{request.build_absolute_uri(reverse('create'))}\">создать новое</a>!</p>",
+                  },
+                  )
 
 
 def error_view(request):
-    return render(request=request, template_name='events/error.html', status=500,
-                  context={'code': '', 'msg': 'Ошибка сервера!'})
+    logger.error(f"Server Error. Request: {request}")
+    return render(request=request, template_name='events/profile/error.html', status=500,
+                  context={'code': '500', 'error_title': 'Ошибка сервера', 'msg': 'Спокойно! Мы с этим разберёмся!'})
 
 
 class CreateEventView(LoginRequiredMixin, views.View):
@@ -977,12 +970,12 @@ class WalletView(LoginRequiredMixin, views.View):
             if wallet.owner != request.user and not request.user.is_superuser:
                 return redirect('profile')
             return render(request=request,
-                          template_name='events/profile/wallet.html',
-                          context={
-                              'form': WalletForm(instance=wallet),
-                          })
+                            template_name='events/profile/wallet.html',
+                            context={
+                                'form': WalletForm(instance=wallet),
+                            })
         except Wallet.DoesNotExist as e:
-            logger.error(f"Wallet deleting error: {e}")
+            logger.error(f"Wallet does not exist error: {e}")
         return redirect('profile')
 
     @staticmethod
