@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from multiselectfield import MultiSelectField
+from django.contrib.postgres.fields import ArrayField
 
 from config import settings
 
@@ -168,6 +169,7 @@ class Event(models.Model):
     is_premium = models.BooleanField(default=False)
     is_expired = models.BooleanField(default=False)
     max_participants = models.IntegerField(default=50, blank=True, null=True)
+    count_routes_num = models.IntegerField(default=0, blank=True, null=True)
 
 
 class Participant(models.Model):
@@ -218,6 +220,8 @@ class Participant(models.Model):
     place = models.IntegerField(default=0)
     email = models.EmailField(max_length=100, blank=True, null=True)
     paid = models.BooleanField(default=False)
+    scores = models.JSONField(default=_get_blank_json)
+    counted_routes = ArrayField(models.IntegerField(), blank=True, null=True)
 
     def __str__(self):
         return f'<Part-t: Name={self.last_name}, PIN={self.pin}, Score={self.score}, set={self.set_index}>'

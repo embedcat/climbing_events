@@ -91,8 +91,10 @@ def clear_results(event: Event) -> None:
 
 def update_event_settings(event: Event, cd: dict) -> None:
     old_routes_num = event.routes_num
-    need_update_results = event.score_type != cd['score_type'] or event.redpoint_points != cd[
-        'redpoint_points'] or event.flash_points_pc != cd['flash_points_pc']
+    need_update_results = event.score_type != cd['score_type'] or \
+                            event.redpoint_points != cd['redpoint_points'] or \
+                            event.flash_points_pc != cd['flash_points_pc'] or \
+                            event.count_routes_num != cd['count_routes_num']
 
     event.routes_num = cd['routes_num']
     event.is_published = cd['is_published']
@@ -108,6 +110,7 @@ def update_event_settings(event: Event, cd: dict) -> None:
     event.score_type = cd['score_type']
     event.redpoint_points = cd['redpoint_points']
     event.flash_points_pc = cd['flash_points_pc']
+    event.count_routes_num = cd['count_routes_num']
     event.group_num = cd['group_num']
     event.group_list = cd['group_list']
     event.set_num = cd['set_num']
@@ -146,7 +149,7 @@ def update_event_pay_settings(event: Event, cd: dict) -> None:
     event.save()
 
 
-def check_expired_events(events: list[Event]) -> None:
+def check_expired_events(events: QuerySet) -> None:
     for event in events:
         event.is_expired = True
         event.save()
@@ -317,20 +320,37 @@ def is_registration_open(event: Event) -> bool:
 # ================================================
 
 
+def _calc_participant_score_by_scores(scores: dict, num_of_best_scores: int) -> dict:
+    sorted_scores_dict = dict(sorted(scores.items(), key=lambda item: float(item[1]), reverse=True))
+    print(sorted_scores_dict)
+    if num_of_best_scores:
+        sorted_scores_dict = dict(list(sorted_scores_dict.items())[:num_of_best_scores])
+    return {"score": round(sum(sorted_scores_dict.values()), 2),
+            "counted_routes": list(sorted_scores_dict.keys()),
+            }
+
+
 def _update_participant_score(event: Event, participant: Participant, routes: QuerySet, json_key: str):
-    participant.score = 0
+    scores = {}
     for no, accent in participant.accents.items():
+        score = 0
         if accent != ACCENT_NO:
             if event.score_type == Event.SCORE_NUM_ACCENTS:
-                participant.score += 100 + (1 if accent == ACCENT_FLASH else 0)
+                score = 100 + (1 if accent == ACCENT_FLASH else 0)
             else:
                 base_route_points = routes[int(no)].score_json.get(json_key, 0)
                 flash_k = 1 + event.flash_points_pc / 100
                 base_score_with_flash = base_route_points * flash_k if accent == ACCENT_FLASH else base_route_points
                 if event.score_type != Event.SCORE_GRADE:
                     base_score_with_flash *= event.redpoint_points
-                participant.score += base_score_with_flash
-    participant.score = round(participant.score, 2)
+                score = base_score_with_flash
+        scores.update({no: round(score, 2)})
+    participant.scores = scores
+    result = _calc_participant_score_by_scores(scores=scores, 
+                                            num_of_best_scores=int(event.count_routes_num) if (event.score_type == Event.SCORE_PROPORTIONAL or event.score_type == Event.SCORE_GRADE) else 0)
+    participant.score = result.get("score", 0)
+    participant.counted_routes = result.get("counted_routes", [])
+    print(participant, result)
     participant.save()
 
 
@@ -429,10 +449,12 @@ def _get_sorted_participants_results(event: Event, participants: QuerySet, full_
             accents = [participant.accents.get(str(i), ACCENT_NO) for i in
                        range(event.routes_num)] if full_results else []
             accents = _accents_to_string(event=event, accents=accents)
+            counted_routes = [True if i in participant.counted_routes else False for i in range(event.routes_num)]
             data.append(dict(participant=participant,
                              accents=accents,
                              score=participant.score,
-                             score_view=f'{int(participant.score / 100)}/{int(participant.score % 100)}' if event.score_type == Event.SCORE_NUM_ACCENTS else participant.score))
+                             score_view=f'{int(participant.score / 100)}/{int(participant.score % 100)}' if event.score_type == Event.SCORE_NUM_ACCENTS else participant.score,
+                             counted_routes=counted_routes))
     return sorted(data, key=lambda k: (-k['score'], k['participant'].last_name), reverse=False)
 
 
@@ -443,7 +465,8 @@ def get_results(event: Event, full_results: bool = False) -> dict:
         'MALE': [
             {
                 'name': 'Спорт',
-                'data': [{'participant': Participant, 'accents': ['NO', 'FL', 'RP', ...], 'score': 100.0, 'score_view': 100.0}, {...}],
+                'data': [{'participant': Participant, 'accents': ['NO', 'FL', 'RP', ...], 'score': 100.0, 'score_view': 100.0, 'counted_routes': [True, False, False, True,]}, 
+                        {...}],
                 'scores': ['100.00\n80.00', '0 0', ...]
             },
             {...},

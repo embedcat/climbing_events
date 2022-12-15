@@ -1,3 +1,5 @@
+{% load events_tags %}
+
 <h4>{{ caption }}</h4>
 <table class="table table-sm table-bordered">
   <thead class="table-dark">
@@ -32,8 +34,8 @@
       {% endif %}
     </td>
     {% if event.is_view_full_results %}
-    {% for accent in d.accents %}
-    <td class="align-middle accent_{{ accent }}"><p class="text-center">{{ accent }}</p></td>
+    {% for accent, is_counted in d.accents|zip:d.counted_routes %}
+    <td class="align-middle accent_{{ accent }} {% if not is_counted %}accent_not_counted{% endif %}"><p class="text-center">{{ accent }}</p></td>
     {% endfor %}
     {% endif %}
     <td class="align-middle">{{ d.score_view }}</td>

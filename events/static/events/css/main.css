@@ -1166,6 +1166,9 @@ form div.mb-3 {
 .accent_RP {
     background-color: #FFFED6 !important;
 }
+.accent_not_counted {
+    opacity: 50%;
+}
 .logo {
     width: 220px;
 }
