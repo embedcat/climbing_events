@@ -1,7 +1,7 @@
 import time
 import requests
 
-BASE_URL = "http://127.0.0.1:8000"
+BASE_URL = "https://rockevents.ru"
 ENDPOINT = "check_expired_events"
 
 
