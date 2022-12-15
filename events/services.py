@@ -135,7 +135,7 @@ def update_event_settings(event: Event, cd: dict) -> None:
 def update_event_premium_settings(event: Event, cd: dict) -> None:
     event.premium_price = cd['premium_price']
     event.is_premium = cd['is_premium']
-    event.is_premium_used = cd['is_premium_used']
+    event.is_expired = cd['is_expired']
     event.save()
 
 
@@ -144,6 +144,12 @@ def update_event_pay_settings(event: Event, cd: dict) -> None:
     event.price = cd['price']
     event.wallet = cd['wallet']
     event.save()
+
+
+def check_expired_events(events: list[Event]) -> None:
+    for event in events:
+        event.is_expired = True
+        event.save()
 
 
 # ================================================

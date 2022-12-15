@@ -64,7 +64,7 @@ class NotifyView(views.View):
                 if check_notify_hash(request.POST, wallet.notify_secret_key):
                     if wallet_id:
                         event.is_premium = True
-                        event.is_premium_used = False
+                        event.is_expired = False
                         event.save()
                         logger.info(f"Pay Premium Notify Success: Event: {event}, Wallet: {wallet}")
                     else:

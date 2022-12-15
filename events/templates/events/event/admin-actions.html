@@ -58,7 +58,7 @@
         </li>
         <li class="list-group-item">
             <div>
-              <input class="btn btn-danger" id="submit-id-clear_event" name="clear_event" type="submit" value="Очистить событие" onclick="return confirm_action();" />
+              <input class="btn btn-danger" id="submit-id-clear_event" name="clear_event" type="submit" value="Очистить событие" onclick="return confirm_action();" {% if event.is_expired %}disabled{% endif %} />
                - Удаляет всех участников, трассы и прохождения
             </div>
         </li>

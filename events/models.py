@@ -166,7 +166,7 @@ class Event(models.Model):
     score_table = models.JSONField(default=_get_default_score_table_json)
     premium_price = models.IntegerField(default=0, blank=True, null=True)
     is_premium = models.BooleanField(default=False)
-    is_premium_used = models.BooleanField(default=False)
+    is_expired = models.BooleanField(default=False)
     max_participants = models.IntegerField(default=50, blank=True, null=True)
 
 

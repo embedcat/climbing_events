@@ -73,6 +73,7 @@ class ParticipantRegistrationForm(forms.ModelForm):
 
 class AdminDescriptionForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
+        is_expired = kwargs.pop('is_expired')
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_method = 'post'
@@ -80,6 +81,8 @@ class AdminDescriptionForm(forms.ModelForm):
 
         self.fields['description'] = forms.CharField(widget=TinyMCE(attrs={'rows': 30}), label='Описание')
         self.fields['date'].input_formats = settings.INPUT_DATE_FORMATS
+        self.fields['date'].widget.attrs['readonly'] = is_expired
+        self.fields['date'].help_text = 'Событие уже состоялось, поменять дату нельзя' if is_expired else ''
 
     class Meta:
         model = Event
@@ -94,7 +97,7 @@ class AdminDescriptionForm(forms.ModelForm):
         labels = {
             'title': 'Название',
             'gym': 'Скалодром',
-            'date': 'Дата (YYYY-MM-DD)',
+            'date': 'Дата (MM/DD/YYYY)',
             'poster': 'Афиша',
             'short_description': 'Краткое описание',
         }
@@ -186,13 +189,13 @@ class EventPremiumSettingsForm(forms.ModelForm):
         fields = [
             'premium_price',
             'is_premium',
-            'is_premium_used',
+            'is_expired',
 
         ]
         labels = {
             'premium_price': 'Стоимость премиум-доступа',
             'is_premium': 'Премиум-доступ',
-            'is_premium_used': 'Премиум-доступ был использован',
+            'is_expired': 'Событие состоялось',
         }
 
 
@@ -372,7 +375,7 @@ class CreateEventForm(forms.ModelForm):
         ]
         labels = {
             'title': 'Название',
-            'date': 'Дата',
+            'date': 'Дата (MM/DD/YYYY)',
         }
         widgets = {
             'date': DatePickerInput(),

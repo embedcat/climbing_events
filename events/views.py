@@ -10,7 +10,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.mail import send_mail
 from django.db.models import Count
 from django.forms import formset_factory, modelformset_factory, ModelChoiceField
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
 
@@ -176,7 +176,7 @@ class AdminDescriptionView(IsOwnerMixin, views.View):
             template_name='events/event/admin-description.html',
             context={
                 'event': event,
-                'form': AdminDescriptionForm(instance=event),
+                'form': AdminDescriptionForm(instance=event, is_expired=event.is_expired),
             }
         )
 
@@ -1006,3 +1006,11 @@ class WalletRemoveView(LoginRequiredMixin, views.View):
         except Wallet.DoesNotExist as e:
             logger.error(f"Wallet deleting error: {e}")
         return redirect('profile')
+
+
+class CheckExpiredEventsView(views.View):
+    @staticmethod
+    def get(request):
+        events = Event.objects.filter(is_expired=False, date__lte=datetime.datetime.today())
+        services.check_expired_events(events=events)
+        return HttpResponse(status=200)

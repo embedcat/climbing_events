@@ -52,5 +52,7 @@ urlpatterns = [
     path('about/', about_views.AboutView.as_view(), name='about'),
     path('help/<str:type>/', about_views.HelpView.as_view(), name='help'),
 
+    path('check_expired_events/', views.CheckExpiredEventsView.as_view(), name='check_expired_events'),
+
     # path('test/', views.async_get_results, name='test'),
 ]
