@@ -24,5 +24,4 @@ def zip_lists(a, b):
 
 @register.filter
 def event_is_today(date):
-    today = datetime.date.today()
-    return date == today
+    return date == datetime.date.today()
