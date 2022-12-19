@@ -1181,3 +1181,9 @@ p.list-item {
 .img-thumbnail-help {
     border: 3px solid #586471;
 }
+.card-expired {
+    opacity: 60%;
+}
+.date-expired::after{
+    content: " (завершено)";
+}

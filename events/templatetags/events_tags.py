@@ -1,5 +1,5 @@
+import datetime
 from django import template
-
 from events import services
 
 register = template.Library()
@@ -20,3 +20,9 @@ def group_label(index, event):
 @register.filter(name='zip')
 def zip_lists(a, b):
     return zip(a, b)
+
+
+@register.filter
+def event_is_today(date):
+    today = datetime.date.today()
+    return date == today

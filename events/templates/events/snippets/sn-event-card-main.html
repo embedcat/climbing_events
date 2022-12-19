@@ -1,5 +1,7 @@
+{% load events_tags %}
+
 <div class="col-md-4 my-2">
-  <div class="card mx-auto h-100 card-animated">
+  <div class="card mx-auto h-100 {% if event.is_expired %}card-expired{% endif %}">
     <a class="" href="{% url 'event' event.id %}"><img src="{{ event.poster.url }}"
                                                        class="card-img-top img-thumbnail"
                                                        alt="poster"></a>
@@ -7,17 +9,18 @@
       <h4 class="card-title">{{ event.title }}</h4>
     </div>
     <div class="card-body">
-      <h6 class="card-subtitle text-muted">{{event.date }}</h6>
+      <h6 class="card-subtitle text-muted {% if event.is_expired %}date-expired{% endif %} ">{{event.date }}</h6>
       <p class="card-text p-y-1">{{ event.short_description }}</p>
     </div>
     <div class="card-footer">
-      {% if event.is_registration_open %}
-      <a class="btn btn-primary" href="{% url 'registration' event.id %}">Регистрация</a>
-      {% else %}
-      <a class="btn btn-primary" href="{% url 'event' event.id %}">Подробнее</a>
+      {% if event.is_registration_open and not event.is_expired %}
+      <a class="btn btn-primary mb-1" href="{% url 'registration' event.id %}">Регистрация</a>
       {% endif %}
       {% if event.is_results_allowed %}
-      <a class="btn btn-primary" href="{% url 'results' event.id %}">Результаты</a>
+      <a class="btn btn-primary mb-1" href="{% url 'results' event.id %}">Результаты</a>
+      {% endif %}
+      {% if event.date|event_is_today %}
+      <a class="btn btn-primary mb-1" href="{% url 'enter_results' event.id %}">Внести результат</a>
       {% endif %}
     </div>
   </div>

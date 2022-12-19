@@ -183,7 +183,7 @@ class AdminDescriptionView(IsOwnerMixin, views.View):
     @staticmethod
     def post(request, event_id):
         event = get_object_or_404(Event, id=event_id)
-        form = AdminDescriptionForm(request.POST, request.FILES)
+        form = AdminDescriptionForm(request.POST, request.FILES, is_expired=event.is_expired)
         if form.is_valid():
             cd = form.cleaned_data
             if 'poster' in request.FILES:
@@ -201,7 +201,7 @@ class AdminDescriptionView(IsOwnerMixin, views.View):
                 template_name='events/event/admin-description.html',
                 context={
                     'event': event,
-                    'form': AdminDescriptionForm(request.POST, request.FILES),
+                    'form': AdminDescriptionForm(request.POST, request.FILES, is_expired=event.is_expired),
                 }
             )
 
