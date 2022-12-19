@@ -350,7 +350,6 @@ def _update_participant_score(event: Event, participant: Participant, routes: Qu
                                             num_of_best_scores=int(event.count_routes_num) if (event.score_type == Event.SCORE_PROPORTIONAL or event.score_type == Event.SCORE_GRADE) else 0)
     participant.score = result.get("score", 0)
     participant.counted_routes = result.get("counted_routes", [])
-    print(participant, result)
     participant.save()
 
 
