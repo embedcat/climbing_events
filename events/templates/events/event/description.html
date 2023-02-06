@@ -15,8 +15,8 @@
       <ul class="">
         <li><strong>Дата: </strong>{{ event.date|date:'d E Y' }}</li>
         <li><strong>Скалодром: </strong>{{ event.gym }}</li>
-        {% if event.group_num > 1 %}<li><strong>Сеты: </strong>{{ event.group_list }}</li>{% endif %}
-        {% if event.set_num > 1 %}<li><strong>Группы: </strong>{{ event.set_list }}</li>{% endif %}
+        {% if event.group_num > 1 %}<li><strong>Группы: </strong>{{ event.group_list }}</li>{% endif %}
+        {% if event.set_num > 1 %}<li><strong>Сеты: </strong>{{ event.set_list }}</li>{% endif %}
         {% if event.price > 0 %}<li><strong>Стоимость: </strong>{{ event.price }} ₽</li>{% endif %}
       </ul>
     </div>
