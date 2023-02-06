@@ -1011,6 +1011,6 @@ class WalletRemoveView(LoginRequiredMixin, views.View):
 class CheckExpiredEventsView(views.View):
     @staticmethod
     def get(request):
-        events = Event.objects.filter(is_expired=False, date__lte=datetime.datetime.today())
+        events = Event.objects.filter(is_expired=False, date__lt=datetime.datetime.today())
         services.check_expired_events(events=events)
         return HttpResponse(status=200)
