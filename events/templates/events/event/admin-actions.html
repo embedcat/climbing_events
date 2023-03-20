@@ -26,7 +26,7 @@
     </li>
     {% if event.is_pay_allowed %}
     <li class="list-group-item">
-        <div>Оплачено взносов: {{ paid_num }}</div>
+        <div>Оплачено взносов: <a href="{% url 'pay_details' event.id %}">{{ paid_num }}</a></div>
     </li>
     {% endif %}
 </ol>

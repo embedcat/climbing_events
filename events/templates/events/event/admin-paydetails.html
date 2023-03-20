@@ -1,0 +1,38 @@
+{% extends 'events/event/base.html' %}
+{% block title %}
+Оплата стартовых взносов
+{% endblock %}
+{% block body %}
+<hr>
+<h4>Файлы</h4>
+<table class="table table-sm table-striped table-bordered"
+               data-toggle="table"
+               data-sort-name="no"
+               data-sortable="true"
+               id="dataTable" width="100%">
+    <thead class="table-dark">
+    <tr>
+        <th data-field="no" data-sortable="true" style="width:5%">#</th>
+        <th data-field="name" data-sortable="true">Участник</th>
+        <th data-field="wallet" data-sortable="true">Кошелёк</th>
+        <th data-field="promo" data-sortable="true">Промокод</th>
+        <th data-field="date" data-sortable="true">Дата оплаты</th>
+        <th data-field="amount" data-sortable="true">Сумма</th>
+        <th data-field="id" data-sortable="true">id</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for item in pay_details %}
+    <tr>
+        <td>{{ forloop.counter }}</td>
+        <td><a href="">{{ item.participant }}</a></td>
+        <td><a href="">{{ item.wallet }}</a></td>
+        <td>{{ item.promo_code }}</td>
+        <td>{{ item.mtime|date:'H:i j-M-Y' }}</td>
+        <td>{{ item.amount }}</td>
+        <td>{{ item.operation_id }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

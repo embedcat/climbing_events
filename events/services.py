@@ -16,7 +16,7 @@ from django.http import HttpResponse
 from config import settings
 from events import xl_tools, mock
 from events.exceptions import DuplicateParticipantError, ParticipantTooYoungError
-from events.models import CustomUser, Event, Route, Participant
+from events.models import CustomUser, Event, PayDetail, PromoCode, Route, Participant, Wallet
 from events.models import ACCENT_NO, ACCENT_FLASH
 
 
@@ -625,3 +625,20 @@ def qr_create(text: str, title: str = 'qrcode') -> HttpResponse:
                             content_type='image/png')
     response['Content-Disposition'] = f'attachment; filename={title}.png'
     return response
+
+
+# ================================================
+# ================= PayDetails ===================
+# ================================================
+
+def save_pay_detail(event: Event, participant: Participant, promo_code: PromoCode or None, wallet: Wallet,
+                    amount: float, operation_id: str) -> PayDetail:
+    pd = PayDetail.objects.create(
+        event=event,
+        participant=participant,
+        promo_code=promo_code,
+        wallet=wallet,
+        amount=amount,
+        operation_id=operation_id
+    )
+    return pd

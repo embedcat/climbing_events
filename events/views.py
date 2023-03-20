@@ -19,7 +19,7 @@ from events.exceptions import DuplicateParticipantError, ParticipantTooYoungErro
 from events.forms import EventPremiumSettingsForm, ParticipantRegistrationForm, AdminDescriptionForm, AccentForm, AccentParticipantForm, \
     EventSettingsForm, RouteEditForm, ParticipantForm, CreateEventForm, EventPaySettingsForm, \
     PromoCodeAddForm, WalletForm, ScoreTableForm
-from events.models import GRADES, Event, Participant, Route, ACCENT_NO, PromoCode, Wallet
+from events.models import GRADES, Event, Participant, PayDetail, Route, ACCENT_NO, PromoCode, Wallet
 from events import services, xl_tools
 from braces import views as braces
 
@@ -1016,3 +1016,16 @@ class CheckExpiredEventsView(views.View):
         events = Event.objects.filter(is_expired=False, date__lt=datetime.datetime.today())
         services.check_expired_events(events=events)
         return HttpResponse(status=200)
+
+
+class PayDetailsView(views.View):
+    @staticmethod
+    def get(request, event_id):
+        event = get_object_or_404(Event, id=event_id)
+        pay_details = PayDetail.objects.filter(event=event)
+        return render(request=request,
+                template_name='events/event/admin-paydetails.html',
+                context={
+                    'event': event,
+                    'pay_details': pay_details,
+                })

@@ -248,3 +248,13 @@ class PromoCode(models.Model):
     price = models.IntegerField(default=0)
     applied_num = models.IntegerField(default=0, blank=True, null=True)
     max_applied_num = models.IntegerField(default=0, blank=True, null=True)
+
+
+class PayDetail(models.Model):
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='PayDetail')
+    participant = models.ForeignKey(Participant, on_delete=models.CASCADE, related_name='PayDetail')
+    promo_code = models.ForeignKey(PromoCode, on_delete=models.CASCADE, related_name='PayDetail', null=True, blank=True)
+    wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='PayDetail')
+    datetime = models.DateTimeField(auto_now_add=True)
+    amount = models.FloatField(default=0)
+    operation_id = models.CharField(max_length=100)

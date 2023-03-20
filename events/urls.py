@@ -13,6 +13,7 @@ urlpatterns = [
     path('e/<int:event_id>/admin_protocols', views.AdminProtocolsView.as_view(), name='admin_protocols'),
     path('e/<int:event_id>/admin_protocols/<str:file>', views.ProtocolDownload.as_view(), name='protocol_download'),
     path('e/<int:event_id>/admin_protocols/<str:file>/remove', views.ProtocolRemove.as_view(), name='protocol_remove'),
+    path('e/<int:event_id>/admin_paydetails/', views.PayDetailsView.as_view(), name='pay_details'),
     path('async_get_results/<int:event_id>/', views.async_get_results, name='async_get_results'),
     path('e/<int:event_id>/enter/', views.EnterResultsView.as_view(), name='enter_results'),
     path('e/<int:event_id>/enter_ok/', views.EnterResultsOKView.as_view(), name='enter_results_ok'),
