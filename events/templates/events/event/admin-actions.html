@@ -24,6 +24,11 @@
     <li class="list-group-item">
         <div>Внесено результатов: {{ entered_num }}</div>
     </li>
+    {% if event.is_pay_allowed %}
+    <li class="list-group-item">
+        <div>Оплачено взносов: {{ payd_num }}</div>
+    </li>
+    {% endif %}
 </ol>
 <h3>Редактировать:</h3>
 <ol class="list-group list-group-flush">

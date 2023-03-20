@@ -77,12 +77,14 @@ class AdminActionsView(IsOwnerMixin, views.View):
     def get(request, event_id):
         event = get_object_or_404(Event, id=event_id)
         entered_num = event.participant.filter(is_entered_result=True).count()
+        payd_num = event.participant.filter(payd=True).count()
         return render(
             request=request,
             template_name='events/event/admin-actions.html',
             context={
                 'event': event,
                 'entered_num': entered_num,
+                'payd_num': payd_num,
                 'male_link': str(request.build_absolute_uri(reverse('results', args=(event_id,)))) + '?autorefresh&m',
                 'female_link': str(request.build_absolute_uri(reverse('results', args=(event_id,)))) + '?autorefresh&f',
             }
