@@ -3,6 +3,10 @@
 Оплата стартовых взносов
 {% endblock %}
 {% block body %}
+
+<link rel="stylesheet" href="https://unpkg.com/bootstrap-table@1.19.1/dist/bootstrap-table.min.css">
+<script src="https://unpkg.com/bootstrap-table@1.19.1/dist/bootstrap-table.min.js"></script>
+
 <hr>
 <h4>Файлы</h4>
 <table class="table table-sm table-striped table-bordered"
@@ -25,12 +29,12 @@
     {% for item in pay_details %}
     <tr>
         <td>{{ forloop.counter }}</td>
-        <td>{{ item.participant.last_name }} {{ item.participant.first_name }}<span class="small"><em><a href="{% url 'participant' event.id item.participant.id %}">(ред.)</a></em></span></td>
+        <td>{{ item.participant.last_name }} {{ item.participant.first_name }}<span class="small"><em><a href="{% url 'participant' event.id item.participant.id %}"> (ред.)</a></em></span></td>
         <td>{{ item.wallet }}</td>
-        <td>{% if item.promo_code %}{{ item.promo_code }}{% endif %}</td>
+        <td>{% if item.promo_code %}{{ item.promo_code.title }}{% endif %}</td>
         <td>{{ item.datetime|date:'H:i:s j-M-Y' }}</td>
         <td>{{ item.amount }}</td>
-        <td><a href="https://yoomoney.ru/details-print?payment-id={{ item.operation_id }}">{{ item.operation_id }}</td>
+        <td><a href="https://yoomoney.ru/details-print?payment-id={{ item.operation_id }}" target="_blank">{{ item.operation_id }}</td>
     </tr>
     {% endfor %}
     </tbody>

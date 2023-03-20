@@ -1022,7 +1022,7 @@ class PayDetailsView(views.View):
     @staticmethod
     def get(request, event_id):
         event = get_object_or_404(Event, id=event_id)
-        pay_details = PayDetail.objects.filter(event=event)
+        pay_details = PayDetail.objects.filter(event=event).order_by('-datetime')
         return render(request=request,
                 template_name='events/event/admin-paydetails.html',
                 context={
