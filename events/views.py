@@ -937,11 +937,12 @@ class PromoCodeRemove(IsOwnerMixin, views.View):
 class WalletsView(LoginRequiredMixin, views.View):
     @staticmethod
     def get(request):
+        wallets = Wallet.objects.all() if request.user.is_superuser else Wallet.objects.filter(owner=request.user)
         return render(request=request,
                       template_name='events/profile/wallets.html',
                       context={
                           'form': WalletForm(),
-                          'wallets': Wallet.objects.filter(owner=request.user),
+                          'wallets': wallets,
                           'notify_link': get_notify_link(request=request),
                       })
 
