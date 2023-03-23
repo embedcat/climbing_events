@@ -102,11 +102,12 @@ class NotifyView(views.View):
                     logger.info(f"Pay Notify Success: Event: {event}, Participant: {participant}{', PromoCode: ' + promo_code.title if promocode_id else ''}")
                     services.save_pay_detail(event=event, participant=participant, promo_code=promo_code,
                         wallet=wallet, amount=amount, operation_id=operation_id)
+                return redirect('pay_notify')
             else:
                 logger.error(f"Pay Notify Error: Notify hash not valid. {request.POST}")
         else:
             logger.error(f"Could not parse notification {request.POST}")
-        return redirect('pay_notify')
+        return HttpResponse(status=400)
 
 
 class CreatePay(views.View):
