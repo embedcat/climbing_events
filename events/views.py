@@ -16,7 +16,7 @@ from django.urls import reverse
 
 from config import settings
 from events.exceptions import DuplicateParticipantError, ParticipantTooYoungError
-from events.forms import EventPremiumSettingsForm, ParticipantRegistrationForm, AdminDescriptionForm, AccentForm, AccentParticipantForm, \
+from events.forms import AccentFrenchForm, EventPremiumSettingsForm, ParticipantRegistrationForm, AdminDescriptionForm, AccentForm, AccentParticipantForm, \
     EventSettingsForm, RouteEditForm, ParticipantForm, CreateEventForm, EventPaySettingsForm, \
     PromoCodeAddForm, WalletForm, ScoreTableForm
 from events.models import GRADES, Event, Participant, PayDetail, Route, ACCENT_NO, PromoCode, Wallet
@@ -324,10 +324,15 @@ class EnterResultsView(views.View):
         if event.is_without_registration:
             return redirect('enter_wo_reg', event_id=event_id)
         if pin and len(saved_accents) == event.routes_num:
+            # возврат со страницы подтверждения
             initial = [{'label': i, 'accent': accent} for i, accent in saved_accents.items()]
         else:
-            initial = [{'label': i, 'accent': ACCENT_NO} for i in range(event.routes_num)]
-        AccentFormSet = formset_factory(AccentForm, extra=0)
+            if event.score_type == Event.SCORE_FRENCH:
+                initial = [{'label': i, 'top': '0', 'zone': '0'} for i in range(event.routes_num)]
+            else:
+                initial = [{'label': i, 'accent': ACCENT_NO} for i in range(event.routes_num)]
+        AccentFormSet = formset_factory(AccentFrenchForm if event.score_type ==
+                                        Event.SCORE_FRENCH else AccentForm, extra=0)
         formset = AccentFormSet(initial=initial, prefix='accents')
         return render(
             request=request,
@@ -345,10 +350,10 @@ class EnterResultsView(views.View):
     def post(request, event_id):
         event = get_object_or_404(Event, id=event_id)
         participant_form = AccentParticipantForm(request.POST, prefix='participant')
-        AccentFormSet = formset_factory(AccentForm)
+        AccentFormSet = formset_factory(AccentFrenchForm if event.score_type == Event.SCORE_FRENCH else AccentForm)
         accent_formset = AccentFormSet(request.POST, prefix='accents')
         if participant_form.is_valid() and accent_formset.is_valid():
-            entered_results = services.accent_form_to_results(form_cleaned_data=accent_formset.cleaned_data)
+            entered_results = services.form_data_to_results(form_cleaned_data=accent_formset.cleaned_data)
             pin = participant_form.cleaned_data['pin']
             try:
                 participant = event.participant.get(pin=int(pin))
@@ -440,8 +445,12 @@ class EnterWithoutReg(views.View):
         event = get_object_or_404(Event, id=event_id)
         if not services.is_registration_open(event=event):
             return redirect('event', event_id=event_id)
-        initial = [{'label': i, 'accent': ACCENT_NO} for i in range(event.routes_num)]
-        AccentFormSet = formset_factory(AccentForm, extra=0)
+        if event.score_type == Event.SCORE_FRENCH:
+            initial = [{'label': i, 'top': '0', 'zone': '0'} for i in range(event.routes_num)]
+        else:
+            initial = [{'label': i, 'accent': ACCENT_NO} for i in range(event.routes_num)]
+        AccentFormSet = formset_factory(AccentFrenchForm if event.score_type ==
+                                        Event.SCORE_FRENCH else AccentForm, extra=0)
         formset = AccentFormSet(initial=initial, prefix='accents')
         routes = event.route.all().order_by('number')
         group_list = services.get_group_list(event=event)
@@ -475,20 +484,19 @@ class EnterWithoutReg(views.View):
                                            registration_fields=services.get_registration_fields(event=event),
                                            required_fields=services.get_registration_required_fields(event=event),
                                            is_enter_form=True)
-        AccentFormSet = formset_factory(AccentForm)
+        AccentFormSet = formset_factory(AccentFrenchForm if event.score_type == Event.SCORE_FRENCH else AccentForm)
         accent_formset = AccentFormSet(request.POST, prefix='accents')
         if form.is_valid() and accent_formset.is_valid():
             try:
                 participant = event.participant.get(first_name=form.cleaned_data['first_name'],
-                last_name=form.cleaned_data['last_name'])
+                                                    last_name=form.cleaned_data['last_name'])
                 if not event.is_update_result_allowed:
                     return redirect('results', event_id=event_id)
             except Participant.DoesNotExist:
                 participant = services.register_participant(event=event, cd=form.cleaned_data)
             services.enter_results(event=event,
-                                participant=participant,
-                                accents=services.accent_form_to_results(
-                                    form_cleaned_data=accent_formset.cleaned_data))
+                                   participant=participant,
+                                   accents=services.form_data_to_results(form_cleaned_data=accent_formset.cleaned_data))
             return redirect('enter_results_ok', event_id=event_id)
         return render(
             request=request,
@@ -514,7 +522,7 @@ class ResultsView(views.View):
                 'routes': event.route.all().order_by('number'),
                 'male': results[Participant.GENDER_MALE],
                 'female': results[Participant.GENDER_FEMALE],
-                'view_scores': event.is_view_full_results and event.is_view_route_score and event.score_type != Event.SCORE_NUM_ACCENTS,
+                'view_scores': event.is_view_full_results and event.is_view_route_score and event.score_type != Event.SCORE_NUM_ACCENTS and event.score_type != Event.SCORE_FRENCH,
                 'autorefresh': 'autorefresh' in request.GET,
                 'active_male': 'm' in request.GET or 'f' not in request.GET,
                 'active_female': 'f' in request.GET,
@@ -755,8 +763,9 @@ class ParticipantRoutesView(IsOwnerMixin, views.View):
     def get(request, event_id, p_id):
         event = get_object_or_404(Event, id=event_id)
         participant = get_object_or_404(Participant, id=p_id)
-        initial = [{'label': i, 'accent': participant.accents.get(str(i), ACCENT_NO)} for i in range(event.routes_num)]
-        AccentFormSet = formset_factory(form=AccentForm, extra=0)
+        initial = services.get_form_initial_results(event=event, participant=participant)
+        AccentFormSet = formset_factory(form=AccentFrenchForm if event.score_type ==
+                                        Event.SCORE_FRENCH else AccentForm, extra=0)
         formset = AccentFormSet(initial=initial, prefix='accents')
         return render(
             request=request,
@@ -774,13 +783,13 @@ class ParticipantRoutesView(IsOwnerMixin, views.View):
     def post(request, event_id, p_id):
         event = get_object_or_404(Event, id=event_id)
         participant = get_object_or_404(Participant, id=p_id)
-        AccentFormSet = formset_factory(form=AccentForm, extra=0)
+        AccentFormSet = formset_factory(form=AccentFrenchForm if event.score_type ==
+                                        Event.SCORE_FRENCH else AccentForm, extra=0)
         accent_formset = AccentFormSet(request.POST, request.FILES, prefix='accents')
         if accent_formset.is_valid():
             services.enter_results(event=event,
                                    participant=participant,
-                                   accents=services.accent_form_to_results(
-                                       form_cleaned_data=accent_formset.cleaned_data))
+                                   accents=services.form_data_to_results(form_cleaned_data=accent_formset.cleaned_data))
             return redirect('results', event_id=event_id)
         return render(
             request=request,
@@ -844,14 +853,16 @@ class MyEventsView(LoginRequiredMixin, views.View):
 def check_pin_code(request):
     pin = request.GET.get('pin')
     event_id = request.GET.get('event_id')
+    event = Event.objects.get(id=event_id)
     try:
         participant = Participant.objects.get(pin=pin, event__id=event_id)
-        if participant.is_entered_result and not Event.objects.get(id=event_id).is_update_result_allowed:
+        if participant.is_entered_result and not event.is_update_result_allowed:
             response = {'result': False,
                         'reason': f'Найден участник: {participant.first_name} {participant.last_name}, но повторный ввод результатов запрещён.'}
         else:
             response = {'result': True, 'participant': f'{participant.first_name} {participant.last_name}',
-                        'accents': participant.accents}
+                        'accents': participant.accents,
+                        'french_accents': participant.french_accents}
     except Participant.DoesNotExist:
         response = {'result': False,
                     'reason': 'Участник не найден. Проверьте PIN-код, или <a href="{% url \'registration\' event.id %}">зарегистрируйтесь</a>!'}
@@ -972,10 +983,10 @@ class WalletView(LoginRequiredMixin, views.View):
             if wallet.owner != request.user and not request.user.is_superuser:
                 return redirect('profile')
             return render(request=request,
-                            template_name='events/profile/wallet.html',
-                            context={
-                                'form': WalletForm(instance=wallet),
-                            })
+                          template_name='events/profile/wallet.html',
+                          context={
+                              'form': WalletForm(instance=wallet),
+                          })
         except Wallet.DoesNotExist as e:
             logger.error(f"Wallet does not exist error: {e}")
         return redirect('profile')
@@ -1024,8 +1035,8 @@ class PayDetailsView(views.View):
         event = get_object_or_404(Event, id=event_id)
         pay_details = PayDetail.objects.filter(event=event).order_by('-datetime')
         return render(request=request,
-                template_name='events/event/admin-paydetails.html',
-                context={
-                    'event': event,
-                    'pay_details': pay_details,
-                })
+                      template_name='events/event/admin-paydetails.html',
+                      context={
+                          'event': event,
+                          'pay_details': pay_details,
+                      })

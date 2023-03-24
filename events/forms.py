@@ -246,6 +246,21 @@ class AccentForm(forms.Form):
         )
 
 
+class AccentFrenchForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['top'] = forms.IntegerField(label="T", required=False)
+        self.fields['zone'] = forms.IntegerField(label="Z", required=False)
+
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+        self.helper.disable_csrf = True
+        self.helper.layout = Layout(
+            Field('top', template='events/snippets/sn-form-accent_french.html'),
+            Field('zone', template='events/snippets/sn-form-accent_french.html'),
+        )
+
+
 class AccentParticipantForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
