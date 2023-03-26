@@ -278,7 +278,7 @@ class PaySettingsView(IsOwnerMixin, views.View):
         EventPaySettingsForm.base_fields['wallet'] = ModelChoiceField(
             queryset=wallets)
         reg_type_list = event.reg_type_list.split(',') if event.reg_type_list else []
-        initial = {f'price_{key}': int(value) for key, value in event.price_list.items()}
+        initial = {f'price_{key}': int(value) for key, value in event.price_list.items()} if event.price_list else {}
         form = EventPaySettingsForm(instance=event,
                                     initial=initial,
                                     reg_type_list=[(i, t.strip()) for i, t in enumerate(reg_type_list)])
