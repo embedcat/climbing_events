@@ -277,7 +277,11 @@ class PaySettingsView(IsOwnerMixin, views.View):
         wallets = Wallet.objects.all() if request.user.is_superuser else Wallet.objects.filter(owner=request.user)
         EventPaySettingsForm.base_fields['wallet'] = ModelChoiceField(
             queryset=wallets)
-        form = EventPaySettingsForm(instance=event)
+        reg_type_list = event.reg_type_list.split(',') if event.reg_type_list else []
+        initial = {f'price_{key}': int(value) for key, value in event.price_list.items()}
+        form = EventPaySettingsForm(instance=event,
+                                    initial=initial,
+                                    reg_type_list=[(i, t.strip()) for i, t in enumerate(reg_type_list)])
         return render(
             request=request,
             template_name='events/event/pay-settings.html',
@@ -292,7 +296,9 @@ class PaySettingsView(IsOwnerMixin, views.View):
     @staticmethod
     def post(request, event_id):
         event = get_object_or_404(Event, id=event_id)
-        form = EventPaySettingsForm(request.POST)
+        reg_type_list = event.reg_type_list.split(',') if event.reg_type_list else []
+        form = EventPaySettingsForm(request.POST,
+                                    reg_type_list=[(i, t.strip()) for i, t in enumerate(reg_type_list)])
         promocode_form = PromoCodeAddForm(request.POST)
         if 'pay_settings' in request.POST and form.is_valid():
             services.update_event_pay_settings(event=event, cd=form.cleaned_data)
@@ -459,7 +465,8 @@ class EnterWithoutReg(views.View):
                                                     registration_fields=services.get_registration_fields(event=event),
                                                     required_fields=services.get_registration_required_fields(
                                                         event=event),
-                                                    is_enter_form=True)
+                                                    is_enter_form=True,
+                                                    reg_type_list=None)
 
             }
         )
@@ -475,7 +482,8 @@ class EnterWithoutReg(views.View):
                                            set_list=set_list,
                                            registration_fields=services.get_registration_fields(event=event),
                                            required_fields=services.get_registration_required_fields(event=event),
-                                           is_enter_form=True)
+                                           is_enter_form=True,
+                                           reg_type_list=None)
         AccentFormSet = formset_factory(AccentForm)
         accent_formset = AccentFormSet(request.POST, prefix='accents')
         if form.is_valid() and accent_formset.is_valid():
@@ -580,7 +588,8 @@ class RegistrationView(views.View):
                                                     set_list=set_list,
                                                     registration_fields=registration_fields,
                                                     required_fields=required_fields,
-                                                    is_enter_form=False)
+                                                    is_enter_form=False,
+                                                    reg_type_list=event.reg_type_list)
             }
         )
 
@@ -598,7 +607,8 @@ class RegistrationView(views.View):
                                            set_list=set_list,
                                            registration_fields=registration_fields,
                                            required_fields=required_fields,
-                                           is_enter_form=False)
+                                           is_enter_form=False,
+                                           reg_type_list=event.reg_type_list)
         if form.is_valid():
             try:
                 participant = services.register_participant(event=event, cd=form.cleaned_data)
@@ -712,9 +722,11 @@ class ParticipantView(IsOwnerMixin, views.View):
                                         group_list=group_list,
                                         set_list=set_list,
                                         initial={'group_index': group_list_value,
-                                                 'set_index': set_index_value},
+                                                 'set_index': set_index_value,
+                                                 'reg_type_index': participant.reg_type_index},
                                         is_pay_allowed=event.is_pay_allowed,
                                         registration_fields=services.get_registration_fields(event=event),
+                                        reg_type_list=event.reg_type_list,
                                         ),
             }
         )
@@ -729,6 +741,7 @@ class ParticipantView(IsOwnerMixin, views.View):
                                set_list=services.get_set_list_for_registration_available(event=event),
                                is_pay_allowed=event.is_pay_allowed,
                                registration_fields=services.get_registration_fields(event=event),
+                               reg_type_list=event.reg_type_list,
                                )
         if form.is_valid():
             services.update_participant(event=event, participant=participant, cd=form.cleaned_data)
@@ -746,6 +759,7 @@ class ParticipantView(IsOwnerMixin, views.View):
                                             set_list=services.get_set_list_for_registration_available(event=event),
                                             is_pay_allowed=event.is_pay_allowed,
                                             registration_fields=services.get_registration_fields(event=event),
+                                            reg_type_list=event.reg_type_list,
                                             ),
                 }
             )
