@@ -117,7 +117,7 @@ class CreatePay(views.View):
         participant = get_object_or_404(Participant, id=p_id)
         if participant.paid:
             return redirect('pay_ok', event_id)
-        amount = event.price
+        amount = int(event.price_list.get(str(participant.reg_type_index), 0)) if event.reg_type_num > 1 else event.price
         label = f"e{event_id}_p{p_id}"
         success_uri = request.build_absolute_uri(reverse('pay_ok', args=(event_id,)))
         return render(
