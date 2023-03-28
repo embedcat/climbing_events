@@ -274,8 +274,9 @@ class PaySettingsView(IsOwnerMixin, views.View):
     @staticmethod
     def get(request, event_id):
         event = get_object_or_404(Event, id=event_id)
+        wallets = Wallet.objects.all() if request.user.is_superuser else Wallet.objects.filter(owner=request.user)
         EventPaySettingsForm.base_fields['wallet'] = ModelChoiceField(
-            queryset=Wallet.objects.filter(owner=request.user))
+            queryset=wallets)
         form = EventPaySettingsForm(instance=event)
         return render(
             request=request,
@@ -948,11 +949,12 @@ class PromoCodeRemove(IsOwnerMixin, views.View):
 class WalletsView(LoginRequiredMixin, views.View):
     @staticmethod
     def get(request):
+        wallets = Wallet.objects.all() if request.user.is_superuser else Wallet.objects.filter(owner=request.user)
         return render(request=request,
                       template_name='events/profile/wallets.html',
                       context={
                           'form': WalletForm(),
-                          'wallets': Wallet.objects.filter(owner=request.user),
+                          'wallets': wallets,
                           'notify_link': get_notify_link(request=request),
                       })
 
