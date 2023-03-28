@@ -17,6 +17,12 @@ def group_label(index, event):
     return group_list[index]
 
 
+@register.filter
+def reg_type_label(index, event):
+    reg_type_list = event.reg_type_list.split(',')
+    return reg_type_list[index].strip()
+
+
 @register.filter(name='zip')
 def zip_lists(a, b):
     return zip(a, b)

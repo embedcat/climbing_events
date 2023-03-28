@@ -16,6 +16,7 @@ class ParticipantRegistrationForm(forms.ModelForm):
         registration_fields = kwargs.pop('registration_fields')
         required_fields = kwargs.pop('required_fields')
         is_enter_form = kwargs.pop('is_enter_form')
+        reg_type_list = kwargs.pop('reg_type_list')
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_method = 'post'
@@ -53,6 +54,11 @@ class ParticipantRegistrationForm(forms.ModelForm):
             self.fields['set_index'] = forms.ChoiceField(choices=tuple([(name, name) for name in set_list]),
                                                          label='Сет',
                                                          required=False)
+        reg_types = reg_type_list.split(',') if reg_type_list != None else []
+        if len(reg_types) > 1:
+            self.fields['reg_type_index'] = forms.ChoiceField(choices=tuple([(i, t.strip()) for i, t in enumerate(reg_types)]),
+                                                              label='Тип регистрации',
+                                                              required=False)
 
     class Meta:
         model = Participant
@@ -143,6 +149,7 @@ class EventSettingsForm(forms.ModelForm):
             'registration_fields',
             'required_fields',
             'participant_min_age',
+            'reg_type_list',
         ]
         labels = {
             'routes_num': 'Количество трасс',
@@ -172,10 +179,12 @@ class EventSettingsForm(forms.ModelForm):
             'registration_fields': 'Дополнительные поля формы регистрации',
             'required_fields': 'Обязательные поля при регистрации',
             'participant_min_age': 'Минимальный возраст участника',
+            'reg_type_list': 'Список типов регистрации участников, через запятую',
         }
         help_texts = {
             'group_list': 'Например: "Спорт, Любители, Новички"',
             'set_list': 'Например: "Утренний сет (8:00), Дневной сет (13:00), Вечерний сет (18:00)"',
+            'reg_type_list': 'Например: "Стандарт, + Футболка, + Футболка и сувенир"',
         }
 
 
@@ -203,10 +212,17 @@ class EventPremiumSettingsForm(forms.ModelForm):
 
 class EventPaySettingsForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
+        reg_type_list = kwargs.pop('reg_type_list')
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.add_input(Submit('pay_settings', 'Сохранить'))
+
+        if len(reg_type_list) > 1:
+            for item in reg_type_list:
+                self.fields[f'price_{item[0]}'] = forms.IntegerField(label=f'Стоимость для типа "{item[1]}"',
+                                                                     required=True)
+            del self.fields['price']
 
     class Meta:
         model = Event
@@ -325,6 +341,7 @@ class ParticipantForm(forms.ModelForm):
         set_list = kwargs.pop('set_list')
         registration_fields = kwargs.pop('registration_fields')
         is_pay_allowed = kwargs.pop('is_pay_allowed')
+        reg_type_list = kwargs.pop('reg_type_list')
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_method = 'post'
@@ -342,6 +359,12 @@ class ParticipantForm(forms.ModelForm):
             self.fields['set_index'] = forms.ChoiceField(choices=tuple([(name, name) for name in set_list]),
                                                          label='Сет',
                                                          required=False)
+        reg_types = reg_type_list.split(',') if reg_type_list != None else []
+        if len(reg_types) > 1:
+            self.fields['reg_type_index'] = forms.ChoiceField(choices=tuple([(i, t.strip()) for i, t in enumerate(reg_types)]),
+                                                              label='Тип регистрации',
+                                                              required=False)
+        
         deleting_fields = list(set(Event.OPTIONAL_FIELDS) - set(registration_fields))
         for field in deleting_fields:
             del self.fields[field]

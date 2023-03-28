@@ -10,9 +10,7 @@
 <a class="nav-link {% active_link 'account_signup' strict=True %}" href="{% url 'account_signup' %}">Регистрация</a>
 {% endif %}
 <hr>
-{% if user.is_authenticated %}
 <a class="nav-link {% active_link 'help' type='workflow' %}" href="{% url 'help' type='workflow' %}">Инструкции</a>
-{% endif %}
 <a class="nav-link {% active_link 'about' %}" href="{% url 'about' %}">О проекте</a>
 <hr>
 {% if user.is_superuser %}

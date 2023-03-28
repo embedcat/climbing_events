@@ -140,3 +140,4 @@ dmypy.json
 test.py
 .DS_Store
 events/static/events/xl_templates/card_template.xlsx
+do_backup

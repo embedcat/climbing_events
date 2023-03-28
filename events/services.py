@@ -125,6 +125,8 @@ def update_event_settings(event: Event, cd: dict) -> None:
     event.is_check_result_before_enter = cd['is_check_result_before_enter']
     event.is_update_result_allowed = cd['is_update_result_allowed']
     event.participant_min_age = cd['participant_min_age']
+    event.reg_type_list = cd['reg_type_list']
+    event.reg_type_num = 0 if event.reg_type_list == None else len(event.reg_type_list.split(','))
 
     event.save()
 
@@ -145,7 +147,13 @@ def update_event_premium_settings(event: Event, cd: dict) -> None:
 
 def update_event_pay_settings(event: Event, cd: dict) -> None:
     event.is_pay_allowed = cd['is_pay_allowed']
-    event.price = cd['price']
+    event.price = cd['price'] if 'price' in cd else 0
+    price_index = 0
+    price_list = {}
+    while f'price_{price_index}' in cd:
+        price_list.update({price_index: int(cd[f'price_{price_index}'])})
+        price_index += 1
+    event.price_list = price_list
     event.wallet = cd['wallet']
     event.save()
 
@@ -239,6 +247,7 @@ def update_participant(event: Event, participant: Participant, cd: dict) -> Part
     participant.set_index = get_set_list(event=event).index(cd['set_index']) if 'set_index' in cd else 0
     participant.paid = cd['paid'] if 'paid' in cd else False
     participant.email = cd['email'] if 'email' in cd else ''
+    participant.reg_type_index = cd['reg_type_index'] if 'reg_type_index' in cd else 0
     participant.save()
 
     if need_update_results:
@@ -261,6 +270,7 @@ def _create_participant(event: Event, first_name: str, last_name: str,
                         group_index: int = 0,
                         set_index: int = 0,
                         email: str = '',
+                        reg_type_index: int = 0,
                         ) -> Participant or None:
     if 0 < event.set_max_participants <= event.participant.filter(set_index=set_index).count():
         return None
@@ -280,6 +290,7 @@ def _create_participant(event: Event, first_name: str, last_name: str,
         group_index=group_index,
         set_index=set_index,
         email=email,
+        reg_type_index=reg_type_index,
     )
     return participant
 
@@ -301,6 +312,7 @@ def register_participant(event: Event, cd: dict) -> Participant:
         group_index=get_group_list(event=event).index(cd['group_index']) if 'group_index' in cd else 0,
         set_index=get_set_list(event=event).index(cd['set_index']) if 'set_index' in cd else 0,
         email=cd[Event.FIELD_EMAIL] if Event.FIELD_EMAIL in cd else '',
+        reg_type_index=cd['reg_type_index'] if 'reg_type_index' in cd else 0,
     )
     _check_participants_number_to_close_registration(event=event)
     return participant
@@ -625,6 +637,7 @@ def _debug_create_random_participant(event: Event) -> Participant:
         grade=random.choice([g[0] for g in Participant.GRADES]),
         group_index=random.randrange(event.group_num),
         set_index=random.randrange(event.set_num),
+        reg_type_index=random.randint(0, event.reg_type_num - 1) if event.reg_type_num > 1 else 0,
     )
 
 

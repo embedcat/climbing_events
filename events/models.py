@@ -165,6 +165,7 @@ class Event(models.Model):
     participant_min_age = models.IntegerField(default=0)
     is_pay_allowed = models.BooleanField(default=False)
     price = models.IntegerField(default=0, null=True, blank=True)
+    price_list = models.JSONField(null=True, blank=True)
     wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='event', blank=True, null=True)
     score_table = models.JSONField(default=_get_default_score_table_json)
     premium_price = models.IntegerField(default=0, blank=True, null=True)
@@ -172,6 +173,8 @@ class Event(models.Model):
     is_expired = models.BooleanField(default=False)
     max_participants = models.IntegerField(default=50, blank=True, null=True)
     count_routes_num = models.IntegerField(default=0, blank=True, null=True)
+    reg_type_list = models.CharField(max_length=300, blank=True, null=True)
+    reg_type_num = models.IntegerField(default=1)
 
 
 class Participant(models.Model):
@@ -217,6 +220,7 @@ class Participant(models.Model):
     is_entered_result = models.BooleanField(default=False)
     group_index = models.IntegerField(default=0)
     set_index = models.IntegerField(default=0)
+    reg_type_index = models.IntegerField(default=0)
 
     accents = models.JSONField(blank=True, null=True)
     french_accents = models.JSONField(blank=True, null=True)

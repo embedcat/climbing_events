@@ -1,0 +1,2 @@
+#!/bin/bash
+PGPASSWORD="pass" pg_dump -h localhost -U user -Fc db > dump.backup

@@ -26,6 +26,9 @@ def export_participants_to_start_list(event: Event):
     sheet.merge_cells(start_row=3, start_column=6, end_row=3, end_column=8)
     sheet.cell(row=3, column=6).value = event.date
 
+    group_list = services.get_group_list(event=event)
+    reg_type_list = event.reg_type_list.split(',') if event.reg_type_num > 1 else []
+
     for set_no in range(event.set_num):
         sheet = book.copy_worksheet(book.worksheets[0])
         sheet.title = f'Сет {set_no + 1}'
@@ -40,9 +43,10 @@ def export_participants_to_start_list(event: Event):
             sheet.cell(row=ROW_OFFSET + index, column=5).value = p.city
             sheet.cell(row=ROW_OFFSET + index, column=6).value = p.get_grade_display()
             sheet.cell(row=ROW_OFFSET + index, column=7).value = p.team
-            group_list = services.get_group_list(event=event)
             sheet.cell(row=ROW_OFFSET + index, column=8).value = group_list[p.group_index] if group_list != [] else ''
             sheet.cell(row=ROW_OFFSET + index, column=9).value = p.pin
+            sheet.cell(row=ROW_OFFSET + index, column=10).value = "Да" if p.paid else "-"
+            sheet.cell(row=ROW_OFFSET + index, column=11).value = reg_type_list[p.reg_type_index].strip() if reg_type_list != [] else ''
     book.remove(book.worksheets[0])
     book.close()
 
