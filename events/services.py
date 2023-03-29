@@ -144,17 +144,21 @@ def update_event_premium_settings(event: Event, cd: dict) -> None:
     event.save()
 
 
-def update_event_pay_settings(event: Event, cd: dict) -> None:
+def update_event_pay_settings(event: Event, cd: dict) -> bool:
+    if cd['pay_type'] == Event.PAY_TYPE_YOOMONEY and not cd['wallet']:
+        return False
     event.is_pay_allowed = cd['is_pay_allowed']
     event.price = cd['price'] if 'price' in cd else 0
     price_index = 0
     price_list = {}
     while f'price_{price_index}' in cd:
-        price_list.update({price_index: int(cd[f'price_{price_index}'])})
+        price_list.update({price_index: cd[f'price_{price_index}']})
         price_index += 1
     event.price_list = price_list
     event.wallet = cd['wallet']
+    event.pay_type = cd['pay_type']
     event.save()
+    return True
 
 
 def check_expired_events(events: QuerySet) -> None:
@@ -634,10 +638,15 @@ def remove_file(file: str) -> bool:
 # ================================================
 
 
-def qr_create(text: str, title: str = 'qrcode') -> HttpResponse:
+def qr_create(text: str) -> io.BytesIO:
     qr = segno.make_qr(text, version=4)
     out = io.BytesIO()
     qr.save(out=out, kind='png', scale=50)
+    return out
+
+
+def qr_create_response(text: str, title: str = 'qrcode') -> HttpResponse:
+    out = qr_create(text=text)
     response = HttpResponse(content=out.getvalue(),
                             content_type='image/png')
     response['Content-Disposition'] = f'attachment; filename={title}.png'

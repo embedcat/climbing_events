@@ -40,6 +40,7 @@ urlpatterns = [
     path('pay/notify/', pay_views.NotifyView.as_view(), name='pay_notify'),
     path('pay/<int:event_id>/<int:p_id>/', pay_views.CreatePay.as_view(), name='pay_create'),
     path('pay/ok/<int:event_id>/', pay_views.PayOk.as_view(), name='pay_ok'),
+    path('pay/unavailable/<int:event_id>/', pay_views.PayUnavailable.as_view(), name='pay_unavailable'),
 
     path('pay_premium/<int:event_id>/', pay_views.PremiumCreatePayView.as_view(), name='pay_premium_create'),
     path('pay_premium/ok/<int:event_id>/', pay_views.PayPremiumOk.as_view(), name='pay_premium_ok'),

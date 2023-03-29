@@ -146,13 +146,13 @@ class AdminProtocolsView(IsOwnerMixin, views.View):
                 return services.get_result_example_response(event=event)
         if 'qr_description' in request.POST:
             url = request.build_absolute_uri(reverse('event', args=(event_id,)))
-            return services.qr_create(text=url, title='qr_event')
+            return services.qr_create_response(text=url, title='qr_event')
         if 'qr_register' in request.POST:
             url = request.build_absolute_uri(reverse('registration', args=(event_id,)))
-            return services.qr_create(text=url, title='qr_registration')
+            return services.qr_create_response(text=url, title='qr_registration')
         if 'qr_enter' in request.POST:
             url = request.build_absolute_uri(reverse('enter_results', args=(event_id,)))
-            return services.qr_create(text=url, title='qr_enter_results')
+            return services.qr_create_response(text=url, title='qr_enter_results')
         return redirect('admin_protocols', event_id)
 
 
@@ -275,10 +275,9 @@ class PaySettingsView(IsOwnerMixin, views.View):
     def get(request, event_id):
         event = get_object_or_404(Event, id=event_id)
         wallets = Wallet.objects.all() if request.user.is_superuser else Wallet.objects.filter(owner=request.user)
-        EventPaySettingsForm.base_fields['wallet'] = ModelChoiceField(
-            queryset=wallets)
+        EventPaySettingsForm.base_fields['wallet'] = ModelChoiceField(queryset=wallets, label='Кошелек Yoomoney', required=False)
         reg_type_list = event.reg_type_list.split(',') if event.reg_type_list else []
-        initial = {f'price_{key}': int(value) for key, value in event.price_list.items()} if event.price_list else {}
+        initial = {f'price_{key}': value for key, value in event.price_list.items()} if event.price_list else {}
         form = EventPaySettingsForm(instance=event,
                                     initial=initial,
                                     reg_type_list=[(i, t.strip()) for i, t in enumerate(reg_type_list)])
@@ -300,26 +299,24 @@ class PaySettingsView(IsOwnerMixin, views.View):
         form = EventPaySettingsForm(request.POST,
                                     reg_type_list=[(i, t.strip()) for i, t in enumerate(reg_type_list)])
         promocode_form = PromoCodeAddForm(request.POST)
-        if 'pay_settings' in request.POST and form.is_valid():
-            services.update_event_pay_settings(event=event, cd=form.cleaned_data)
+        if 'pay_settings' in request.POST and form.is_valid() and services.update_event_pay_settings(event=event, cd=form.cleaned_data):
             return redirect('pay_settings', event_id)
-        elif 'add_promocode' in request.POST and promocode_form.is_valid():
+        if 'add_promocode' in request.POST and promocode_form.is_valid():
             PromoCode.objects.create(event=event,
                                      title=promocode_form.cleaned_data['title'],
                                      price=promocode_form.cleaned_data['price'],
                                      max_applied_num=promocode_form.cleaned_data['max_applied_num'])
             return redirect('pay_settings', event_id)
-        else:
-            return render(
-                request=request,
-                template_name='events/event/pay-settings.html',
-                context={
-                    'event': event,
-                    'form': form,
-                    'promocode_form': promocode_form,
-                    'promocodes': PromoCode.objects.filter(event__id=event_id),
-                }
-            )
+        return render(
+            request=request,
+            template_name='events/event/pay-settings.html',
+            context={
+                'event': event,
+                'form': form,
+                'promocode_form': promocode_form,
+                'promocodes': PromoCode.objects.filter(event__id=event_id),
+            }
+        )
 
 
 class EnterResultsView(views.View):

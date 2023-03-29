@@ -167,7 +167,7 @@ class Event(models.Model):
     is_update_result_allowed = models.BooleanField(default=True)
     participant_min_age = models.IntegerField(default=0)
     is_pay_allowed = models.BooleanField(default=False)
-    price = models.IntegerField(default=0, null=True, blank=True)
+    price = models.CharField(max_length=300, null=True, blank=True)
     price_list = models.JSONField(null=True, blank=True)
     wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='event', blank=True, null=True)
     score_table = models.JSONField(default=_get_default_score_table_json)
@@ -178,6 +178,14 @@ class Event(models.Model):
     count_routes_num = models.IntegerField(default=0, blank=True, null=True)
     reg_type_list = models.CharField(max_length=300, blank=True, null=True)
     reg_type_num = models.IntegerField(default=1)
+
+    PAY_TYPE_YOOMONEY = 'yoomoney'
+    PAY_TYPE_SBP = 'sbp'
+    PAY_TYPE = [
+        (PAY_TYPE_YOOMONEY, 'Кошелек Yoomoney'),
+        (PAY_TYPE_SBP, 'СБП (QR-код)'),
+    ]
+    pay_type = models.CharField(max_length=20, choices=PAY_TYPE, default=PAY_TYPE_YOOMONEY)
 
 
 class Participant(models.Model):
