@@ -214,7 +214,7 @@ class EventPremiumSettingsForm(forms.ModelForm):
             'is_expired': 'Событие состоялось',
         }
 
-
+price_field_help_text = 'При оплате по Yoomoney - стоимость в рублях, по СБП - ссылка (QR-код) для оплаты'
 class EventPaySettingsForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         reg_type_list = kwargs.pop('reg_type_list')
@@ -225,21 +225,26 @@ class EventPaySettingsForm(forms.ModelForm):
 
         if len(reg_type_list) > 1:
             for item in reg_type_list:
-                self.fields[f'price_{item[0]}'] = forms.IntegerField(label=f'Стоимость для типа "{item[1]}"',
-                                                                     required=True)
+                self.fields[f'price_{item[0]}'] = forms.CharField(label=f'Стоимость/ссылка для типа "{item[1]}"',
+                                                                     required=True, help_text=price_field_help_text)
             del self.fields['price']
 
     class Meta:
         model = Event
         fields = [
             'is_pay_allowed',
+            'pay_type',
             'price',
             'wallet',
         ]
         labels = {
             'is_pay_allowed': 'Оплачивать стартовые взносы на сайте',
-            'price': 'Стоимость участия',
+            'pay_type': 'Тип оплаты',
+            'price': 'Стоимость/ссылка',
             'wallet': 'Кошелек для оплаты',
+        }
+        help_texts = {
+            'price': price_field_help_text,
         }
 
 

@@ -1,3 +1,4 @@
+import base64
 import logging
 import hashlib
 
@@ -27,7 +28,11 @@ def check_notify_hash(notify: dict, secret: str) -> bool:
 
 
 def is_pay_available(event: Event) -> bool:
-    return event.wallet and event.is_pay_allowed
+    if event.pay_type == Event.PAY_TYPE_YOOMONEY:
+        return event.wallet and event.is_pay_allowed
+    if event.pay_type == Event.PAY_TYPE_SBP:
+        return event.is_pay_allowed
+    return False
 
 
 def is_premium_pay_available(event: Event) -> bool:
@@ -117,23 +122,52 @@ class CreatePay(views.View):
         participant = get_object_or_404(Participant, id=p_id)
         if participant.paid:
             return redirect('pay_ok', event_id)
-        amount = int(event.price_list.get(str(participant.reg_type_index), 0)) if event.reg_type_num > 1 else event.price
-        label = f"e{event_id}_p{p_id}"
-        success_uri = request.build_absolute_uri(reverse('pay_ok', args=(event_id,)))
-        return render(
-            request=request,
-            template_name='events/event/pay.html',
-            context={
-                'title': f'{participant.last_name} {participant.first_name}',
-                'event': event,
-                'participant': participant,
-                'label': label,
-                'amount': amount,
-                'success_uri': success_uri,
-                'receiver': event.wallet.wallet_id,
-                'pay_available': is_pay_available(event=event),
-            }
-        )
+        if not is_pay_available(event=event):
+            return redirect('pay_unavailable', event_id)
+
+        if event.pay_type == Event.PAY_TYPE_YOOMONEY:
+            try:
+                amount = int(event.price_list.get(str(participant.reg_type_index), 0)) if event.reg_type_num > 1 else int(event.price)
+            except:
+                return redirect('pay_unavailable', event_id)
+
+            label = f"e{event_id}_p{p_id}"
+            success_uri = request.build_absolute_uri(reverse('pay_ok', args=(event_id,)))
+            return render(
+                request=request,
+                template_name='events/event/pay-yoomoney.html',
+                context={
+                    'title': f'{participant.last_name} {participant.first_name}',
+                    'event': event,
+                    'participant': participant,
+                    'label': label,
+                    'amount': amount,
+                    'success_uri': success_uri,
+                    'receiver': event.wallet.wallet_id,
+                }
+            )
+        if event.pay_type == Event.PAY_TYPE_SBP:
+            qr_uri = event.price_list.get(str(participant.reg_type_index), 0) if event.reg_type_num > 1 else str(event.price)
+            qr_code = services.qr_create(text=qr_uri).getvalue()
+            img_str = base64.b64encode(qr_code).decode("utf-8")  # convert to str and cut b'' chars
+            parts = qr_uri.split('&')
+            amount = 0
+            for part in parts:
+                if part.startswith('sum='):
+                    amount = int(int(part[4:]) / 100)
+                    break
+            return render(
+                request=request,
+                template_name='events/event/pay-sbp.html',
+                context={
+                    'title': f'{participant.last_name} {participant.first_name}',
+                    'event': event,
+                    'participant': participant,
+                    'amount': amount,
+                    'qr_uri': qr_uri,
+                    'img_str': img_str,
+                }
+            )
 
 
 class PayOk(views.View):
@@ -143,6 +177,19 @@ class PayOk(views.View):
         return render(
             request=request,
             template_name='events/event/pay-ok.html',
+            context={
+                'event': event,
+            }
+        )
+
+
+class PayUnavailable(views.View):
+    @staticmethod
+    def get(request, event_id):
+        event = get_object_or_404(Event, id=event_id)
+        return render(
+            request=request,
+            template_name='events/event/pay-unavailable.html',
             context={
                 'event': event,
             }
