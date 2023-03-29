@@ -7,6 +7,7 @@ from config import settings
 
 from events.models import Participant, Event, ACCENT_TYPE, Route, PromoCode, Wallet
 from tinymce.widgets import TinyMCE
+from phonenumber_field.formfields import PhoneNumberField
 
 
 class ParticipantRegistrationForm(forms.ModelForm):
@@ -45,6 +46,10 @@ class ParticipantRegistrationForm(forms.ModelForm):
         if Event.FIELD_EMAIL in registration_fields:
             self.fields[Event.FIELD_EMAIL] = forms.EmailField(label='Email',
                                                               required=Event.FIELD_EMAIL in required_fields)
+        if Event.FIELD_PHONE in registration_fields:
+            self.fields[Event.FIELD_PHONE] = PhoneNumberField(label='Телефон',
+                                                              required=Event.FIELD_PHONE in required_fields,
+                                                              region='RU')
 
         if group_list != ['']:
             self.fields['group_index'] = forms.ChoiceField(choices=tuple([(name, name) for name in group_list]),
@@ -368,6 +373,7 @@ class ParticipantForm(forms.ModelForm):
             Event.FIELD_TEAM,
             Event.FIELD_GRADE,
             Event.FIELD_EMAIL,
+            Event.FIELD_PHONE,
             'paid',
         ]
         labels = {
@@ -380,6 +386,7 @@ class ParticipantForm(forms.ModelForm):
             Event.FIELD_TEAM: 'Команда',
             Event.FIELD_GRADE: 'Спортивный разряд',
             Event.FIELD_EMAIL: 'E-mail',
+            Event.FIELD_PHONE: 'Телефон',
             'paid': 'Оплата произведена',
         }
 

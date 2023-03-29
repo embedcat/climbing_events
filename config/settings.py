@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
+    'phonenumber_field',
 ]
 
 MIDDLEWARE = [
@@ -247,3 +248,5 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
 INPUT_DATE_FORMATS = ['%m/%d/%Y']
+
+PHONENUMBER_DEFAULT_REGION = 'RU'

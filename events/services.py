@@ -247,6 +247,7 @@ def update_participant(event: Event, participant: Participant, cd: dict) -> Part
     participant.paid = cd['paid'] if 'paid' in cd else False
     participant.email = cd['email'] if 'email' in cd else ''
     participant.reg_type_index = cd['reg_type_index'] if 'reg_type_index' in cd else 0
+    participant.phone_number = cd['phone_number'] if 'phone_number' in cd else ''
     participant.save()
 
     if need_update_results:
@@ -270,6 +271,7 @@ def _create_participant(event: Event, first_name: str, last_name: str,
                         set_index: int = 0,
                         email: str = '',
                         reg_type_index: int = 0,
+                        phone_number: str = '',
                         ) -> Participant or None:
     if 0 < event.set_max_participants <= event.participant.filter(set_index=set_index).count():
         return None
@@ -290,6 +292,7 @@ def _create_participant(event: Event, first_name: str, last_name: str,
         set_index=set_index,
         email=email,
         reg_type_index=reg_type_index,
+        phone_number=phone_number,
     )
     return participant
 
@@ -312,6 +315,7 @@ def register_participant(event: Event, cd: dict) -> Participant:
         set_index=get_set_list(event=event).index(cd['set_index']) if 'set_index' in cd else 0,
         email=cd[Event.FIELD_EMAIL] if Event.FIELD_EMAIL in cd else '',
         reg_type_index=cd['reg_type_index'] if 'reg_type_index' in cd else 0,
+        phone_number = cd['phone_number'] if 'phone_number' in cd else '',
     )
     _check_participants_number_to_close_registration(event=event)
     return participant

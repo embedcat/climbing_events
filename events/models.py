@@ -4,6 +4,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from multiselectfield import MultiSelectField
 from django.contrib.postgres.fields import ArrayField
+from phonenumber_field.modelfields import PhoneNumberField
 
 from config import settings
 
@@ -130,6 +131,7 @@ class Event(models.Model):
     FIELD_GENDER = 'gender'
     FIELD_GRADE = 'grade'
     FIELD_EMAIL = 'email'
+    FIELD_PHONE = 'phone_number'
     OPTIONAL_FIELDS = [
         FIELD_BIRTH_YEAR,
         FIELD_CITY,
@@ -137,12 +139,14 @@ class Event(models.Model):
         FIELD_GENDER,
         FIELD_GRADE,
         FIELD_EMAIL,
+        FIELD_PHONE,
     ]
     REQUIRED_FIELDS = [
         (FIELD_BIRTH_YEAR, 'Год рождения'),
         (FIELD_CITY, 'Город'),
         (FIELD_TEAM, 'Команда'),
         (FIELD_EMAIL, 'Email'),
+        (FIELD_PHONE, 'Телефон'),
     ]
     REGISTRATION_FIELDS = [
         (FIELD_GENDER, 'Пол'),
@@ -150,7 +154,8 @@ class Event(models.Model):
         (FIELD_CITY, 'Город'),
         (FIELD_TEAM, 'Команда'),
         (FIELD_GRADE, 'Разряд'),
-        (FIELD_EMAIL, 'Email')
+        (FIELD_EMAIL, 'Email'),
+        (FIELD_PHONE, 'Телефон'),
     ]
     registration_fields = MultiSelectField(choices=REGISTRATION_FIELDS,
                                            default=f'{FIELD_GENDER},{FIELD_BIRTH_YEAR},{FIELD_CITY},{FIELD_TEAM}',
@@ -226,6 +231,8 @@ class Participant(models.Model):
     paid = models.BooleanField(default=False)
     scores = models.JSONField(default=_get_blank_json)
     counted_routes = ArrayField(models.IntegerField(), blank=True, null=True)
+
+    phone_number = PhoneNumberField(blank=True)
 
     def __str__(self):
         return f'<Part-t: Name={self.last_name}, PIN={self.pin}, Score={self.score}, set={self.set_index}>'
