@@ -638,8 +638,8 @@ def remove_file(file: str) -> bool:
 # ================================================
 
 
-def qr_create(text: str) -> io.BytesIO:
-    qr = segno.make_qr(text, version=4)
+def qr_create(text: str, version: int = 4) -> io.BytesIO:
+    qr = segno.make_qr(text, version=version)
     out = io.BytesIO()
     qr.save(out=out, kind='png', scale=50)
     return out

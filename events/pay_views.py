@@ -148,7 +148,7 @@ class CreatePay(views.View):
             )
         if event.pay_type == Event.PAY_TYPE_SBP:
             qr_uri = event.price_list.get(str(participant.reg_type_index), 0) if event.reg_type_num > 1 else str(event.price)
-            qr_code = services.qr_create(text=qr_uri).getvalue()
+            qr_code = services.qr_create(text=qr_uri, version=10).getvalue()
             img_str = base64.b64encode(qr_code).decode("utf-8")  # convert to str and cut b'' chars
             parts = qr_uri.split('&')
             amount = 0
