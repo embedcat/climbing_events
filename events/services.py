@@ -438,6 +438,8 @@ def get_registration_msg_html(event: Event, participant: Participant, pay_url: s
            f"PIN-код понадобится Вам для ввода результатов! Также он будет указан в вашей карточке участника.</p><br>"
     if event.is_pay_allowed:
         html += f"Для завершения регистрации Вам необходимо оплатить стартовый взнос по ссылке: <a href=\"{pay_url}\">{pay_url}</a>.<br>"
+        if event.pay_type == Event.PAY_TYPE_SBP:
+            html += f"Внимание! После оплаты вам необходимо связаться с организаторами и сообщить об оплате.<br>"
     return html
 
 
