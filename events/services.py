@@ -433,13 +433,19 @@ def enter_results(event: Event, participant: Participant, accents: dict, force_u
 
 
 def get_registration_msg_html(event: Event, participant: Participant, pay_url: str) -> str:
-    html = f"<h3>Вы успешно зарегистрированы на \"{event.title}\", {event.date}, скалодром {event.gym}</h3><br>" \
-           f"Ваш PIN-код: <strong>{participant.pin}</strong>. " \
-           f"PIN-код понадобится Вам для ввода результатов! Также он будет указан в вашей карточке участника.</p><br>"
+    html = f"<h3>Вы успешно зарегистрированы на \"{event.title}\", {event.date}, скалодром \"{event.gym}\"</h3><br>" \
+           f"<p>Ваш PIN-код: <strong>{participant.pin}</strong>. " \
+           f"PIN-код понадобится Вам для ввода результатов! Также он будет указан в вашей карточке участника.</p>"
     if event.is_pay_allowed:
-        html += f"Для завершения регистрации Вам необходимо оплатить стартовый взнос по ссылке: <a href=\"{pay_url}\">{pay_url}</a>.<br>"
+        html += f"<p>Для завершения регистрации Вам необходимо оплатить стартовый взнос по ссылке: <a href=\"{pay_url}\">{pay_url}</a>.</p>"
         if event.pay_type == Event.PAY_TYPE_SBP:
-            html += f"Внимание! После оплаты вам необходимо связаться с организаторами и сообщить об оплате.<br>"
+            html += f"<p>Внимание! После оплаты вам необходимо связаться с организаторами и сообщить об оплате.</p>"
+    return html
+
+
+def get_registration_email_msg_html(event: Event, participant: Participant, pay_url: str) -> str:
+    html = get_registration_msg_html(event=event, participant=participant, pay_url=pay_url)
+    html += f"<hr><p style='color:grey'>Это письмо сформировано автоматически, не отвечайте на него. Контакты для связи с организатором ищите на странице описания соревнования.</p>"
     return html
 
 

@@ -632,17 +632,20 @@ class EventRegistrationOkView(views.View):
     def get(request, event_id, participant_id):
         event = get_object_or_404(Event, id=event_id)
         participant = get_object_or_404(Participant, id=participant_id)
+        pay_url = request.build_absolute_uri(reverse('pay_create', args=(event_id, participant_id,)))
         msg = services.get_registration_msg_html(event=event,
                                                  participant=participant,
-                                                 pay_url=request.build_absolute_uri(
-                                                     reverse('pay_create', args=(event_id, participant_id,))))
+                                                 pay_url=pay_url)
+        email = services.get_registration_email_msg_html(event=event,
+                                                 participant=participant,
+                                                 pay_url=pay_url)
         if participant.email and event.is_pay_allowed:
             send_mail(subject='Регистрация завершена',
                       message=msg,
                       from_email=None,
                       recipient_list=[participant.email],
                       fail_silently=True,
-                      html_message=msg)
+                      html_message=email)
         return render(
             request=request,
             template_name='events/event/registration-ok.html',
