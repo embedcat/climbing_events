@@ -145,17 +145,21 @@ def update_event_premium_settings(event: Event, cd: dict) -> None:
     event.save()
 
 
-def update_event_pay_settings(event: Event, cd: dict) -> None:
+def update_event_pay_settings(event: Event, cd: dict) -> bool:
+    if cd['pay_type'] == Event.PAY_TYPE_YOOMONEY and not cd['wallet']:
+        return False
     event.is_pay_allowed = cd['is_pay_allowed']
     event.price = cd['price'] if 'price' in cd else 0
     price_index = 0
     price_list = {}
     while f'price_{price_index}' in cd:
-        price_list.update({price_index: int(cd[f'price_{price_index}'])})
+        price_list.update({price_index: cd[f'price_{price_index}']})
         price_index += 1
     event.price_list = price_list
     event.wallet = cd['wallet']
+    event.pay_type = cd['pay_type']
     event.save()
+    return True
 
 
 def check_expired_events(events: QuerySet) -> None:
@@ -248,6 +252,7 @@ def update_participant(event: Event, participant: Participant, cd: dict) -> Part
     participant.paid = cd['paid'] if 'paid' in cd else False
     participant.email = cd['email'] if 'email' in cd else ''
     participant.reg_type_index = cd['reg_type_index'] if 'reg_type_index' in cd else 0
+    participant.phone_number = cd['phone_number'] if 'phone_number' in cd else ''
     participant.save()
 
     if need_update_results:
@@ -271,6 +276,7 @@ def _create_participant(event: Event, first_name: str, last_name: str,
                         set_index: int = 0,
                         email: str = '',
                         reg_type_index: int = 0,
+                        phone_number: str = '',
                         ) -> Participant or None:
     if 0 < event.set_max_participants <= event.participant.filter(set_index=set_index).count():
         return None
@@ -291,6 +297,7 @@ def _create_participant(event: Event, first_name: str, last_name: str,
         set_index=set_index,
         email=email,
         reg_type_index=reg_type_index,
+        phone_number=phone_number,
     )
     return participant
 
@@ -313,6 +320,7 @@ def register_participant(event: Event, cd: dict) -> Participant:
         set_index=get_set_list(event=event).index(cd['set_index']) if 'set_index' in cd else 0,
         email=cd[Event.FIELD_EMAIL] if Event.FIELD_EMAIL in cd else '',
         reg_type_index=cd['reg_type_index'] if 'reg_type_index' in cd else 0,
+        phone_number = cd['phone_number'] if 'phone_number' in cd else '',
     )
     _check_participants_number_to_close_registration(event=event)
     return participant
@@ -482,11 +490,19 @@ def enter_results(event: Event, participant: Participant, accents: dict, force_u
 
 
 def get_registration_msg_html(event: Event, participant: Participant, pay_url: str) -> str:
-    html = f"<h3>Вы успешно зарегистрированы на \"{event.title}\", {event.date}, скалодром {event.gym}</h3><br>" \
-           f"Ваш PIN-код: <strong>{participant.pin}</strong>. " \
-           f"PIN-код понадобится Вам для ввода результатов! Также он будет указан в вашей карточке участника.</p><br>"
+    html = f"<h3>Вы успешно зарегистрированы на \"{event.title}\", {event.date}, скалодром \"{event.gym}\"</h3><br>" \
+           f"<p>Ваш PIN-код: <strong>{participant.pin}</strong>. " \
+           f"PIN-код понадобится Вам для ввода результатов! Также он будет указан в вашей карточке участника.</p>"
     if event.is_pay_allowed:
-        html += f"Для завершения регистрации Вам необходимо оплатить стартовый взнос по ссылке: <a href=\"{pay_url}\">{pay_url}</a>.<br>"
+        html += f"<p>Для завершения регистрации Вам необходимо оплатить стартовый взнос по ссылке: <a href=\"{pay_url}\">{pay_url}</a>.</p>"
+        if event.pay_type == Event.PAY_TYPE_SBP:
+            html += f"<p>Внимание! После оплаты вам необходимо связаться с организаторами и сообщить об оплате.</p>"
+    return html
+
+
+def get_registration_email_msg_html(event: Event, participant: Participant, pay_url: str) -> str:
+    html = get_registration_msg_html(event=event, participant=participant, pay_url=pay_url)
+    html += f"<hr><p style='color:grey'>Это письмо сформировано автоматически, не отвечайте на него. Контакты для связи с организатором ищите на странице описания соревнования.</p>"
     return html
 
 
@@ -706,10 +722,15 @@ def remove_file(file: str) -> bool:
 # ================================================
 
 
-def qr_create(text: str, title: str = 'qrcode') -> HttpResponse:
-    qr = segno.make_qr(text, version=4)
+def qr_create(text: str, version: int = 4) -> io.BytesIO:
+    qr = segno.make_qr(text, version=version)
     out = io.BytesIO()
     qr.save(out=out, kind='png', scale=50)
+    return out
+
+
+def qr_create_response(text: str, title: str = 'qrcode') -> HttpResponse:
+    out = qr_create(text=text)
     response = HttpResponse(content=out.getvalue(),
                             content_type='image/png')
     response['Content-Disposition'] = f'attachment; filename={title}.png'

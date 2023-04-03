@@ -45,8 +45,10 @@ def export_participants_to_start_list(event: Event):
             sheet.cell(row=ROW_OFFSET + index, column=7).value = p.team
             sheet.cell(row=ROW_OFFSET + index, column=8).value = group_list[p.group_index] if group_list != [] else ''
             sheet.cell(row=ROW_OFFSET + index, column=9).value = p.pin
-            sheet.cell(row=ROW_OFFSET + index, column=10).value = "Да" if p.paid else "-"
-            sheet.cell(row=ROW_OFFSET + index, column=11).value = reg_type_list[p.reg_type_index].strip() if reg_type_list != [] else ''
+            sheet.cell(row=ROW_OFFSET + index, column=10).value = str(p.phone_number)
+            sheet.cell(row=ROW_OFFSET + index, column=11).value = p.email
+            sheet.cell(row=ROW_OFFSET + index, column=12).value = "Да" if p.paid else "-"
+            sheet.cell(row=ROW_OFFSET + index, column=13).value = reg_type_list[p.reg_type_index].strip() if reg_type_list != [] else ''
     book.remove(book.worksheets[0])
     book.close()
 

@@ -7,6 +7,7 @@ from config import settings
 
 from events.models import Participant, Event, ACCENT_TYPE, Route, PromoCode, Wallet
 from tinymce.widgets import TinyMCE
+from phonenumber_field.formfields import PhoneNumberField
 
 
 class ParticipantRegistrationForm(forms.ModelForm):
@@ -45,6 +46,10 @@ class ParticipantRegistrationForm(forms.ModelForm):
         if Event.FIELD_EMAIL in registration_fields:
             self.fields[Event.FIELD_EMAIL] = forms.EmailField(label='Email',
                                                               required=Event.FIELD_EMAIL in required_fields)
+        if Event.FIELD_PHONE in registration_fields:
+            self.fields[Event.FIELD_PHONE] = PhoneNumberField(label='Телефон',
+                                                              required=Event.FIELD_PHONE in required_fields,
+                                                              region='RU')
 
         if group_list != ['']:
             self.fields['group_index'] = forms.ChoiceField(choices=tuple([(name, name) for name in group_list]),
@@ -209,7 +214,7 @@ class EventPremiumSettingsForm(forms.ModelForm):
             'is_expired': 'Событие состоялось',
         }
 
-
+price_field_help_text = 'При оплате по Yoomoney - стоимость в рублях, по СБП - ссылка (QR-код) для оплаты'
 class EventPaySettingsForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         reg_type_list = kwargs.pop('reg_type_list')
@@ -220,21 +225,26 @@ class EventPaySettingsForm(forms.ModelForm):
 
         if len(reg_type_list) > 1:
             for item in reg_type_list:
-                self.fields[f'price_{item[0]}'] = forms.IntegerField(label=f'Стоимость для типа "{item[1]}"',
-                                                                     required=True)
+                self.fields[f'price_{item[0]}'] = forms.CharField(label=f'Стоимость/ссылка для типа "{item[1]}"',
+                                                                     required=True, help_text=price_field_help_text)
             del self.fields['price']
 
     class Meta:
         model = Event
         fields = [
             'is_pay_allowed',
+            'pay_type',
             'price',
             'wallet',
         ]
         labels = {
             'is_pay_allowed': 'Оплачивать стартовые взносы на сайте',
-            'price': 'Стоимость участия',
+            'pay_type': 'Тип оплаты',
+            'price': 'Стоимость/ссылка',
             'wallet': 'Кошелек для оплаты',
+        }
+        help_texts = {
+            'price': price_field_help_text,
         }
 
 
@@ -383,6 +393,7 @@ class ParticipantForm(forms.ModelForm):
             Event.FIELD_TEAM,
             Event.FIELD_GRADE,
             Event.FIELD_EMAIL,
+            Event.FIELD_PHONE,
             'paid',
         ]
         labels = {
@@ -395,6 +406,7 @@ class ParticipantForm(forms.ModelForm):
             Event.FIELD_TEAM: 'Команда',
             Event.FIELD_GRADE: 'Спортивный разряд',
             Event.FIELD_EMAIL: 'E-mail',
+            Event.FIELD_PHONE: 'Телефон',
             'paid': 'Оплата произведена',
         }
 

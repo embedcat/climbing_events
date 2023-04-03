@@ -40,6 +40,9 @@
         {% if user == event.owner or user.is_superuser %}
         <th>Pin</th>
         {% endif %}
+        {% if user == event.owner or user.is_superuser %}
+        <th>Телефон</th>
+        {% endif %}
         {% if 'gender' in fields %}
         <th data-field="gender" data-sortable="true">Пол</th>
         {% endif %}
@@ -86,8 +89,11 @@
           {% endif %}
         </td>
         {% endif %}
-        {% if user.is_superuser %}
+        {% if user == event.owner or user.is_superuser %}
         <td>{{ participant.pin }}</td>
+        {% endif %}
+        {% if user == event.owner or user.is_superuser %}
+        <td>{{ participant.phone_number }}</td>
         {% endif %}
         {% if 'gender' in fields %}
         <td>{{ participant.get_gender_display }}</td>
