@@ -1,3 +1,4 @@
+from dataclasses import asdict, dataclass
 import io
 import operator
 import os
@@ -5,6 +6,7 @@ import random
 import string
 from datetime import datetime
 from typing import Iterable
+import dacite
 from openpyxl import load_workbook
 from openpyxl.writer.excel import save_virtual_workbook
 
@@ -92,9 +94,9 @@ def clear_results(event: Event) -> None:
 def update_event_settings(event: Event, cd: dict) -> None:
     old_routes_num = event.routes_num
     need_update_results = event.score_type != cd['score_type'] or \
-                            event.redpoint_points != cd['redpoint_points'] or \
-                            event.flash_points_pc != cd['flash_points_pc'] or \
-                            event.count_routes_num != cd['count_routes_num']
+        event.redpoint_points != cd['redpoint_points'] or \
+        event.flash_points_pc != cd['flash_points_pc'] or \
+        event.count_routes_num != cd['count_routes_num']
 
     event.routes_num = cd['routes_num']
     event.is_published = cd['is_published']
@@ -129,7 +131,6 @@ def update_event_settings(event: Event, cd: dict) -> None:
     event.save()
 
     if old_routes_num != event.routes_num:
-        print("new routes")
         clear_results(event=event)
         remove_routes(event=event)
         create_event_routes(event=event)
@@ -340,9 +341,28 @@ def is_registration_open(event: Event) -> bool:
 # ================================================
 
 
+@dataclass
+class Accent:
+    top: int = 0
+    zone: int = 0
+
+
+def form_data_to_results(form_cleaned_data: list) -> dict:
+    '''
+    [{'top': 2, 'zone': 0}, {'top': 0, 'zone': 3} ... ] ->
+    -> {0: {'top': 2, 'zone': 0}, 1: {'top': 0, 'zone': 3} ... }
+    '''
+    results = {}
+    for i, result in enumerate(form_cleaned_data):
+        accent = dacite.from_dict(data_class=Accent, data=result)
+        if accent.top and accent.zone == 0:
+            accent.zone = accent.top
+        results.update({i: asdict(accent)})
+    return results
+
+
 def _calc_participant_score_by_scores(scores: dict, num_of_best_scores: int) -> dict:
     sorted_scores_dict = dict(sorted(scores.items(), key=lambda item: float(item[1]), reverse=True))
-    print(sorted_scores_dict)
     if num_of_best_scores:
         sorted_scores_dict = dict(list(sorted_scores_dict.items())[:num_of_best_scores])
     return {"score": round(sum(sorted_scores_dict.values()), 2),
@@ -352,26 +372,42 @@ def _calc_participant_score_by_scores(scores: dict, num_of_best_scores: int) -> 
 
 def _update_participant_score(event: Event, participant: Participant, routes: QuerySet, json_key: str):
     scores = {}
-    for no, accent in participant.accents.items():
+    tops, tops_a, zones, zones_a = 0, 0, 0, 0
+    for no, accent in participant.french_accents.items():
         score = 0
-        if accent != ACCENT_NO:
-            if event.score_type == Event.SCORE_NUM_ACCENTS:
-                score = 100 + (1 if accent == ACCENT_FLASH else 0)
-            else:
-                base_route_points = routes[int(no)].score_json.get(json_key, 0)
-                flash_k = 1 + event.flash_points_pc / 100
-                base_score_with_flash = base_route_points * flash_k if accent == ACCENT_FLASH else base_route_points
-                if event.score_type != Event.SCORE_GRADE:
-                    base_score_with_flash *= event.redpoint_points
-                score = base_score_with_flash
-        scores.update({no: round(score, 2)})
-    participant.scores = scores
-    result = _calc_participant_score_by_scores(scores=scores, 
-                                            num_of_best_scores=int(event.count_routes_num) if (event.score_type == Event.SCORE_PROPORTIONAL or event.score_type == Event.SCORE_GRADE) else 0)
-    participant.score = result.get("score", 0)
-    participant.counted_routes = result.get("counted_routes", [])
-    participant.save()
+        result = dacite.from_dict(data_class=Accent, data=accent)
 
+        if event.score_type == Event.SCORE_FRENCH:
+            tops += 1 if result.top > 0 else 0
+            tops_a += result.top
+            zones += 1 if result.zone > 0 else 0
+            zones_a += result.zone
+
+        else:
+            if result.top > 0:
+                if event.score_type == Event.SCORE_NUM_ACCENTS:
+                    score = 100 + (1 if result.top == 1 else 0)
+                else:
+                    base_route_points = routes[int(no)].score_json.get(json_key, 0)
+                    flash_k = 1 + event.flash_points_pc / 100
+                    base_score_with_flash = base_route_points * flash_k if result.top == 1 else base_route_points
+                    if event.score_type != Event.SCORE_GRADE:
+                        base_score_with_flash *= event.redpoint_points
+                    score = base_score_with_flash
+                scores.update({no: round(score, 2)})
+
+    if event.score_type == Event.SCORE_FRENCH:
+        participant.score = 10000*tops + 1000*zones + 100*(100-tops_a) + 10*(100-zones_a)
+        participant.french_score = f'{tops}T{tops_a} {zones}z{zones_a}'
+        participant.counted_routes = [i for i in range(event.routes_num)]
+    else:
+        participant.scores = scores
+        result = _calc_participant_score_by_scores(scores=scores,
+                                                   num_of_best_scores=int(event.count_routes_num) if (event.score_type == Event.SCORE_PROPORTIONAL or event.score_type == Event.SCORE_GRADE) else 0)
+        participant.score = result.get("score", 0)
+        participant.counted_routes = result.get("counted_routes", [])
+
+    participant.save()
 
 def _update_results(event: Event, gender: Participant.GENDERS, group_index: int):
     json_key = _get_participant_json_key(gender=gender, group_index=group_index)
@@ -391,14 +427,17 @@ def _update_results(event: Event, gender: Participant.GENDERS, group_index: int)
             # get num of accents of route:
             if event.is_count_only_entered_results:
                 for p in participants:
-                    accent = p.accents.get(str(no), ACCENT_NO) if p.is_entered_result else ACCENT_NO
-                    accents_num += 0 if accent == ACCENT_NO else 1
+                    accent = dacite.from_dict(data_class=Accent, data=p.french_accents.get(
+                        str(no), {})) if p.is_entered_result else Accent()
+                    accents_num += 1 if accent.top > 0 else 0
             else:
                 accents_num = len(participants)
             route_score = 1 / accents_num if accents_num != 0 else 0
         elif event.score_type == Event.SCORE_GRADE:
             route_score = int(event.score_table.get(route.grade, 1))
         elif event.score_type == Event.SCORE_NUM_ACCENTS:
+            route_score = 1
+        elif event.score_type == Event.SCORE_FRENCH:
             route_score = 1
         route.score_json.update({f'{json_key}': route_score})
         route.save()
@@ -416,6 +455,24 @@ def _update_results(event: Event, gender: Participant.GENDERS, group_index: int)
         p.save()
 
 
+def get_form_initial_results(event: Event, participant: Participant) -> list:
+    initial = []
+    if event.score_type == Event.SCORE_FRENCH:
+        for i in range(event.routes_num):
+            result = participant.french_accents.get(str(i), {'top': 0, 'zone': 0})
+            initial.append({'top': str(result.get('top', 0)), 'zone': str(result.get('zone', 0))})
+    else:
+        if participant.french_accents:
+            for i in range(event.routes_num):
+                result = participant.french_accents.get(str(i), {'top': 0}).get('top', 0)
+                accent = ACCENT_NO if result == 0 else (ACCENT_FLASH if result == 1 else ACCENT_REDPOINT)
+                initial.append({'accent': accent})
+        else:
+            initial = [{'label': i, 'accent': participant.accents.get(
+                str(i), ACCENT_NO)} for i in range(event.routes_num)]
+    return initial
+
+
 def update_results(event: Event):
     for gender in (Participant.GENDER_MALE, Participant.GENDER_FEMALE):
         for group_index, _ in enumerate(get_group_list(event=event)):
@@ -424,7 +481,7 @@ def update_results(event: Event):
 
 def enter_results(event: Event, participant: Participant, accents: dict, force_update_disable: bool = False):
     # save participant accents:
-    participant.accents = accents
+    participant.french_accents = accents
     participant.is_entered_result = True
     participant.save()
 
@@ -457,15 +514,25 @@ def _accent_attempt_to_literal(attempt: str) -> str:
         return '-'
     if attempt == '1':
         return 'F'
-    if attempt == '2':
-        return 'RP'
-    return attempt
+    return 'RP'
 
 
 def _accents_to_string(event: Event, accents: list) -> list:
-    if event.score_type == Event.SCORE_PROPORTIONAL or event.score_type == Event.SCORE_SIMPLE_SUM or event.score_type == Event.SCORE_GRADE or event.score_type == Event.SCORE_NUM_ACCENTS:
-        return [_accent_attempt_to_literal(attempt) for attempt in accents]
-    return accents
+    return [_accent_attempt_to_literal(attempt) for attempt in accents]
+
+
+def _french_accents_to_string(event: Event, accents: list) -> list:
+    if event.score_type == Event.SCORE_FRENCH:
+        return [f"{result.get('top', 0)}T {result.get('zone', 0)}z" for result in accents]
+    return [_accent_attempt_to_literal(str(result.get('top', '0'))) for result in accents]
+
+
+def _get_score_view(participant: Participant, score_type) -> str:
+    if score_type == Event.SCORE_NUM_ACCENTS:
+        return f'{int(participant.score / 100)}/{int(participant.score % 100)}'
+    if score_type == Event.SCORE_FRENCH:
+        return str(participant.french_score)
+    return str(participant.score)
 
 
 def _get_sorted_participants_results(event: Event, participants: QuerySet, full_results: bool = False) -> list:
@@ -473,14 +540,21 @@ def _get_sorted_participants_results(event: Event, participants: QuerySet, full_
     data = []
     for participant in participants:
         if (not event.is_count_only_entered_results) or participant.is_entered_result:
-            accents = [participant.accents.get(str(i), ACCENT_NO) for i in
-                       range(event.routes_num)] if full_results else []
-            accents = _accents_to_string(event=event, accents=accents)
+            accents = []
+            if participant.french_accents:
+                accents = [participant.french_accents.get(str(i), {})
+                           for i in range(event.routes_num)] if full_results else []
+                accents = _french_accents_to_string(event=event, accents=accents)
+            else:
+                accents = [participant.accents.get(str(i), ACCENT_NO)
+                           for i in range(event.routes_num)] if full_results else []
+                accents = _accents_to_string(event=event, accents=accents)
+
             counted_routes = [True if i in participant.counted_routes else False for i in range(event.routes_num)]
             data.append(dict(participant=participant,
                              accents=accents,
                              score=participant.score,
-                             score_view=f'{int(participant.score / 100)}/{int(participant.score % 100)}' if event.score_type == Event.SCORE_NUM_ACCENTS else participant.score,
+                             score_view=_get_score_view(participant=participant, score_type=event.score_type),
                              counted_routes=counted_routes))
     return sorted(data, key=lambda k: (-k['score'], k['participant'].last_name), reverse=False)
 
@@ -588,9 +662,15 @@ def debug_create_participants(event: Event, num: int) -> None:
         _debug_create_random_participant(event=event)
 
 
+def _debug_get_random_accent() -> Accent:
+    top = random.randint(0, 5)
+    zone = random.randint(1, top) if top else random.randint(0, 5)
+    return Accent(top=top, zone=zone)
+
+
 def debug_apply_random_results(event: Event) -> None:
     for participant in event.participant.all():
-        accents = {i: random.choice(['1', '2', '0']) for i in range(event.routes_num)}
+        accents = {i: asdict(_debug_get_random_accent()) for i in range(event.routes_num)}
         enter_results(event=event, participant=participant, accents=accents, force_update_disable=True)
     update_results(event=event)
 
@@ -602,10 +682,6 @@ def debug_apply_random_results(event: Event) -> None:
 
 def get_maintenance_context(request):
     return {'code': '', 'msg': 'Сервер на обслуживании'}
-
-
-def accent_form_to_results(form_cleaned_data: list) -> dict:
-    return {i: accent.get('accent') for i, accent in enumerate(form_cleaned_data)}
 
 
 # ================================================

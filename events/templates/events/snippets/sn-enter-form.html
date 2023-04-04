@@ -1,9 +1,12 @@
 {% load crispy_forms_tags %}
 {% load events_tags %}
+
+<script src="/static/events/js/bootstrap-input-spinner.js" type="text/javascript"></script>
+
 <table cellspacing="0"
-       class="table table-bordered table-hover table-striped table-sm align-middle"
-       id="dataTable" width="100%" style="text-align: center;">
-  <thead>
+class="table table-bordered table-hover table-striped table-sm align-middle"
+id="dataTable" width="100%" style="text-align: center;">
+<thead>
   <tr>
     <th style="width:1%">#</th>
     {% if event.is_view_route_color %}
@@ -16,13 +19,13 @@
   </tr>
   </thead>
   <tbody>
-  {% for form, route in formset|zip:routes %}
-  <tr>
-    <td class="align-middle">{{ route.number }}</td>
-    {% if event.is_view_route_color %}
+    {% for form, route in formset|zip:routes %}
+    <tr>
+      <td class="align-middle">{{ route.number }}</td>
+      {% if event.is_view_route_color %}
     <td class="align-middle">
       <span
-              style="width: 25px; height: 25px; margin:auto; display: inline-block; border: 1px solid gray; vertical-align: middle; border-radius: 4px; background:{{ route.color }}"></span>
+      style="width: 25px; height: 25px; margin:auto; display: inline-block; border: 1px solid gray; vertical-align: middle; border-radius: 4px; background:{{ route.color }}"></span>
     </td>
     {% endif %}
     {% if event.is_view_route_grade %}
@@ -31,9 +34,15 @@
     <td class="align-middle">{% crispy form %}</td>
   </tr>
   {% endfor %}
-  </tbody>
+</tbody>
 </table>
 <div class="form-actions">
   <input class="btn btn-primary" id="submit-save" name="submit" type="submit" value="Сохранить результат"
-         {% if not event.is_check_result_before_enter %} onclick="return confirm_action();" {% endif %}>
+  {% if not event.is_check_result_before_enter %} onclick="return confirm_action();" {% endif %}>
 </div>
+
+<script>
+  $("input.french-input[type='number']").inputSpinner({
+    buttonsOnly: true,
+  });
+</script>

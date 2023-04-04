@@ -64,6 +64,14 @@ def _get_blank_json():
     return {}
 
 
+def _get_blank_accents_json():
+    return {"0": "0"}
+
+
+def _get_blank_french_accents_json():
+    return {"0": {"top": 0, "zone": 0}}
+
+
 def _get_default_route_score_json():
     return {'all': 1}
 
@@ -111,11 +119,13 @@ class Event(models.Model):
     SCORE_PROPORTIONAL = 'PROP'
     SCORE_GRADE = 'TBL'
     SCORE_NUM_ACCENTS = 'NUM'
+    SCORE_FRENCH = 'FR'
     SCORE_TYPE = [
         (SCORE_SIMPLE_SUM, 'Сумма баллов'),
         (SCORE_PROPORTIONAL, 'От количества пролазов'),
         (SCORE_GRADE, 'По таблице категорий'),
         (SCORE_NUM_ACCENTS, 'По количеству Всего/Flash'),
+        (SCORE_FRENCH, 'Французская система'),
     ]
     score_type = models.CharField(max_length=4, choices=SCORE_TYPE, default=SCORE_SIMPLE_SUM)
     redpoint_points = models.IntegerField(default=80)
@@ -233,7 +243,9 @@ class Participant(models.Model):
     set_index = models.IntegerField(default=0)
     reg_type_index = models.IntegerField(default=0)
 
-    accents = models.JSONField(default=_get_blank_json)
+    accents = models.JSONField(blank=True, null=True, default=_get_blank_accents_json)
+    french_accents = models.JSONField(blank=True, null=True, default=_get_blank_french_accents_json)
+    french_score = models.CharField(max_length=20, blank=True, null=True)
     place = models.IntegerField(default=0)
     email = models.EmailField(max_length=100, blank=True, null=True)
     paid = models.BooleanField(default=False)

@@ -9,7 +9,8 @@ class EventAdmin(admin.ModelAdmin):
 
 
 class ParticipantAdmin(admin.ModelAdmin):
-    list_display = ('last_name', 'first_name', 'pin', 'gender', 'city', 'set_index', 'group_index', )
+    list_display = ('last_name', 'first_name', 'pin', 'gender', 'city', 'set_index', 'group_index', 'event', )
+    list_filter = ('event', )
     search_fields = ('last_name', 'first_name', 'city', )
 
 
