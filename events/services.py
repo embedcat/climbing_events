@@ -354,7 +354,7 @@ def form_data_to_results(form_cleaned_data: list) -> dict:
     '''
     results = {}
     for i, result in enumerate(form_cleaned_data):
-        accent = dacite.from_dict(data_class=Accent, data=result)
+        accent = Accent(top=int(result.get('top', 0)), zone=int(result.get('zone', 0)))
         if accent.top and accent.zone == 0:
             accent.zone = accent.top
         results.update({i: asdict(accent)})
@@ -466,7 +466,7 @@ def get_form_initial_results(event: Event, participant: Participant) -> list:
             for i in range(event.routes_num):
                 result = participant.french_accents.get(str(i), {'top': 0}).get('top', 0)
                 accent = ACCENT_NO if result == 0 else (ACCENT_FLASH if result == 1 else ACCENT_REDPOINT)
-                initial.append({'accent': accent})
+                initial.append({'top': accent,})
         else:
             initial = [{'label': i, 'accent': participant.accents.get(
                 str(i), ACCENT_NO)} for i in range(event.routes_num)]
