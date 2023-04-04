@@ -541,14 +541,14 @@ def _get_sorted_participants_results(event: Event, participants: QuerySet, full_
     for participant in participants:
         if (not event.is_count_only_entered_results) or participant.is_entered_result:
             accents = []
-            if participant.accents:
-                accents = [participant.accents.get(str(i), ACCENT_NO)
-                           for i in range(event.routes_num)] if full_results else []
-                accents = _accents_to_string(event=event, accents=accents)
-            else:
+            if participant.french_accents:
                 accents = [participant.french_accents.get(str(i), {})
                            for i in range(event.routes_num)] if full_results else []
                 accents = _french_accents_to_string(event=event, accents=accents)
+            else:
+                accents = [participant.accents.get(str(i), ACCENT_NO)
+                           for i in range(event.routes_num)] if full_results else []
+                accents = _accents_to_string(event=event, accents=accents)
 
             counted_routes = [True if i in participant.counted_routes else False for i in range(event.routes_num)]
             data.append(dict(participant=participant,

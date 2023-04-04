@@ -64,6 +64,14 @@ def _get_blank_json():
     return {}
 
 
+def _get_blank_accents_json():
+    return {"0": "0"}
+
+
+def _get_blank_french_accents_json():
+    return {"0": {"top": 0, "zone": 0}}
+
+
 def _get_default_route_score_json():
     return {'all': 1}
 
@@ -235,8 +243,8 @@ class Participant(models.Model):
     set_index = models.IntegerField(default=0)
     reg_type_index = models.IntegerField(default=0)
 
-    accents = models.JSONField(blank=True, null=True)
-    french_accents = models.JSONField(blank=True, null=True)
+    accents = models.JSONField(blank=True, null=True, default=_get_blank_accents_json)
+    french_accents = models.JSONField(blank=True, null=True, default=_get_blank_french_accents_json)
     french_score = models.CharField(max_length=20, blank=True, null=True)
     place = models.IntegerField(default=0)
     email = models.EmailField(max_length=100, blank=True, null=True)
