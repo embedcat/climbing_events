@@ -18,7 +18,7 @@ from django.http import HttpResponse
 from config import settings
 from events import xl_tools, mock
 from events.exceptions import DuplicateParticipantError, ParticipantTooYoungError
-from events.models import CustomUser, Event, PayDetail, PromoCode, Route, Participant, Wallet
+from events.models import ACCENT_REDPOINT, CustomUser, Event, PayDetail, PromoCode, Route, Participant, Wallet
 from events.models import ACCENT_NO, ACCENT_FLASH
 
 
