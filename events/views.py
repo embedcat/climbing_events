@@ -452,7 +452,7 @@ class EnterWithoutReg(views.View):
         formset = AccentFormSet(initial=initial, prefix='accents')
         routes = event.route.all().order_by('number')
         group_list = services.get_group_list(event=event)
-        set_list = services.get_set_list_for_registration_available(event=event)
+        set_list = services.get_set_list_available(event=event)
         return render(
             request=request,
             template_name='events/event/enter-wo-reg.html',
@@ -574,7 +574,7 @@ class RegistrationView(views.View):
         if event.is_without_registration:
             return redirect('enter_results', event_id=event_id)
         group_list = services.get_group_list(event=event)
-        set_list = services.get_set_list_for_registration_available(event=event)
+        set_list = services.get_set_list_available(event=event)
         registration_fields = services.get_registration_fields(event=event)
         required_fields = services.get_registration_required_fields(event=event)
         return render(
@@ -707,7 +707,7 @@ class ParticipantView(IsOwnerMixin, views.View):
         participant = get_object_or_404(Participant, id=p_id)
         group_list = services.get_group_list(event=event) if event.group_num > 1 else ""
         group_list_value = group_list[participant.group_index] if event.group_num > 1 else ""
-        set_list = services.get_set_list_for_change_available(event=event, participant=participant)
+        set_list = services.get_set_list_available(event=event, participant=participant)
         set_index_value = ""
         if event.set_num > 1:
             current_set_value = services.get_set_list(event=event)[participant.set_index]
@@ -740,7 +740,7 @@ class ParticipantView(IsOwnerMixin, views.View):
         form = ParticipantForm(request.POST,
                                request.FILES,
                                group_list=services.get_group_list(event=event),
-                               set_list=services.get_set_list_for_registration_available(event=event),
+                               set_list=services.get_set_list_available(event=event, participant=participant),
                                is_pay_allowed=event.is_pay_allowed,
                                registration_fields=services.get_registration_fields(event=event),
                                reg_type_list=event.reg_type_list,
@@ -758,7 +758,7 @@ class ParticipantView(IsOwnerMixin, views.View):
                     'participant': participant,
                     'form': ParticipantForm(request.POST,
                                             group_list=services.get_group_list(event=event),
-                                            set_list=services.get_set_list_for_registration_available(event=event),
+                                            set_list=services.get_set_list_available(event=event, participant=participant),
                                             is_pay_allowed=event.is_pay_allowed,
                                             registration_fields=services.get_registration_fields(event=event),
                                             reg_type_list=event.reg_type_list,

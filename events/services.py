@@ -190,26 +190,13 @@ def get_route_score(route: Route, json_key: str) -> float:
 # ================================================
 
 
-def get_set_list_for_registration_available(event: Event) -> list:
+def get_set_list_available(event: Event, participant: Participant = None) -> list:
     set_list_all = get_set_list(event=event)
     set_list = []
     if event.set_max_participants > 0:
         for i, item in enumerate(set_list_all):
             set_participants_num = event.participant.filter(set_index=i).count()
-            if set_participants_num < event.set_max_participants:
-                set_list.append(item)
-    else:
-        set_list = set_list_all
-    return set_list
-
-
-def get_set_list_for_change_available(event: Event, participant: Participant) -> list:
-    set_list_all = get_set_list(event=event)
-    set_list = []
-    if event.set_max_participants > 0:
-        for i, item in enumerate(set_list_all):
-            set_participants_num = event.participant.filter(set_index=i).count()
-            if set_participants_num < event.set_max_participants or participant.set_index == i:
+            if set_participants_num < event.set_max_participants or (participant.set_index == i if participant else False):
                 set_list.append(item)
     else:
         set_list = set_list_all
@@ -334,7 +321,10 @@ def _clear_participant_score(participant: Participant) -> None:
 
 
 def is_registration_open(event: Event) -> bool:
-    return event.is_published and event.is_registration_open and (event.participant.count() < event.max_participants or event.is_premium)
+    return event.is_published and \
+    event.is_registration_open and \
+    (event.participant.count() < event.max_participants or event.is_premium) and \
+    (event.participant.count() < event.set_max_participants * event.set_num)
 
 # ================================================
 # ========== Calc and update results =============
