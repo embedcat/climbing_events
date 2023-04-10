@@ -316,6 +316,7 @@ def register_participant(event: Event, cd: dict) -> Participant:
 def _clear_participant_score(participant: Participant) -> None:
     participant.score = 0
     participant.accents = {}
+    participant.french_accents = {}
     participant.is_entered_result = False
     participant.save()
 
