@@ -11,7 +11,7 @@
   {% endif %}
   {% crispy form %}
 {% else %}
-  {% include 'events/snippets/sn-card-banner.html' with message='Регистрация закрыта' %}
+  {% include 'events/snippets/sn-card-banner.html' with message='Регистрация закрыта или достигнут лимит участников' %}
 {% endif %}
 
 {% endblock body %}
