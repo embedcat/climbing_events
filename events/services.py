@@ -322,10 +322,17 @@ def _clear_participant_score(participant: Participant) -> None:
 
 
 def is_registration_open(event: Event) -> bool:
-    return event.is_published and \
-    event.is_registration_open and \
-    (event.participant.count() < event.max_participants or event.is_premium) and \
-    (event.participant.count() < event.set_max_participants * event.set_num)
+    if not event.is_published:
+        return False
+    if not event.is_registration_open:
+        return False
+    if event.set_max_participants != 0 and event.participant.count() >= event.set_max_participants * event.set_num:
+        return False
+    if not event.is_premium:
+        if event.participant.count() >= event.max_participants:
+            return False        
+    return True
+
 
 # ================================================
 # ========== Calc and update results =============
