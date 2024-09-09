@@ -331,10 +331,7 @@ class EnterResultsView(views.View):
             # возврат со страницы подтверждения
             initial = [{'label': i, 'accent': accent} for i, accent in saved_accents.items()]
         else:
-            if event.score_type == Event.SCORE_FRENCH:
-                initial = [{'label': i, 'top': '0', 'zone': '0'} for i in range(event.routes_num)]
-            else:
-                initial = [{'label': i, 'accent': ACCENT_NO} for i in range(event.routes_num)]
+            initial = [{'label': i, 'top': '0', 'zone': '0'} for i in range(event.routes_num)]
         AccentFormSet = formset_factory(AccentFrenchForm if event.score_type ==
                                         Event.SCORE_FRENCH else AccentForm, extra=0)
         formset = AccentFormSet(initial=initial, prefix='accents')
@@ -449,16 +446,13 @@ class EnterWithoutReg(views.View):
         event = get_object_or_404(Event, id=event_id)
         if not services.is_registration_open(event=event):
             return redirect('event', event_id=event_id)
-        if event.score_type == Event.SCORE_FRENCH:
-            initial = [{'label': i, 'top': '0', 'zone': '0'} for i in range(event.routes_num)]
-        else:
-            initial = [{'label': i, 'accent': ACCENT_NO} for i in range(event.routes_num)]
+        initial = [{'label': i, 'top': '0', 'zone': '0'} for i in range(event.routes_num)]
         AccentFormSet = formset_factory(AccentFrenchForm if event.score_type ==
                                         Event.SCORE_FRENCH else AccentForm, extra=0)
         formset = AccentFormSet(initial=initial, prefix='accents')
         routes = event.route.all().order_by('number')
         group_list = services.get_group_list(event=event)
-        set_list = services.get_set_list_for_registration_available(event=event)
+        set_list = services.get_set_list_available(event=event)
         return render(
             request=request,
             template_name='events/event/enter-wo-reg.html',
@@ -580,7 +574,7 @@ class RegistrationView(views.View):
         if event.is_without_registration:
             return redirect('enter_results', event_id=event_id)
         group_list = services.get_group_list(event=event)
-        set_list = services.get_set_list_for_registration_available(event=event)
+        set_list = services.get_set_list_available(event=event)
         registration_fields = services.get_registration_fields(event=event)
         required_fields = services.get_registration_required_fields(event=event)
         return render(
@@ -713,7 +707,7 @@ class ParticipantView(IsOwnerMixin, views.View):
         participant = get_object_or_404(Participant, id=p_id)
         group_list = services.get_group_list(event=event) if event.group_num > 1 else ""
         group_list_value = group_list[participant.group_index] if event.group_num > 1 else ""
-        set_list = services.get_set_list_for_change_available(event=event, participant=participant)
+        set_list = services.get_set_list_available(event=event, participant=participant)
         set_index_value = ""
         if event.set_num > 1:
             current_set_value = services.get_set_list(event=event)[participant.set_index]
@@ -746,7 +740,7 @@ class ParticipantView(IsOwnerMixin, views.View):
         form = ParticipantForm(request.POST,
                                request.FILES,
                                group_list=services.get_group_list(event=event),
-                               set_list=services.get_set_list_for_registration_available(event=event),
+                               set_list=services.get_set_list_available(event=event, participant=participant),
                                is_pay_allowed=event.is_pay_allowed,
                                registration_fields=services.get_registration_fields(event=event),
                                reg_type_list=event.reg_type_list,
@@ -764,7 +758,7 @@ class ParticipantView(IsOwnerMixin, views.View):
                     'participant': participant,
                     'form': ParticipantForm(request.POST,
                                             group_list=services.get_group_list(event=event),
-                                            set_list=services.get_set_list_for_registration_available(event=event),
+                                            set_list=services.get_set_list_available(event=event, participant=participant),
                                             is_pay_allowed=event.is_pay_allowed,
                                             registration_fields=services.get_registration_fields(event=event),
                                             reg_type_list=event.reg_type_list,
@@ -873,11 +867,14 @@ def check_pin_code(request):
         participant = Participant.objects.get(pin=pin, event__id=event_id)
         if participant.is_entered_result and not event.is_update_result_allowed:
             response = {'result': False,
-                        'reason': f'Найден участник: {participant.first_name} {participant.last_name}, но повторный ввод результатов запрещён.'}
+                        'reason': f'Найден участник: {participant.last_name} {participant.first_name}, но повторный ввод результатов запрещён.'}
         else:
-            response = {'result': True, 'participant': f'{participant.first_name} {participant.last_name}',
-                        'accents': participant.accents,
-                        'french_accents': participant.french_accents}
+            response = {'result': True, 'participant': f'{participant.last_name} {participant.first_name}'}
+            if event.score_type == Event.SCORE_FRENCH:
+                response.update({'french_accents': participant.french_accents})
+            else:
+                response.update({'accents': participant.french_accents})
+
     except Participant.DoesNotExist:
         response = {'result': False,
                     'reason': 'Участник не найден. Проверьте PIN-код, или <a href="{% url \'registration\' event.id %}">зарегистрируйтесь</a>!'}

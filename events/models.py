@@ -64,6 +64,10 @@ def _get_blank_json():
     return {}
 
 
+def _get_default_array():
+    return []
+
+
 def _get_blank_accents_json():
     return {"0": "0"}
 
@@ -250,7 +254,7 @@ class Participant(models.Model):
     email = models.EmailField(max_length=100, blank=True, null=True)
     paid = models.BooleanField(default=False)
     scores = models.JSONField(default=_get_blank_json)
-    counted_routes = ArrayField(models.IntegerField(), blank=True, null=True)
+    counted_routes = ArrayField(models.IntegerField(), blank=True, null=True, default=_get_default_array)
 
     phone_number = PhoneNumberField(blank=True)
 

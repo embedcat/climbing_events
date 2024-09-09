@@ -262,13 +262,13 @@ class EventAdminServiceForm(forms.Form):
 class AccentForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['accent'] = forms.ChoiceField(widget=forms.RadioSelect, choices=ACCENT_TYPE)
+        self.fields['top'] = forms.ChoiceField(widget=forms.RadioSelect, choices=ACCENT_TYPE)
 
         self.helper = FormHelper()
         self.helper.form_tag = False
         self.helper.disable_csrf = True
         self.helper.layout = Layout(
-            InlineRadios('accent', template='events/snippets/sn-form-accent.html'),
+            InlineRadios('top', template='events/snippets/sn-form-accent.html'),
         )
 
 

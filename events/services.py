@@ -18,7 +18,7 @@ from django.http import HttpResponse
 from config import settings
 from events import xl_tools, mock
 from events.exceptions import DuplicateParticipantError, ParticipantTooYoungError
-from events.models import CustomUser, Event, PayDetail, PromoCode, Route, Participant, Wallet
+from events.models import ACCENT_REDPOINT, CustomUser, Event, PayDetail, PromoCode, Route, Participant, Wallet
 from events.models import ACCENT_NO, ACCENT_FLASH
 
 
@@ -190,26 +190,13 @@ def get_route_score(route: Route, json_key: str) -> float:
 # ================================================
 
 
-def get_set_list_for_registration_available(event: Event) -> list:
+def get_set_list_available(event: Event, participant: Participant = None) -> list:
     set_list_all = get_set_list(event=event)
     set_list = []
     if event.set_max_participants > 0:
         for i, item in enumerate(set_list_all):
             set_participants_num = event.participant.filter(set_index=i).count()
-            if set_participants_num < event.set_max_participants:
-                set_list.append(item)
-    else:
-        set_list = set_list_all
-    return set_list
-
-
-def get_set_list_for_change_available(event: Event, participant: Participant) -> list:
-    set_list_all = get_set_list(event=event)
-    set_list = []
-    if event.set_max_participants > 0:
-        for i, item in enumerate(set_list_all):
-            set_participants_num = event.participant.filter(set_index=i).count()
-            if set_participants_num < event.set_max_participants or participant.set_index == i:
+            if set_participants_num < event.set_max_participants or (participant.set_index == i if participant else False):
                 set_list.append(item)
     else:
         set_list = set_list_all
@@ -329,12 +316,23 @@ def register_participant(event: Event, cd: dict) -> Participant:
 def _clear_participant_score(participant: Participant) -> None:
     participant.score = 0
     participant.accents = {}
+    participant.french_accents = {}
     participant.is_entered_result = False
     participant.save()
 
 
 def is_registration_open(event: Event) -> bool:
-    return event.is_published and event.is_registration_open and (event.participant.count() < event.max_participants or event.is_premium)
+    if not event.is_published:
+        return False
+    if not event.is_registration_open:
+        return False
+    if event.set_max_participants != 0 and event.participant.count() >= event.set_max_participants * event.set_num:
+        return False
+    if not event.is_premium:
+        if event.participant.count() >= event.max_participants:
+            return False        
+    return True
+
 
 # ================================================
 # ========== Calc and update results =============
@@ -354,7 +352,7 @@ def form_data_to_results(form_cleaned_data: list) -> dict:
     '''
     results = {}
     for i, result in enumerate(form_cleaned_data):
-        accent = dacite.from_dict(data_class=Accent, data=result)
+        accent = Accent(top=int(result.get('top', 0)), zone=int(result.get('zone', 0)))
         if accent.top and accent.zone == 0:
             accent.zone = accent.top
         results.update({i: asdict(accent)})
@@ -466,7 +464,7 @@ def get_form_initial_results(event: Event, participant: Participant) -> list:
             for i in range(event.routes_num):
                 result = participant.french_accents.get(str(i), {'top': 0}).get('top', 0)
                 accent = ACCENT_NO if result == 0 else (ACCENT_FLASH if result == 1 else ACCENT_REDPOINT)
-                initial.append({'accent': accent})
+                initial.append({'top': accent,})
         else:
             initial = [{'label': i, 'accent': participant.accents.get(
                 str(i), ACCENT_NO)} for i in range(event.routes_num)]

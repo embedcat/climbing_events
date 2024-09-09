@@ -15,9 +15,9 @@ function CheckPinCode(event_id, pin) {
         document.getElementById('enter-result-form').style.display = 'block'
         if (resp['accents']) {
           for ([key, value] of Object.entries(resp['accents'])) {
-              document.getElementById("id_accents-" + key + "-accent_1").checked = value == "0";
-              document.getElementById("id_accents-" + key + "-accent_2").checked = value == "1";
-              document.getElementById("id_accents-" + key + "-accent_3").checked = value == "2";
+              document.getElementById("id_accents-" + key + "-top_1").checked = value['top'] == 0;
+              document.getElementById("id_accents-" + key + "-top_2").checked = value['top'] == 1;
+              document.getElementById("id_accents-" + key + "-top_3").checked = value['top'] == 2;
           }
         }
         if (resp['french_accents']) {
