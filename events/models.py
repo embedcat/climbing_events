@@ -186,7 +186,7 @@ class Event(models.Model):
     wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='event', blank=True, null=True)
     score_table = models.JSONField(default=_get_default_score_table_json)
     premium_price = models.IntegerField(default=0, blank=True, null=True)
-    is_premium = models.BooleanField(default=False)
+    is_premium = models.BooleanField(default=True)
     is_expired = models.BooleanField(default=False)
     max_participants = models.IntegerField(default=50, blank=True, null=True)
     count_routes_num = models.IntegerField(default=0, blank=True, null=True)
