@@ -1,6 +1,6 @@
 {% load active_link_tags %}
 {% if user == event.owner or user.is_superuser %}
-<div class="nav-heading"><span title="Полный доступ">{% if event.is_premium %}<i class="fa-solid fa-star"></i></span> {% endif %}Управление событием</div>
+<div class="nav-heading">{% if event.is_premium %}<span title="Полный доступ"><i class="fa-solid fa-star"></i></span>{% endif %}Управление событием</div>
 <a class="nav-link {% active_link 'admin_actions' strict=True event_id=event.id %}" href="{% url 'admin_actions' event.id %}">Управление</a>
 <a class="nav-link {% active_link 'admin_description' strict=True event_id=event.id %}" href="{% url 'admin_description' event.id %}">Описание</a>
 <a class="nav-link {% active_link 'admin_settings' strict=True event_id=event.id %}" href="{% url 'admin_settings' event.id %}">Настройки</a>
