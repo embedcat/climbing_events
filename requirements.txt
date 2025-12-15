@@ -41,11 +41,11 @@ openpyxl==3.0.10
 packaging==21.3
 pathspec==0.10.1
 phonenumberslite==8.13.8
-Pillow==9.2.0
+# Pillow==9.2.0
 pip-review==1.2.0
 platformdirs==2.5.2
-psycopg2==2.9.5
-psycopg2-binary==2.9.5
+# psycopg2==2.9.5
+# psycopg2-binary==2.9.5
 pycodestyle==2.9.1
 pycparser==2.21
 pyflakes==2.5.0

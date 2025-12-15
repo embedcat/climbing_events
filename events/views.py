@@ -6,6 +6,8 @@ import operator
 
 from asgiref.sync import sync_to_async
 from django import views
+from django.core.paginator import Paginator
+from django.views.generic import ListView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.mail import send_mail
 from django.db.models import Count
@@ -44,7 +46,21 @@ class IsSuperuserMixin(braces.UserPassesTestMixin):
         return user.is_superuser
 
 
-class MainView(views.View):
+class MainView(ListView):
+    model = Event
+    paginate_by = 5
+    template_name = 'events/index.html'
+    context_object_name = 'events'
+    # ordering = ['-date']
+
+    def get_queryset(self):
+        events = Event.objects.filter(is_published=True).order_by('-date')
+        return events
+    
+    def get_paginator(self, queryset: services.QuerySet[asyncio.Any], per_page: int, orphans: int = ..., allow_empty_first_page: bool = ..., **kwargs: asyncio.Any) -> Paginator:
+        return super().get_paginator(queryset, per_page, orphans, allow_empty_first_page, **kwargs)
+    
+
     @staticmethod
     def get(request):
         if int(settings.DEFAULT_EVENT_ID) != 0:
