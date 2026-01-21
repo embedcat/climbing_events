@@ -498,15 +498,7 @@ class EnterWithoutReg(views.View):
                                    participant=participant,
                                    accents=services.form_data_to_results(form_cleaned_data=accent_formset.cleaned_data))
             return redirect('enter_results_ok', event_id=event_id)
-        return render(
-            request=request,
-            template_name='events/event/enter-wo-reg.html',
-            context={
-                'event': event,
-                'formset': accent_formset,
-                'participant_form': form,
-            }
-        )
+        return redirect('enter_wo_reg', event_id=event_id)
 
 
 class ResultsView(views.View):
