@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.db.models import Count
 from events.models import Event, Participant, Route, CustomUser, PromoCode, Wallet
 
 
@@ -19,7 +20,19 @@ class RouteAdmin(admin.ModelAdmin):
     list_filter = ('event',)
 
 
-admin.site.register(CustomUser)
+class CustomUserAdmin(admin.ModelAdmin):
+    model = CustomUser
+    list_display = ('email', 'date_joined', 'last_login', 'get_events_count',)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(events_count=Count('owner'))
+
+    @admin.display(description='Events count')
+    def get_events_count(self, obj):
+        return obj.events_count
+
+
+admin.site.register(CustomUser, CustomUserAdmin)
 admin.site.register(Event, EventAdmin)
 admin.site.register(Participant, ParticipantAdmin)
 admin.site.register(Route, RouteAdmin)
