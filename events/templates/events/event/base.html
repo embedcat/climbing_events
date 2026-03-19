@@ -5,7 +5,14 @@
 {% block nav-staff %} {% include 'events/snippets/sn-nav-staff.html' %}{% endblock %}
 
 {% block container %}
-<h2 class="">{{ event.title }}</h2>
+<div>
+  <h2 class="">{{ event.title }}</h2>
+  {% if not event.is_published %}
+    {% if user == event.owner or user.is_superuser %}
+      <span class="badge rounded-pill bg-warning text-dark">Ждёт публикации</span>
+    {% endif %}
+  {% endif %}
+</div>
 <div class="alert alert-secondary" class="my-4">
   <h4>{% block title %} {% endblock title %}</h4>
 </div>
