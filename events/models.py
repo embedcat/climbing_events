@@ -103,7 +103,7 @@ class Event(models.Model):
     title = models.CharField(max_length=128)
     gym = models.CharField(max_length=128, default="Скалодром")
     date = models.DateField(null=True)
-    date_end = models.DateField(null=True)
+    date_end = models.DateField(null=True, blank=True)
     poster = models.ImageField(upload_to=settings.MEDIA_POSTERS_DIR,
                                default=f'..{settings.STATIC_URL}events/img/default_poster.png')
     description = models.TextField(null=True, default="Регламент")
