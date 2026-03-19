@@ -4,7 +4,7 @@
 {% endblock %}
 
 {% block body %}
-{% if event.is_published %}
+{% if event.is_published or user == event.owner or user.is_superuser %}
 {% if event.is_results_allowed %}
 <div class="table-responsive">
 <nav>

@@ -4,7 +4,7 @@
 {% endblock %}
 
 {% block body %}
-{% if event.is_published %}
+{% if event.is_published or user == event.owner or user.is_superuser %}
 {% load events_tags %}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"

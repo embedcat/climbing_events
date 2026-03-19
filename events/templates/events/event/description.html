@@ -3,7 +3,7 @@
 Описание
 {% endblock %}
 {% block body %}
-{% if event.is_published %}
+{% if event.is_published or user == event.owner or user.is_superuser %}
 <div class='container-fluid'>
   <div class="row">
     <div class="col-md-3">

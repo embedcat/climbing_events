@@ -19,7 +19,10 @@ id="dataTableProtocols" width="100%">
 <td>{{ forloop.counter }}</td>
 <td>
 {% if event.is_premium %}<i class="fa-solid fa-star text-warning"></i>{% endif %}
-<a href="{% url 'admin_actions' event.id %}">{{ event.title }}</a><br>
+<a href="{% url 'admin_actions' event.id %}">{{ event.title }}</a>
+{% if event.is_expired %}<span class="badge rounded-pill bg-secondary">Завершено</span>{% endif %}
+{% if not event.is_published %}<span class="badge rounded-pill bg-warning text-dark">Ждёт публикации</span>{% endif %}
+<br>
 <small><em>
  (<a href="{% url 'admin_settings' event.id %}">Настройки</a>,
  <a href="{% url 'participants' event.id %}">Участники</a>,

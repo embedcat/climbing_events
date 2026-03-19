@@ -8,7 +8,7 @@ from asgiref.sync import sync_to_async
 from django import views
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.mail import send_mail
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.forms import formset_factory, modelformset_factory, ModelChoiceField
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
@@ -49,7 +49,13 @@ class MainView(views.View):
     def get(request):
         if int(settings.DEFAULT_EVENT_ID) != 0:
             return redirect('event', event_id=settings.DEFAULT_EVENT_ID)
-        events = Event.objects.filter(is_published=True).order_by('-date')
+        if request.user.is_authenticated:
+            if request.user.is_superuser:
+                events = Event.objects.all().order_by('-date')
+            else:
+                events = Event.objects.filter(Q(is_published=True) | Q(owner=request.user)).order_by('-date')
+        else:
+            events = Event.objects.filter(is_published=True).order_by('-date')
         return render(
             request=request,
             template_name='events/index.html',

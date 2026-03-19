@@ -6,7 +6,9 @@
                                                        class="card-img-top img-thumbnail"
                                                        alt="poster"></a>
     <div class="card-header">
-      <h4 class="card-title">{{ event.title }}</h4>
+      <h4 class="card-title">{{ event.title }}
+        {% if not event.is_published %}<span class="badge rounded-pill bg-warning text-dark">Ждёт публикации</span> {% endif %}
+        {% if event.is_expired %}<span class="badge rounded-pill bg-secondary">Завершено</span>{% endif %}</h4>
     </div>
     <div class="card-body">
       <h6 class="card-subtitle text-muted {% if event.is_expired %}date-expired{% endif %} ">{{event.date }}</h6>
