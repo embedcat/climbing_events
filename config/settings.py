@@ -30,7 +30,7 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 SECRET_KEY = env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env('DEBUG')
+DEBUG = env.bool('DEBUG')
 
 ALLOWED_HOSTS = env('ALLOWED_HOSTS')
 
@@ -202,7 +202,7 @@ MAINTENANCE_MODE_IGNORE_ADMIN_SITE = True
 # if True the superuser will not see the maintenance-mode page
 MAINTENANCE_MODE_IGNORE_SUPERUSER = False
 
-USE_DJDT = env('USE_DJDT')
+USE_DJDT = env.bool('USE_DJDT', default=False)
 if USE_DJDT:
     MIDDLEWARE += (
         'debug_toolbar.middleware.DebugToolbarMiddleware',
