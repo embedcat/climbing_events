@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:14-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=climbing_events
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+      - media_data:/app/media
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=django-insecure-development-key-12345
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/climbing_events
+      - ALLOWED_HOSTS=localhost,127.0.0.1
+      - USE_DJDT=False
+      - DEFAULT_EVENT_ID=0
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
+  media_data:
