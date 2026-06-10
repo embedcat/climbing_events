@@ -14,42 +14,17 @@ services:
       context: .
       dockerfile: Dockerfile.prod
     command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3
+    # Привязываем порт только к localhost сервера для безопасности
+    ports:
+      - "127.0.0.1:8000:8000"
     volumes:
-      - static_volume:/app/static
-      - media_volume:/app/media
-    expose:
-      - "8000"
+      - /var/www/climbing_events/static:/app/static
+      - /var/www/climbing_events/media:/app/media
     env_file:
       - .env.prod
     depends_on:
       - db
     restart: always
 
-  nginx:
-    image: nginx:1.25-alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - static_volume:/app/static
-      - media_volume:/app/media
-      - certbot_etc:/etc/letsencrypt:ro
-      - certbot_var:/var/www/certbot:ro
-    depends_on:
-      - web
-    restart: always
-
-  certbot:
-    image: certbot/certbot
-    volumes:
-      - certbot_etc:/etc/letsencrypt
-      - certbot_var:/var/www/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
-
 volumes:
   postgres_data_prod:
-  static_volume:
-  media_volume:
-  certbot_etc:
-  certbot_var:
