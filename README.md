@@ -102,19 +102,21 @@ docker compose -f docker-compose.prod.yml exec -T db sh -c 'pg_restore -U "$POST
 Для настройки автоматического создания бэкапов на сервере:
 
 1. Создайте в корне проекта файл `do_backup.sh`:
-   ```bash
-   #!/bin/bash
+    ```bash
+    #!/bin/bash
+    # Переходим в папку проекта (важно для cron)
+    cd ~/climbing_events
 
-   # Создаем папку для бэкапов, если её нет
-   mkdir -p backups
+    # Создаем папку для бэкапов, если её нет
+    mkdir -p backups
 
-   # Формируем бэкап
-   BACKUP_NAME="backup_\$(date +%Y-%m-%d_%H-%M-%S).backup"
-   docker compose -f docker-compose.prod.yml exec -T db sh -c 'pg_dump -U "\$POSTGRES_USER" -d "\$POSTGRES_DB" -Fc' > "backups/\$BACKUP_NAME"
+    # Формируем бэкап
+    BACKUP_NAME="backup_$(date +%Y-%m-%d_%H-%M-%S).backup"
+    docker compose -f docker-compose.prod.yml exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "backups/$BACKUP_NAME"
 
-   # Удаляем бэкапы старше 14 дней
-   find backups/ -type f -name "*.backup" -mtime +14 -delete
-   ```
+    # Удаляем бэкапы старше 14 дней
+    find backups/ -type f -name "*.backup" -mtime +14 -delete
+    ```
 2. Сделайте скрипт исполняемым:
    ```bash
    chmod +x do_backup.sh
