@@ -1,16 +1,132 @@
-# climbing-events
-Сервис для ввода и подсчёта результатов скалолазных соревнований
+# Climbing Events
 
-### Database dump:
-- Dump on remote:
-`pg_dump -h localhost -U <db_user> -Fc <db_name> > dump.backup`
-- Copy to local:
-`scp user@host:/path/to/dbdump.backup .`
-- Create db:
-  - `sudo -u postgres psql`
-  - `CREATE DATABASE <db> WITH ENCODING='UTF8' LC_CTYPE='en_US.UTF-8' LC_COLLATE='en_US.UTF-8' TEMPLATE=template0;`
-  - `CREATE USER <db_user> WITH PASSWORD '<db_password>';`
-  - `GRANT ALL PRIVILEGES ON DATABASE <db> TO <db_user>;`
-- Restore database
-    - in pgAdmin: create user and db, restore
-    - in cli: `pg_restore -h localhost -p 5432 -U <db_user> -d <db> -v dump.backup `
+Сервис для ввода и подсчёта результатов скалолазных соревнований.
+
+## Разработка (Локальный запуск)
+
+Для запуска в режиме разработки (с автоматической перезагрузкой кода):
+
+1. Убедитесь, что у вас установлен Docker и Docker Compose.
+2. Создайте файл `.env` на основе `.env.example`.
+3. Запустите контейнеры:
+   ```bash
+   docker-compose up --build
+   ```
+4. Приложение будет доступно по адресу: [http://localhost:8000](http://localhost:8000)
+
+---
+
+## Развертывание на сервере (Production)
+
+### 1. Подготовка сервера (Debian/Ubuntu)
+Установите необходимые пакеты:
+```bash
+sudo apt update
+sudo apt install docker.io docker-compose-plugin nginx certbot python3-certbot-nginx
+```
+
+### 2. Настройка проекта
+1. Склонируйте репозиторий.
+2. Подготовьте файл с переменными окружения:
+   ```bash
+   cp .env.prod.example .env.prod
+   # Обязательно отредактируйте .env.prod: установите DEBUG=False, домены в ALLOWED_HOSTS и CSRF_TRUSTED_ORIGINS
+   ```
+3. Создайте папки для статики и медиа и дайте права Nginx:
+   ```bash
+   sudo mkdir -p /var/www/climbing_events/static /var/www/climbing_events/media
+   sudo chown -R www-data:www-data /var/www/climbing_events/
+   ```
+
+### 3. Настройка Nginx и SSL
+1. Создайте конфиг сайта `/etc/nginx/sites-available/climbing_events` на основе файла `nginx.host.conf`.
+2. Активируйте конфиг и проверьте его:
+   ```bash
+   sudo ln -s /etc/nginx/sites-available/climbing_events /etc/nginx/sites-enabled/
+   sudo nginx -t
+   sudo systemctl reload nginx
+   ```
+3. Получите SSL-сертификат:
+   ```bash
+   sudo certbot --nginx -d your-domain.com
+   ```
+
+### 4. Запуск приложения
+Запустите Docker контейнеры:
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+Создайте суперпользователя:
+```bash
+docker compose -f docker-compose.prod.yml exec web python manage.py createsuperuser
+```
+
+---
+
+## Обновление сайта после изменений
+
+1. **Заберите изменения** из Git:
+   ```bash
+   git pull
+   ```
+2. **Пересоберите и перезапустите** контейнеры:
+   ```bash
+   # --build принудительно пересоберет образ с новым кодом
+   docker compose -f docker-compose.prod.yml up -d --build
+   ```
+3. (Опционально) Если вы добавили новые миграции, они применятся автоматически при запуске благодаря `entrypoint.py`. Но вы можете проверить их вручную:
+   ```bash
+   docker compose -f docker-compose.prod.yml exec web python manage.py showmigrations
+   ```
+4. Если изменились статические файлы, они также соберутся автоматически, но можно запустить сборку вручную:
+   ```bash
+   docker compose -f docker-compose.prod.yml exec web python manage.py collectstatic --no-input
+   ```
+
+## Резервное копирование и восстановление (Бэкапы)
+
+### 1. Создание бэкапа вручную
+Чтобы сделать бэкап базы данных продакшена, выполните команду в папке проекта:
+```bash
+docker compose -f docker-compose.prod.yml exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > backup_$(date +%Y-%m-%d_%H-%M-%S).backup
+```
+
+### 2. Восстановление из бэкапа вручную
+Чтобы восстановить базу данных из файла бэкапа кастомного формата (`.backup`):
+```bash
+docker compose -f docker-compose.prod.yml exec -T db sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --no-owner --no-privileges' < dump.backup
+```
+
+### 3. Автоматические бэкапы по расписанию (Cron)
+Для настройки автоматического создания бэкапов на сервере:
+
+1. Создайте в корне проекта файл `do_backup.sh`:
+   ```bash
+   #!/bin/bash
+
+   # Создаем папку для бэкапов, если её нет
+   mkdir -p backups
+
+   # Формируем бэкап
+   BACKUP_NAME="backup_\$(date +%Y-%m-%d_%H-%M-%S).backup"
+   docker compose -f docker-compose.prod.yml exec -T db sh -c 'pg_dump -U "\$POSTGRES_USER" -d "\$POSTGRES_DB" -Fc' > "backups/\$BACKUP_NAME"
+
+   # Удаляем бэкапы старше 14 дней
+   find backups/ -type f -name "*.backup" -mtime +14 -delete
+   ```
+2. Сделайте скрипт исполняемым:
+   ```bash
+   chmod +x do_backup.sh
+   ```
+3. Откройте планировщик cron командой `crontab -e` и добавьте строку для запуска скрипта каждую ночь в 03:00:
+   ```cron
+   0 3 * * * ~/climbing_events/do_backup.sh > /dev/null 2>&1
+   ```
+
+---
+
+### Архитектурные заметки:
+- Проект использует **Gunicorn** в качестве сервера приложений.
+- **Nginx** на хосте работает как Reverse Proxy и раздает статику/медиа.
+- Все настройки передаются через файлы `.env` и `.env.prod`.
