@@ -126,6 +126,24 @@ docker compose -f docker-compose.prod.yml exec -T db sh -c 'pg_restore -U "$POST
    0 3 * * * ~/climbing_events/do_backup.sh > /dev/null 2>&1
    ```
 
+## Периодические задачи (Cron)
+
+### 1. Проверка завершённых соревнований
+Для автоматической проверки соревнований и перевода их в статус "Завершено" создана консольная команда Django:
+```bash
+docker compose -f docker-compose.prod.yml exec -T web python manage.py check_expired
+```
+
+Чтобы запускать эту проверку автоматически (например, каждый день в 00:05):
+1. Откройте планировщик cron на сервере:
+   ```bash
+   crontab -e
+   ```
+2. Добавьте в конец файла следующую строку:
+   ```cron
+   5 0 * * * cd ~/climbing_events && docker compose -f docker-compose.prod.yml exec -T web python manage.py check_expired > /dev/null 2>&1
+   ```
+
 ---
 
 ### Архитектурные заметки:

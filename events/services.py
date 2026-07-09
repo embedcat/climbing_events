@@ -162,7 +162,7 @@ def update_event_pay_settings(event: Event, cd: dict) -> bool:
     return True
 
 
-def check_expired_events(events: QuerySet) -> None:
+def mark_events_as_expired(events: QuerySet) -> None:
     for event in events:
         event.is_expired = True
         event.save()
