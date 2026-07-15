@@ -66,14 +66,21 @@ docker compose -f docker-compose.prod.yml exec web python manage.py createsuperu
 
 ## Обновление сайта после изменений
 
-1. **Заберите изменения** из Git:
+1. **Заберите изменения** из Git (чтобы обновить конфигурационные файлы):
    ```bash
    git pull
    ```
-2. **Пересоберите и перезапустите** контейнеры:
+2. **Скачайте новый образ** из реестра (так как образ собирается на GitHub):
    ```bash
-   # --build принудительно пересоберет образ с новым кодом
-   docker compose -f docker-compose.prod.yml up -d --build
+   docker compose -f docker-compose.prod.yml pull
+   ```
+3. **Перезапустите** контейнеры (Docker Compose автоматически пересоздаст контейнер с новым образом):
+   ```bash
+   docker compose -f docker-compose.prod.yml up -d
+   ```
+4. (Опционально) Удалите старые неиспользуемые образы, чтобы освободить место:
+   ```bash
+   docker image prune -f
    ```
 3. (Опционально) Если вы добавили новые миграции, они применятся автоматически при запуске благодаря `entrypoint.py`. Но вы можете проверить их вручную:
    ```bash
