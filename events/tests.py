@@ -1,51 +1,431 @@
-from datetime import datetime
-from django.test import TestCase, SimpleTestCase
-import events.services as services
-from events.models import CustomUser, Event, Participant, Route
+from datetime import datetime, date
+from django.test import TestCase, Client
+from django.contrib.auth import get_user_model
+from django.urls import reverse
+from django.db.utils import IntegrityError
+from events.models import CustomUser, Event, Participant, Route, Wallet, PromoCode, PayDetail
+from events import services
+from events.forms import ParticipantRegistrationForm, CreateEventForm
+from events.exceptions import DuplicateParticipantError, ParticipantTooYoungError
 
-class IsRegistrationOpenTestCase(TestCase):
-    def setUp(self) -> None:
-        superuser = CustomUser.objects.create(id=1)
-        self.event = services.create_event(owner=superuser, title="test event", date=datetime.now())
-        return super().setUp()
-    
-    def test_not_published(self):
-        self.assertFalse(services.is_registration_open(self.event))
+class ClimbingEventsBaseTestCase(TestCase):
+    def setUp(self):
+        super().setUp()
+        self.client = Client()
+        # Create user with id=1, as required by create_event service
+        self.superuser = CustomUser.objects.create_superuser(
+            id=1,
+            username='admin',
+            email='admin@example.com',
+            password='password123',
+            premium_price=100
+        )
+        # Create normal user with explicit id=2 to avoid Postgres PK sequence collision
+        self.user = CustomUser.objects.create_user(
+            id=2,
+            username='user',
+            email='user@example.com',
+            password='password123'
+        )
 
-    def test_not_opened_registration(self):
-        self.event.is_published = True
-        self.assertFalse(services.is_registration_open(self.event))
+class ModelsTestCase(ClimbingEventsBaseTestCase):
+    def test_wallet_creation_and_str(self):
+        wallet = Wallet.objects.create(
+            owner=self.user,
+            title='My Wallet',
+            wallet_id='1234567890123456',
+            notify_secret_key='secret'
+        )
+        self.assertEqual(str(wallet), 'My Wallet (******3456)')
 
-    def test_too_many_participants_in_sets(self):
-        services.debug_create_participants(self.event, 10)
+    def test_event_creation_and_defaults(self):
+        event = Event.objects.create(
+            owner=self.user,
+            title='Autumn Boulder 2026',
+            date=date(2026, 10, 1)
+        )
+        self.assertEqual(event.gym, 'Скалодром')
+        self.assertEqual(event.score_type, Event.SCORE_SIMPLE_SUM)
+        self.assertTrue(event.is_premium)
+        self.assertFalse(event.is_published)
+
+    def test_participant_creation_and_str(self):
+        event = services.create_event(owner=self.superuser, title="Test Event", date=datetime(2026, 10, 1))
+        participant = Participant.objects.create(
+            first_name='Иван',
+            last_name='Иванов',
+            gender=Participant.GENDER_MALE,
+            birth_year=1995,
+            event=event,
+            pin=1234,
+            set_index=0
+        )
+        self.assertEqual(str(participant), f'<Part-t: Name=Иванов, PIN=1234, Score={participant.score}, set=0>')
+
+    def test_route_creation_and_str(self):
+        event = services.create_event(owner=self.superuser, title="Test Event", date=datetime(2026, 10, 1))
+        route = Route.objects.get(event=event, number=1)
+        self.assertEqual(str(route), f"N=1, score={route.score_json}")
+
+
+class ServicesTestCase(ClimbingEventsBaseTestCase):
+    def test_create_event_routes(self):
+        event = services.create_event(owner=self.superuser, title="Bouldering Event", date=datetime(2026, 10, 1))
+        self.assertEqual(event.routes_num, 10)
+        self.assertEqual(Route.objects.filter(event=event).count(), 10)
+
+    def test_group_and_set_lists(self):
+        event = services.create_event(owner=self.superuser, title="Test Lists", date=datetime(2026, 10, 1))
+        event.group_num = 2
+        event.group_list = "Новички, Любители"
+        event.set_num = 3
+        event.set_list = "Сет 1, Сет 2, Сет 3"
+        event.save()
+
+        self.assertEqual(services.get_group_list(event), ['Новички', 'Любители'])
+        self.assertEqual(services.get_set_list(event), ['Сет 1', 'Сет 2', 'Сет 3'])
+
+    def test_clear_event(self):
+        event = services.create_event(owner=self.superuser, title="Clear Event", date=datetime(2026, 10, 1))
+        Participant.objects.create(first_name='A', last_name='B', event=event, pin=1234)
+        
+        self.assertEqual(Route.objects.filter(event=event).count(), 10)
+        self.assertEqual(Participant.objects.filter(event=event).count(), 1)
+
+        services.clear_event(event)
+        self.assertEqual(Participant.objects.filter(event=event).count(), 0)
+        self.assertEqual(Route.objects.filter(event=event).count(), 10)
+
+    def test_is_registration_open_published_logic(self):
+        event = services.create_event(owner=self.superuser, title="Reg Event", date=datetime(2026, 10, 1))
+        
+        # Initially not published and registration not open
+        self.assertFalse(services.is_registration_open(event))
+
+        event.is_published = True
+        event.is_registration_open = True
+        event.save()
+        self.assertTrue(services.is_registration_open(event))
+
+        # Check limit for set participants
+        event.set_num = 2
+        event.set_max_participants = 1
+        event.save()
+        
+        # Max participants in all sets is 2 * 1 = 2
+        Participant.objects.create(first_name='A', last_name='B', event=event, pin=1234, set_index=0)
+        self.assertTrue(services.is_registration_open(event))
+        Participant.objects.create(first_name='C', last_name='D', event=event, pin=5678, set_index=1)
+        # Reached limit
+        self.assertFalse(services.is_registration_open(event))
+
+    def test_register_participant_success_and_failures(self):
+        event = services.create_event(owner=self.superuser, title="Reg Flow", date=datetime(2026, 10, 1))
+        event.is_published = True
+        event.is_registration_open = True
+        event.participant_min_age = 18
+        event.save()
+
+        # Age requirement failure
+        data_young = {
+            'first_name': 'Young',
+            'last_name': 'Climber',
+            'gender': Participant.GENDER_FEMALE,
+            'birth_year': datetime.today().year - 10,  # 10 years old
+            'city': 'City',
+            'team': 'Team',
+            'grade': Participant.GRADE_BR,
+        }
+        with self.assertRaises(ParticipantTooYoungError):
+            services.register_participant(event, data_young)
+
+        # Successful registration
+        data_valid = {
+            'first_name': 'Adult',
+            'last_name': 'Climber',
+            'gender': Participant.GENDER_MALE,
+            'birth_year': datetime.today().year - 20,  # 20 years old
+            'city': 'City',
+            'team': 'Team',
+            'grade': Participant.GRADE_3,
+        }
+        p = services.register_participant(event, data_valid)
+        self.assertIsNotNone(p)
+        self.assertEqual(p.first_name, 'Adult')
+        self.assertTrue(1000 <= p.pin <= 9999)
+
+        # Duplicate registration failure
+        with self.assertRaises(DuplicateParticipantError):
+            services.register_participant(event, data_valid)
+
+    def test_calculate_results_simple_sum(self):
+        event = services.create_event(owner=self.superuser, title="Simple Sum Event", date=datetime(2026, 10, 1))
+        event.score_type = Event.SCORE_SIMPLE_SUM
+        event.is_published = True
+        event.save()
+
+        p = Participant.objects.create(
+            first_name='Petr',
+            last_name='Petrov',
+            gender=Participant.GENDER_MALE,
+            event=event,
+            pin=1122
+        )
+        
+        # 10 routes. Send route index 0 with Flash, index 1 with Redpoint.
+        # Format of french_accents is: { route_index_string: { "top": accent_type, "zone": accent_type } }
+        # where accent_type: 1 = FLASH, 2 = REDPOINT, 0 = NO ACCENT
+        # We need to populate french_accents and set is_entered_result = True
+        p.french_accents = {
+            "0": {"top": 1, "zone": 1},  # Flash
+            "1": {"top": 2, "zone": 2},  # Redpoint
+        }
+        p.is_entered_result = True
+        p.save()
+
+        # Update results
+        services.update_results(event=event)
+        
+        p.refresh_from_db()
+        # For simple sum, default route score is 1.
+        # For index 0: score = 1 * (1 + flash_points_pc/100) = 1 * 1.25 = 1.25 * redpoint_points (80) = 100
+        # For index 1: score = 1 * redpoint_points (80) = 80
+        # Total score = 100 + 80 = 180
+        self.assertEqual(p.score, 180.0)
+        self.assertEqual(p.place, 1)
+
+    def test_calculate_results_advanced(self):
+        # Create event with 3 sets, 2 groups
+        event = services.create_event(owner=self.superuser, title="Advanced Event", date=datetime(2026, 10, 1))
+        event.is_published = True
+        event.group_num = 2
+        event.group_list = "Group 0, Group 1"
+        event.set_num = 3
+        event.set_list = "Set 0, Set 1, Set 2"
+        event.is_separate_score_by_groups = True
+        event.is_count_only_entered_results = True
+        event.score_type = Event.SCORE_PROPORTIONAL
+        event.save()
+
+        # Route 0
+        r0 = Route.objects.get(event=event, number=1)
+
+        # 1. Proportional scoring: check set independence & gender/group separation
+        # We create participants in different sets, genders, and groups.
+        
+        # Male, Group 0, Set 0 - Sends Route 0 (Flash)
+        p1 = Participant.objects.create(
+            first_name='M00', last_name='S0', gender=Participant.GENDER_MALE,
+            group_index=0, set_index=0, event=event, pin=1001, is_entered_result=True,
+            french_accents={"0": {"top": 1, "zone": 1}}
+        )
+        
+        # Male, Group 0, Set 1 - Sends Route 0 (Redpoint)
+        # Since p1 and p2 are in the same group and gender, but different sets:
+        # both should contribute to Route 0 score for (MALE, Group 0).
+        p2 = Participant.objects.create(
+            first_name='M01', last_name='S1', gender=Participant.GENDER_MALE,
+            group_index=0, set_index=1, event=event, pin=1002, is_entered_result=True,
+            french_accents={"0": {"top": 2, "zone": 2}}
+        )
+
+        # Male, Group 1, Set 0 - Sends Route 0 (Flash)
+        # Should be completely separate because of group separation.
+        p3 = Participant.objects.create(
+            first_name='M10', last_name='S0', gender=Participant.GENDER_MALE,
+            group_index=1, set_index=0, event=event, pin=1003, is_entered_result=True,
+            french_accents={"0": {"top": 1, "zone": 1}}
+        )
+
+        # Female, Group 0, Set 0 - Sends Route 0 (Flash)
+        # Should be completely separate because of gender separation.
+        p4 = Participant.objects.create(
+            first_name='F00', last_name='S0', gender=Participant.GENDER_FEMALE,
+            group_index=0, set_index=0, event=event, pin=1004, is_entered_result=True,
+            french_accents={"0": {"top": 1, "zone": 1}}
+        )
+
+        services.update_results(event=event)
+
+        r0.refresh_from_db()
+        # Verify Route 0 scores in route.score_json.
+        # Format of keys is: "{gender}_{group_index}"
+        # For MALE_0: there are 2 sends. Route score = 1 / 2 = 0.5.
+        self.assertEqual(r0.score_json.get("MALE_0"), 0.5)
+        # For MALE_1: there is 1 send. Route score = 1 / 1 = 1.0.
+        self.assertEqual(r0.score_json.get("MALE_1"), 1.0)
+        # For FEMALE_0: there is 1 send. Route score = 1 / 1 = 1.0.
+        self.assertEqual(r0.score_json.get("FEMALE_0"), 1.0)
+
+        # Verify participant scores for Proportional logic:
+        p1.refresh_from_db()
+        p2.refresh_from_db()
+        # For p1: Route 0 score is 0.5. Flash bonus (1 + 25/100) = 1.25. Redpoint points = 80.
+        # Score = 0.5 * 1.25 * 80 = 50.0
+        self.assertEqual(p1.score, 50.0)
+
+        # For p2: Route 0 score is 0.5. No Flash bonus. Redpoint points = 80.
+        # Score = 0.5 * 1.0 * 80 = 40.0
+        self.assertEqual(p2.score, 40.0)
+
+        # 2. Table scoring: SCORE_GRADE
+        event.score_type = Event.SCORE_GRADE
+        event.score_table = {"5": "15", "6A": "25"}
+        event.save()
+        r0.grade = "6A"
+        r0.save()
+
+        # Update results again
+        services.update_results(event=event)
+        p1.refresh_from_db()
+        p2.refresh_from_db()
+        # For SCORE_GRADE, route score is 25 (from table).
+        # For p1: Flash bonus is applied (1.25) but not redpoint_points.
+        # Score = 25 * 1.25 = 31.25
+        self.assertEqual(p1.score, 31.25)
+        # For p2: Redpoint (1.0). Score = 25 * 1.0 = 25.0
+        self.assertEqual(p2.score, 25.0)
+
+        # 3. Num Accents scoring: SCORE_NUM_ACCENTS
+        event.score_type = Event.SCORE_NUM_ACCENTS
+        event.save()
+        services.update_results(event=event)
+        p1.refresh_from_db()
+        p2.refresh_from_db()
+        # For p1: Flash = 101.0
+        self.assertEqual(p1.score, 101.0)
+        # For p2: Redpoint = 100.0
+        self.assertEqual(p2.score, 100.0)
+
+        # 4. French scoring: SCORE_FRENCH
+        event.score_type = Event.SCORE_FRENCH
+        event.save()
+        p1.french_accents = {
+            "0": {"top": 2, "zone": 3}
+        }
+        p1.save()
+        services.update_results(event=event)
+        p1.refresh_from_db()
+        # Calculation:
+        # tops = 1, zones = 1, tops_a = 2, zones_a = 3
+        # score = 10000*1 + 1000*1 + 100*(100-2) + 10*(100-3) = 10000 + 1000 + 9800 + 970 = 21770
+        self.assertEqual(p1.score, 21770.0)
+
+
+class FormsTestCase(ClimbingEventsBaseTestCase):
+    def test_participant_registration_form_fields(self):
+        event = services.create_event(owner=self.superuser, title="Form Event", date=datetime(2026, 10, 1))
+        # Explicitly configure fields for form rendering
+        event.registration_fields = [Event.FIELD_GENDER, Event.FIELD_BIRTH_YEAR, Event.FIELD_EMAIL]
+        event.required_fields = [Event.FIELD_BIRTH_YEAR]
+        event.save()
+        
+        form = ParticipantRegistrationForm(
+            group_list=services.get_group_list(event),
+            set_list=services.get_set_list(event),
+            registration_fields=services.get_registration_fields(event),
+            required_fields=services.get_registration_required_fields(event),
+            is_enter_form=False,
+            reg_type_list=event.reg_type_list
+        )
+        self.assertIn('first_name', form.fields)
+        self.assertIn('last_name', form.fields)
+        self.assertIn('gender', form.fields)
+        self.assertIn('birth_year', form.fields)
+        self.assertIn('email', form.fields)
+        self.assertTrue(form.fields['birth_year'].required)
+        self.assertFalse(form.fields['gender'].required)
+
+
+class ViewsTestCase(ClimbingEventsBaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.event = services.create_event(owner=self.superuser, title="View Event", date=datetime(2026, 10, 1))
         self.event.is_published = True
         self.event.is_registration_open = True
-        self.event.set_num = 1
-        self.event.set_max_participants = 10
-        self.assertFalse(services.is_registration_open(self.event))
-        self.event.set_num = 2
-        self.event.set_max_participants = 5
-        self.assertFalse(services.is_registration_open(self.event))
-        self.event.set_max_participants = 11
-        self.assertTrue(services.is_registration_open(self.event))
+        self.event.save()
 
-    def test_too_many_participants_no_premium(self):
-        services.debug_create_participants(self.event, 10)
-        self.event.is_published = True
-        self.event.is_registration_open = True
-        self.event.set_num = 1
-        self.event.max_participants = 10
-        self.assertFalse(services.is_registration_open(self.event))
+    def test_main_view_pagination(self):
+        # We need multiple events to test pagination. 
+        # By default, views.py has `Paginator(events, 9)`
+        # Let's create 11 published events
+        for i in range(11):
+            e = services.create_event(owner=self.superuser, title=f"Event {i}", date=datetime(2026, 10, 1))
+            e.is_published = True
+            e.save()
 
-    def test_too_many_participants_premium(self):
-        services.debug_create_participants(self.event, 10)
-        self.event.is_published = True
-        self.event.is_registration_open = True
-        self.event.set_num = 1
-        self.event.max_participants = 10
-        self.event.is_premium = True
-        self.assertTrue(services.is_registration_open(self.event))
-        self.event.set_num = 1
-        self.event.set_max_participants = 10
-        self.assertFalse(services.is_registration_open(self.event))
+        # Request first page
+        response = self.client.get(reverse('main'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('events', response.context)
+        # Should display 9 events on page 1
+        self.assertEqual(len(response.context['events']), 9)
+        self.assertTrue(response.context['events'].has_other_pages())
 
+        # Request second page
+        response_page2 = self.client.get(reverse('main') + '?page=2')
+        self.assertEqual(response_page2.status_code, 200)
+        # Should display 3 events on page 2 (12 total events)
+        self.assertEqual(len(response_page2.context['events']), 3)
+
+    def test_registration_view_get_post(self):
+        url = reverse('registration', kwargs={'event_id': self.event.id})
+        
+        # GET request
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'events/event/registration.html')
+
+        # POST request (successful registration)
+        post_data = {
+            'first_name': 'Алексей',
+            'last_name': 'Алексеев',
+            'gender': Participant.GENDER_MALE,
+            'birth_year': 1990,
+            'city': 'Москва',
+            'team': 'Скала',
+            'grade': Participant.GRADE_BR,
+            'email': 'alex@example.com',
+            'phone_number': '+79998887766'
+        }
+        response_post = self.client.post(url, data=post_data)
+        # Redirect to event_registration_ok view
+        self.assertEqual(response_post.status_code, 302)
+        
+        # Check participant is registered
+        self.assertEqual(Participant.objects.filter(event=self.event, last_name='Алексеев').count(), 1)
+
+    def test_enter_results_view_successful_post(self):
+        p = Participant.objects.create(
+            first_name='Николай',
+            last_name='Николаев',
+            gender=Participant.GENDER_MALE,
+            event=self.event,
+            pin=5555
+        )
+        url = reverse('enter_results', kwargs={'event_id': self.event.id})
+        
+        # Prepare formset POST data for 10 routes.
+        # Django formset requires management form data:
+        post_data = {
+            'participant-pin': '5555',
+            'accents-TOTAL_FORMS': '10',
+            'accents-INITIAL_FORMS': '10',
+            'accents-MIN_NUM_FORMS': '0',
+            'accents-MAX_NUM_FORMS': '1000',
+        }
+        for i in range(10):
+            post_data[f'accents-{i}-label'] = str(i)
+            # Route 0: Top = 1 (Flash)
+            # Others: Top = 0 (No Accent)
+            post_data[f'accents-{i}-top'] = '1' if i == 0 else '0'
+            post_data[f'accents-{i}-zone'] = '1' if i == 0 else '0'
+
+        response = self.client.post(url, data=post_data)
+        # Should redirect to enter_results_ok view
+        self.assertEqual(response.status_code, 302)
+
+        # Check participant has results entered
+        p.refresh_from_db()
+        self.assertTrue(p.is_entered_result)
+        self.assertEqual(p.french_accents.get("0"), {"top": 1, "zone": 1})
