@@ -204,8 +204,8 @@ def get_set_list_available(event: Event, participant: Participant = None) -> lis
 
 
 def get_registration_fields(event: Event) -> list:
-    registration_fields = event.registration_fields
-    if event.participant_min_age:
+    registration_fields = list(event.registration_fields) if event.registration_fields else []
+    if event.participant_min_age and Event.FIELD_BIRTH_YEAR not in registration_fields:
         registration_fields.append(Event.FIELD_BIRTH_YEAR)
     if Event.FIELD_EMAIL not in registration_fields and event.is_pay_allowed:
         registration_fields.append(Event.FIELD_EMAIL)
@@ -213,8 +213,8 @@ def get_registration_fields(event: Event) -> list:
 
 
 def get_registration_required_fields(event: Event) -> list:
-    required_fields = event.required_fields
-    if event.participant_min_age:
+    required_fields = list(event.required_fields) if event.required_fields else []
+    if event.participant_min_age and Event.FIELD_BIRTH_YEAR not in required_fields:
         required_fields.append(Event.FIELD_BIRTH_YEAR)
     if Event.FIELD_EMAIL not in required_fields and event.is_pay_allowed:
         required_fields.append(Event.FIELD_EMAIL)
