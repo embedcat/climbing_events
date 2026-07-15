@@ -8,6 +8,7 @@ from asgiref.sync import sync_to_async
 from django import views
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.mail import send_mail
+from django.core.paginator import Paginator
 from django.db.models import Count, Q
 from django.forms import formset_factory, modelformset_factory, ModelChoiceField
 from django.http import HttpResponse, JsonResponse
@@ -56,11 +57,16 @@ class MainView(views.View):
                 events = Event.objects.filter(Q(is_published=True) | Q(owner=request.user)).order_by('-date')
         else:
             events = Event.objects.filter(is_published=True).order_by('-date')
+
+        paginator = Paginator(events, 9)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+
         return render(
             request=request,
             template_name='events/index.html',
             context={
-                'events': events,
+                'events': page_obj,
             }
         )
 
