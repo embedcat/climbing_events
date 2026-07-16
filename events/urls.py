@@ -1,8 +1,23 @@
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
 
-from events import views, pay_views, about_views
+from events import views, pay_views, about_views, api_views
+
+router = DefaultRouter()
+router.register('events', api_views.EventViewSet, basename='api_events')
+router.register('participants', api_views.ParticipantViewSet, basename='api_participants')
+router.register('routes', api_views.RouteViewSet, basename='api_routes')
+router.register('wallets', api_views.WalletViewSet, basename='api_wallets')
+router.register('promocodes', api_views.PromoCodeViewSet, basename='api_promocodes')
 
 urlpatterns = [
+    path('api/', include(router.urls)),
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('', views.MainView.as_view(), name='main'),
     path('e/<int:event_id>/', views.EventView.as_view(), name='event'),
     path('e/<int:event_id>/admin_actions/', views.AdminActionsView.as_view(), name='admin_actions'),

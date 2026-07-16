@@ -429,3 +429,116 @@ class ViewsTestCase(ClimbingEventsBaseTestCase):
         p.refresh_from_db()
         self.assertTrue(p.is_entered_result)
         self.assertEqual(p.french_accents.get("0"), {"top": 1, "zone": 1})
+
+
+class APITestCase(ClimbingEventsBaseTestCase):
+    def test_jwt_token_obtain_and_refresh(self):
+        url = reverse('token_obtain_pair')
+        # Login using superuser credentials
+        data = {
+            'username': 'admin',
+            'password': 'password123'
+        }
+        response = self.client.post(url, data=data, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('access', response.json())
+        self.assertIn('refresh', response.json())
+
+        access_token = response.json()['access']
+        refresh_token = response.json()['refresh']
+
+        # Try refresh
+        url_refresh = reverse('token_refresh')
+        response_refresh = self.client.post(
+            url_refresh, 
+            data={'refresh': refresh_token}, 
+            content_type='application/json'
+        )
+        self.assertEqual(response_refresh.status_code, 200)
+        self.assertIn('access', response_refresh.json())
+
+    def test_events_api_read_write(self):
+        # Create an event via ORM
+        event = services.create_event(owner=self.superuser, title="Public Event", date=date(2026, 10, 1))
+        event.is_published = True
+        event.save()
+
+        # Anonymous request to list events (published only)
+        url = reverse('api_events-list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()), 1)
+
+        # Attempt to create event anonymously should fail
+        response_create_anon = self.client.post(
+            url, 
+            data={'title': 'New Anon Event', 'date': '2026-10-02'}, 
+            content_type='application/json'
+        )
+        self.assertEqual(response_create_anon.status_code, 401)
+
+        # Login and obtain token
+        token_url = reverse('token_obtain_pair')
+        token_response = self.client.post(
+            token_url, 
+            data={'username': 'admin', 'password': 'password123'}, 
+            content_type='application/json'
+        )
+        access_token = token_response.json()['access']
+        headers = {'HTTP_AUTHORIZATION': f'Bearer {access_token}'}
+
+        # Create event as superuser
+        response_create = self.client.post(
+            url, 
+            data={'title': 'Authorized Event', 'date': '2026-10-02'}, 
+            content_type='application/json',
+            **headers
+        )
+        self.assertEqual(response_create.status_code, 201)
+        self.assertEqual(Event.objects.filter(title='Authorized Event').count(), 1)
+        # Verify routes were created automatically via services.create_event inside perform_create
+        new_event = Event.objects.get(title='Authorized Event')
+        self.assertEqual(Route.objects.filter(event=new_event).count(), 10)
+
+    def test_participants_api_registration_and_results(self):
+        event = services.create_event(owner=self.superuser, title="API Reg Event", date=date(2026, 10, 1))
+        event.is_published = True
+        event.is_registration_open = True
+        event.save()
+
+        # Register participant via API (anonymous POST is allowed if reg is open)
+        url = reverse('api_participants-list')
+        reg_data = {
+            'event': event.id,
+            'first_name': 'Семён',
+            'last_name': 'Семёнов',
+            'gender': Participant.GENDER_MALE,
+            'birth_year': 1992,
+            'city': 'Питер',
+            'team': 'Нева',
+            'grade': Participant.GRADE_BR,
+            'group_index': 0,
+            'set_index': 0
+        }
+        response = self.client.post(url, data=reg_data, content_type='application/json')
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('pin', response.json())
+        pin = response.json()['pin']
+        p_id = response.json()['id']
+
+        # Enter results via custom action
+        url_enter = reverse('api_participants-enter-results', kwargs={'pk': p_id})
+        accents_data = {
+            'pin': pin,
+            'accents': {
+                "0": {"top": 1, "zone": 1},  # Flash route 0
+                "1": {"top": 2, "zone": 2}   # Redpoint route 1
+            }
+        }
+        response_enter = self.client.post(url_enter, data=accents_data, content_type='application/json')
+        self.assertEqual(response_enter.status_code, 200)
+
+        # Check results were processed
+        participant = Participant.objects.get(id=p_id)
+        self.assertTrue(participant.is_entered_result)
+        self.assertEqual(participant.french_accents.get("0"), {"top": 1, "zone": 1})
