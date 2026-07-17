@@ -121,15 +121,26 @@ class AdminActionsView(IsOwnerMixin, views.View):
         return redirect('admin_actions', event_id)
 
 
-@sync_to_async
-def export_results(event_id: int):
-    event = get_object_or_404(Event, id=event_id)
-    xl_tools.export_result(event=event)
+def export_results_thread(event_id: int):
+    from django.db import close_old_connections
+    try:
+        event = get_object_or_404(Event, id=event_id)
+        xl_tools.export_result(event=event)
+    except Exception as e:
+        logger.error(f"Error exporting results for event {event_id}: {e}", exc_info=True)
+    finally:
+        close_old_connections()
 
 
-async def async_get_results(request, event_id):
-    loop = asyncio.get_event_loop()
-    loop.create_task(export_results(event_id=event_id))
+def async_get_results(request, event_id):
+    import threading
+    thread = threading.Thread(
+        target=export_results_thread,
+        args=(event_id,),
+        name=f"export_results_{event_id}",
+        daemon=True
+    )
+    thread.start()
     return redirect('admin_protocols', event_id)
 
 

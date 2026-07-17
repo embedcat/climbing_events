@@ -1,5 +1,5 @@
 from datetime import datetime, date
-from django.test import TestCase, Client
+from django.test import TestCase, TransactionTestCase, Client
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.db.utils import IntegrityError
@@ -542,3 +542,39 @@ class APITestCase(ClimbingEventsBaseTestCase):
         participant = Participant.objects.get(id=p_id)
         self.assertTrue(participant.is_entered_result)
         self.assertEqual(participant.french_accents.get("0"), {"top": 1, "zone": 1})
+
+
+class ProtocolAsyncTests(TransactionTestCase):
+    def setUp(self):
+        super().setUp()
+        self.client = Client()
+        self.superuser = CustomUser.objects.create_superuser(
+            id=1,
+            username='admin',
+            email='admin@example.com',
+            password='password123',
+            premium_price=100
+        )
+
+    def test_async_get_results_generates_protocol(self):
+        self.client.force_login(self.superuser)
+        event = services.create_event(owner=self.superuser, title="Premium Event", date=date(2026, 10, 1))
+        event.is_premium = True
+        event.save()
+
+        url = reverse('async_get_results', args=[event.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+
+        import threading
+        threads = [t for t in threading.enumerate() if t.name == f"export_results_{event.id}"]
+        for t in threads:
+            t.join(timeout=5)
+
+        protocols = services.get_list_of_protocols(event)
+        self.assertGreater(len(protocols), 0)
+        self.assertTrue(protocols[0]['name'].startswith("results_"))
+        self.assertTrue(protocols[0]['name'].endswith(".xlsx"))
+
+        for item in protocols:
+            services.remove_file(f"{event.id}/{item['name']}")
