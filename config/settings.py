@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
+    'django.contrib.postgres',
 
     'maintenance_mode',
     'active_link',
@@ -141,7 +142,14 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = 'media'
@@ -250,7 +258,14 @@ EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
-INPUT_DATE_FORMATS = ['%m/%d/%Y']
+INPUT_DATE_FORMATS = ['%m/%d/%Y', '%Y-%m-%d']
+
+BOOTSTRAP_DATEPICKER_PLUS = {
+    "options": {
+        "format": "MM/DD/YYYY",
+        "allowInputToggle": True,
+    }
+}
 
 PHONENUMBER_DEFAULT_REGION = 'RU'
 
@@ -275,20 +290,44 @@ REST_FRAMEWORK = {
     ),
 }
 
-# Monkey patch Django BaseContext.__copy__ for Python 3.13+ / 3.14+ compatibility
+# Monkey patch django-multiselectfield for Django 5.x/6.x compatibility
 try:
-    from django.template.context import BaseContext
-    import copy
-    
-    def base_context_copy(self):
-        duplicate = BaseContext()
-        duplicate.__class__ = self.__class__
-        duplicate.__dict__ = copy.copy(self.__dict__)
-        duplicate.dicts = self.dicts[:]
-        return duplicate
+    from multiselectfield.db.fields import MultiSelectField
+    from multiselectfield.validators import MaxValueMultiFieldValidator, MinChoicesValidator, MaxChoicesValidator
+    from multiselectfield.utils import get_max_length
+    from django.db.models import Field
 
-    BaseContext.__copy__ = base_context_copy
+    def patched_init(self, *args, **kwargs):
+        self.min_choices = kwargs.pop('min_choices', None)
+        self.max_choices = kwargs.pop('max_choices', None)
+        super(MultiSelectField, self).__init__(*args, **kwargs)
+        self.max_length = get_max_length(self.choices, self.max_length)
+        
+        validator = MaxValueMultiFieldValidator(self.max_length)
+        if not self.validators:
+            self.validators.append(validator)
+        else:
+            self.validators[0] = validator
+            
+        if self.min_choices is not None:
+            self.validators.append(MinChoicesValidator(self.min_choices))
+        if self.max_choices is not None:
+            self.validators.append(MaxChoicesValidator(self.max_choices))
+
+    def patched_get_flatchoices(self):
+        flat_choices = Field.flatchoices.fget(self)
+        class MSFFlatchoices(list):
+            def __bool__(self):
+                return False
+            __nonzero__ = __bool__
+        return MSFFlatchoices(flat_choices)
+
+    MultiSelectField.__init__ = patched_init
+    MultiSelectField._get_flatchoices = patched_get_flatchoices
+    MultiSelectField.flatchoices = property(patched_get_flatchoices)
 except Exception:
     pass
+
+
 
 

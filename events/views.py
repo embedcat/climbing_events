@@ -944,7 +944,7 @@ class CreateEventView(LoginRequiredMixin, views.View):
     def post(request):
         form = CreateEventForm(request.POST)
         if form.is_valid():
-            date = datetime.datetime.strptime(request.POST['date'], "%m/%d/%Y").date()
+            date = form.cleaned_data['date']
             event = services.create_event(owner=request.user, title=form.cleaned_data['title'], date=date)
             return redirect('admin_description', event.id)
         else:
