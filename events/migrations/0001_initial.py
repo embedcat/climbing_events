@@ -8,7 +8,7 @@ from django.db import migrations, models
 import django.db.models.deletion
 import django.utils.timezone
 import events.models
-import multiselectfield.db.fields
+
 
 
 class Migration(migrations.Migration):
@@ -76,8 +76,8 @@ class Migration(migrations.Migration):
                 ('set_num', models.IntegerField(default=1)),
                 ('set_list', models.CharField(default='Общий сет', max_length=200)),
                 ('set_max_participants', models.IntegerField(default=0)),
-                ('registration_fields', multiselectfield.db.fields.MultiSelectField(blank=True, choices=[('gender', 'Пол'), ('birth_year', 'Год рождения'), ('city', 'Город'), ('team', 'Команда'), ('grade', 'Разряд'), ('email', 'Email')], default='gender,birth_year,city,team', max_length=39, null=True)),
-                ('required_fields', multiselectfield.db.fields.MultiSelectField(blank=True, choices=[('birth_year', 'Год рождения'), ('city', 'Город'), ('team', 'Команда'), ('email', 'Email')], default=None, max_length=26, null=True)),
+                ('registration_fields', models.CharField(blank=True, choices=[('gender', 'Пол'), ('birth_year', 'Год рождения'), ('city', 'Город'), ('team', 'Команда'), ('grade', 'Разряд'), ('email', 'Email')], default='gender,birth_year,city,team', max_length=39, null=True)),
+                ('required_fields', models.CharField(blank=True, choices=[('birth_year', 'Год рождения'), ('city', 'Город'), ('team', 'Команда'), ('email', 'Email')], default=None, max_length=26, null=True)),
                 ('is_without_registration', models.BooleanField(default=False)),
                 ('is_view_pin_after_registration', models.BooleanField(default=True)),
                 ('is_check_result_before_enter', models.BooleanField(default=False)),

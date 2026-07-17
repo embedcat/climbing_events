@@ -52,7 +52,6 @@ INSTALLED_APPS = [
     'crispy_bootstrap5',
     'tinymce',
     'colorfield',
-    'multiselectfield',
     'bootstrap_datepicker_plus',
 
     'events',
@@ -290,43 +289,7 @@ REST_FRAMEWORK = {
     ),
 }
 
-# Monkey patch django-multiselectfield for Django 5.x/6.x compatibility
-try:
-    from multiselectfield.db.fields import MultiSelectField
-    from multiselectfield.validators import MaxValueMultiFieldValidator, MinChoicesValidator, MaxChoicesValidator
-    from multiselectfield.utils import get_max_length
-    from django.db.models import Field
 
-    def patched_init(self, *args, **kwargs):
-        self.min_choices = kwargs.pop('min_choices', None)
-        self.max_choices = kwargs.pop('max_choices', None)
-        super(MultiSelectField, self).__init__(*args, **kwargs)
-        self.max_length = get_max_length(self.choices, self.max_length)
-        
-        validator = MaxValueMultiFieldValidator(self.max_length)
-        if not self.validators:
-            self.validators.append(validator)
-        else:
-            self.validators[0] = validator
-            
-        if self.min_choices is not None:
-            self.validators.append(MinChoicesValidator(self.min_choices))
-        if self.max_choices is not None:
-            self.validators.append(MaxChoicesValidator(self.max_choices))
-
-    def patched_get_flatchoices(self):
-        flat_choices = Field.flatchoices.fget(self)
-        class MSFFlatchoices(list):
-            def __bool__(self):
-                return False
-            __nonzero__ = __bool__
-        return MSFFlatchoices(flat_choices)
-
-    MultiSelectField.__init__ = patched_init
-    MultiSelectField._get_flatchoices = patched_get_flatchoices
-    MultiSelectField.flatchoices = property(patched_get_flatchoices)
-except Exception:
-    pass
 
 
 

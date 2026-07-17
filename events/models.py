@@ -2,7 +2,6 @@ from colorfield.fields import ColorField
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-from multiselectfield import MultiSelectField
 from django.contrib.postgres.fields import ArrayField
 from phonenumber_field.modelfields import PhoneNumberField
 
@@ -78,6 +77,10 @@ def _get_blank_french_accents_json():
 
 def _get_default_route_score_json():
     return {'all': 1}
+
+
+def _get_default_registration_fields():
+    return ['gender', 'birth_year', 'city', 'team']
 
 
 def _get_default_score_table_json():
@@ -172,10 +175,8 @@ class Event(models.Model):
         (FIELD_EMAIL, 'Email'),
         (FIELD_PHONE, 'Телефон'),
     ]
-    registration_fields = MultiSelectField(choices=REGISTRATION_FIELDS,
-                                           default=f'{FIELD_GENDER},{FIELD_BIRTH_YEAR},{FIELD_CITY},{FIELD_TEAM}',
-                                           null=True, blank=True)
-    required_fields = MultiSelectField(choices=REQUIRED_FIELDS, default=None, null=True, blank=True)
+    registration_fields = ArrayField(models.CharField(max_length=20, choices=REGISTRATION_FIELDS), blank=True, null=True, default=_get_default_registration_fields)
+    required_fields = ArrayField(models.CharField(max_length=20, choices=REQUIRED_FIELDS), blank=True, null=True, default=list)
     is_without_registration = models.BooleanField(default=False)
     is_view_pin_after_registration = models.BooleanField(default=True)
     is_check_result_before_enter = models.BooleanField(default=False)

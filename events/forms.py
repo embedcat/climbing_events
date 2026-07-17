@@ -118,6 +118,19 @@ class AdminDescriptionForm(forms.ModelForm):
 
 
 class EventSettingsForm(forms.ModelForm):
+    registration_fields = forms.MultipleChoiceField(
+        choices=Event.REGISTRATION_FIELDS,
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        label='Дополнительные поля формы регистрации'
+    )
+    required_fields = forms.MultipleChoiceField(
+        choices=Event.REQUIRED_FIELDS,
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        label='Обязательные поля при регистрации'
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
