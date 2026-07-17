@@ -275,3 +275,20 @@ REST_FRAMEWORK = {
     ),
 }
 
+# Monkey patch Django BaseContext.__copy__ for Python 3.13+ / 3.14+ compatibility
+try:
+    from django.template.context import BaseContext
+    import copy
+    
+    def base_context_copy(self):
+        duplicate = BaseContext()
+        duplicate.__class__ = self.__class__
+        duplicate.__dict__ = copy.copy(self.__dict__)
+        duplicate.dicts = self.dicts[:]
+        return duplicate
+
+    BaseContext.__copy__ = base_context_copy
+except Exception:
+    pass
+
+
