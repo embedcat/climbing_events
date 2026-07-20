@@ -3,7 +3,13 @@ import os
 from datetime import datetime
 
 from openpyxl import Workbook, load_workbook
-from openpyxl.writer.excel import save_virtual_workbook
+from io import BytesIO
+
+def save_virtual_workbook(workbook):
+    virtual_workbook = BytesIO()
+    workbook.save(virtual_workbook)
+    virtual_workbook.seek(0)
+    return virtual_workbook.read()
 
 from config import settings
 from events import services

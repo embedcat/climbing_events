@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Iterable
 import dacite
 from openpyxl import load_workbook
-from openpyxl.writer.excel import save_virtual_workbook
+from events.xl_tools import save_virtual_workbook
 
 import segno
 from django.contrib.auth import get_user_model

@@ -40,8 +40,11 @@ if __name__ == "__main__":
     # Run migrations
     run_command(["python", "manage.py", "migrate"])
 
-    # Collect static
-    run_command(["python", "manage.py", "collectstatic", "--no-input"])
+    # Collect static (only if DEBUG is False/not set)
+    if os.environ.get("DEBUG", "False").lower() not in ("true", "1"):
+        run_command(["python", "manage.py", "collectstatic", "--no-input"])
+    else:
+        print("DEBUG is True. Skipping collectstatic...")
 
     # Execute the CMD passed as arguments
     if len(sys.argv) > 1:
