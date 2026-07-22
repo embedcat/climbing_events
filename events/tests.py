@@ -664,3 +664,132 @@ class MultiDayEventTests(TestCase):
         self.assertFalse(e1.is_expired)
         self.assertTrue(e2.is_expired)
 
+    def test_registration_close_datetime_setting_and_clear(self):
+        import datetime
+        from django.utils import timezone
+        close_time = timezone.now() + datetime.timedelta(hours=5)
+        event = services.create_event(owner=self.superuser, title="Close Reg Event", date=date(2026, 10, 1))
+
+        cd = {
+            'routes_num': 10,
+            'is_published': True,
+            'is_registration_open': True,
+            'registration_close_datetime': close_time,
+            'is_results_allowed': True,
+            'is_enter_result_allowed': True,
+            'is_count_only_entered_results': True,
+            'is_view_full_results': True,
+            'is_view_route_color': False,
+            'is_view_route_grade': False,
+            'is_view_route_score': True,
+            'is_separate_score_by_groups': True,
+            'score_type': 'SUM',
+            'redpoint_points': 80,
+            'flash_points_pc': 25,
+            'count_routes_num': 0,
+            'group_num': 1,
+            'group_list': 'Общая группа',
+            'set_num': 1,
+            'set_list': 'Общий сет',
+            'set_max_participants': 0,
+            'registration_fields': [],
+            'required_fields': [],
+            'is_without_registration': False,
+            'is_view_pin_after_registration': True,
+            'is_check_result_before_enter': False,
+            'is_update_result_allowed': True,
+            'participant_min_age': 0,
+            'reg_type_list': None,
+        }
+        services.update_event_settings(event=event, cd=cd)
+        event.refresh_from_db()
+        self.assertIsNotNone(event.registration_close_datetime)
+
+        cd['registration_close_datetime'] = None
+        services.update_event_settings(event=event, cd=cd)
+        event.refresh_from_db()
+        self.assertIsNone(event.registration_close_datetime)
+
+    def test_check_close_registration_command(self):
+        import datetime
+        from django.utils import timezone
+        from django.core.management import call_command
+        now = timezone.now()
+
+        e1 = Event.objects.create(
+            owner=self.superuser,
+            title="Past Close Event",
+            date=date(2026, 10, 1),
+            is_registration_open=True,
+            registration_close_datetime=now - datetime.timedelta(hours=1)
+        )
+        e2 = Event.objects.create(
+            owner=self.superuser,
+            title="Future Close Event",
+            date=date(2026, 10, 1),
+            is_registration_open=True,
+            registration_close_datetime=now + datetime.timedelta(hours=2)
+        )
+        e3 = Event.objects.create(
+            owner=self.superuser,
+            title="No Close Event",
+            date=date(2026, 10, 1),
+            is_registration_open=True,
+            registration_close_datetime=None
+        )
+
+        call_command('check_close_registration')
+        e1.refresh_from_db()
+        e2.refresh_from_db()
+        e3.refresh_from_db()
+
+        self.assertFalse(e1.is_registration_open)
+        self.assertTrue(e2.is_registration_open)
+        self.assertTrue(e3.is_registration_open)
+
+    def test_event_settings_form_registration_close_validation(self):
+        from events.forms import EventSettingsForm
+        event = Event.objects.create(owner=self.superuser, title="Validation Event", date=date(2026, 10, 10))
+        form_invalid = EventSettingsForm(
+            instance=event,
+            data={
+                'routes_num': 10,
+                'is_published': True,
+                'is_registration_open': True,
+                'registration_close_datetime': '10/10/2026 12:00',
+                'score_type': 'SUM',
+                'redpoint_points': 80,
+                'flash_points_pc': 25,
+                'count_routes_num': 0,
+                'group_num': 1,
+                'group_list': 'Общая группа',
+                'set_num': 1,
+                'set_list': 'Общий сет',
+                'set_max_participants': 0,
+                'participant_min_age': 0,
+            }
+        )
+        self.assertFalse(form_invalid.is_valid())
+        self.assertIn('registration_close_datetime', form_invalid.errors)
+
+        form_valid = EventSettingsForm(
+            instance=event,
+            data={
+                'routes_num': 10,
+                'is_published': True,
+                'is_registration_open': True,
+                'registration_close_datetime': '10/09/2026 23:00',
+                'score_type': 'SUM',
+                'redpoint_points': 80,
+                'flash_points_pc': 25,
+                'count_routes_num': 0,
+                'group_num': 1,
+                'group_list': 'Общая группа',
+                'set_num': 1,
+                'set_list': 'Общий сет',
+                'set_max_participants': 0,
+                'participant_min_age': 0,
+            }
+        )
+        self.assertTrue(form_valid.is_valid())
+

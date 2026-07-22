@@ -114,6 +114,7 @@ class Event(models.Model):
     routes_num = models.IntegerField(null=True, default=10)
     is_published = models.BooleanField(default=False)
     is_registration_open = models.BooleanField(default=False)
+    registration_close_datetime = models.DateTimeField(null=True, blank=True)
     is_results_allowed = models.BooleanField(default=False)
     is_enter_result_allowed = models.BooleanField(default=False)
     is_count_only_entered_results = models.BooleanField(default=True)

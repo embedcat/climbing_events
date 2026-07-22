@@ -102,6 +102,7 @@ def update_event_settings(event: Event, cd: dict) -> None:
     event.routes_num = cd['routes_num']
     event.is_published = cd['is_published']
     event.is_registration_open = cd['is_registration_open']
+    event.registration_close_datetime = cd.get('registration_close_datetime')
     event.is_enter_result_allowed = cd['is_enter_result_allowed']
     event.is_results_allowed = cd['is_results_allowed']
     event.is_count_only_entered_results = cd['is_count_only_entered_results']

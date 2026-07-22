@@ -248,7 +248,7 @@ class AdminSettingsView(IsOwnerMixin, views.View):
     @staticmethod
     def post(request, event_id):
         event = get_object_or_404(Event, id=event_id)
-        form = EventSettingsForm(request.POST)
+        form = EventSettingsForm(request.POST, instance=event)
         if form.is_valid():
             services.update_event_settings(event=event, cd=form.cleaned_data)
             return redirect('admin_settings', event_id)
@@ -258,7 +258,7 @@ class AdminSettingsView(IsOwnerMixin, views.View):
                 template_name='events/event/admin-settings.html',
                 context={
                     'event': event,
-                    'form': EventSettingsForm(request.POST),
+                    'form': form,
                 }
             )
 

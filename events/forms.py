@@ -1,4 +1,4 @@
-from bootstrap_datepicker_plus.widgets import DatePickerInput
+from bootstrap_datepicker_plus.widgets import DatePickerInput, DateTimePickerInput
 from crispy_forms.bootstrap import InlineRadios
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit, Layout, Field
@@ -150,6 +150,20 @@ class EventSettingsForm(forms.ModelForm):
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.add_input(Submit('submit', 'Сохранить'))
+        self.fields['registration_close_datetime'].input_formats = settings.INPUT_DATE_FORMATS + [
+            '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%m/%d/%Y %H:%M', '%m/%d/%Y %H:%M:%S'
+        ]
+
+    def clean(self):
+        cleaned_data = super().clean()
+        reg_close = cleaned_data.get('registration_close_datetime')
+        if reg_close and self.instance and self.instance.date:
+            if reg_close.date() >= self.instance.date:
+                self.add_error(
+                    'registration_close_datetime',
+                    'Дата закрытия регистрации должна быть раньше даты начала события.'
+                )
+        return cleaned_data
 
     class Meta:
         model = Event
@@ -157,6 +171,7 @@ class EventSettingsForm(forms.ModelForm):
             'routes_num',
             'is_published',
             'is_registration_open',
+            'registration_close_datetime',
             'is_results_allowed',
             'is_enter_result_allowed',
             'is_count_only_entered_results',
@@ -187,6 +202,7 @@ class EventSettingsForm(forms.ModelForm):
             'routes_num': 'Количество трасс',
             'is_published': 'Событие опубликовано',
             'is_registration_open': 'Регистрация на событие разрешена',
+            'registration_close_datetime': 'Дата и время автоматического закрытия регистрации',
             'is_results_allowed': 'Просмотр результатов разрешён',
             'is_enter_result_allowed': 'Ввод результатов разрешён',
             'is_count_only_entered_results': 'Учитывать только введённые результаты',
@@ -213,7 +229,11 @@ class EventSettingsForm(forms.ModelForm):
             'participant_min_age': 'Минимальный возраст участника',
             'reg_type_list': 'Список типов регистрации участников, через запятую',
         }
+        widgets = {
+            'registration_close_datetime': DateTimePickerInput(options={'format': 'MM/DD/YYYY HH:00', 'stepping': 60}),
+        }
         help_texts = {
+            'registration_close_datetime': 'Оставьте пустым для отмены автоматического закрытия регистрации',
             'group_list': 'Например: "Спорт, Любители, Новички"',
             'set_list': 'Например: "Утренний сет (8:00), Дневной сет (13:00), Вечерний сет (18:00)"',
             'reg_type_list': 'Например: "Стандарт, + Футболка, + Футболка и сувенир"',

@@ -152,6 +152,19 @@ docker compose -f docker-compose.prod.yml exec -T web python manage.py check_exp
    5 0 * * * cd ~/climbing_events && docker compose -f docker-compose.prod.yml exec -T web python manage.py check_expired > /dev/null 2>&1
    ```
 
+### 2. Автоматическое закрытие регистрации
+Для автоматической проверки даты/времени закрытия регистрации создана консольная команда:
+```bash
+docker compose -f docker-compose.prod.yml exec -T web python manage.py check_close_registration
+```
+
+Чтобы запускать эту проверку автоматически (например, каждый час):
+1. Откройте планировщик cron на сервере (`crontab -e`).
+2. Добавьте строку:
+   ```cron
+   1 * * * * cd ~/climbing_events && docker compose -f docker-compose.prod.yml exec -T web python manage.py check_close_registration > /dev/null 2>&1
+   ```
+
 ---
 
 ### Архитектурные заметки:
