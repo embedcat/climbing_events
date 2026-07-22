@@ -22,7 +22,7 @@
 Установите необходимые пакеты:
 ```bash
 sudo apt update
-sudo apt install docker.io docker-compose-plugin nginx certbot python3-certbot-nginx
+sudo apt install docker.io docker-compose nginx certbot python3-certbot-nginx
 ```
 
 ### 2. Настройка проекта
@@ -39,16 +39,17 @@ sudo apt install docker.io docker-compose-plugin nginx certbot python3-certbot-n
    ```
 
 ### 3. Настройка Nginx и SSL
-1. Создайте конфиг сайта `/etc/nginx/sites-available/climbing_events` на основе файла `nginx.host.conf`.
+1. Создайте конфиг сайта `/etc/nginx/sites-available/rockevents.ru` на основе файла `nginx.host.conf`.
 2. Активируйте конфиг и проверьте его:
    ```bash
-   sudo ln -s /etc/nginx/sites-available/climbing_events /etc/nginx/sites-enabled/
+   cp nginx.host.conf /etc/nginx/sites-available/rockevents.ru
+   sudo ln -s /etc/nginx/sites-available/rockevents.ru /etc/nginx/sites-enabled/
    sudo nginx -t
    sudo systemctl reload nginx
    ```
 3. Получите SSL-сертификат:
    ```bash
-   sudo certbot --nginx -d your-domain.com
+   sudo certbot --nginx
    ```
 
 ### 4. Запуск приложения
