@@ -578,3 +578,89 @@ class ProtocolAsyncTests(TransactionTestCase):
 
         for item in protocols:
             services.remove_file(f"{event.id}/{item['name']}")
+
+
+class MultiDayEventTests(TestCase):
+    def setUp(self):
+        self.superuser = CustomUser.objects.create_superuser(
+            id=1,
+            username='admin',
+            email='admin@example.com',
+            password='password123',
+            premium_price=100
+        )
+
+    def test_multi_day_event_creation(self):
+        start_date = date(2026, 10, 1)
+        end_date = date(2026, 10, 5)
+        event = services.create_event(
+            owner=self.superuser,
+            title="Multi Day Event",
+            date=start_date,
+            date_end=end_date
+        )
+        self.assertEqual(event.date, start_date)
+        self.assertEqual(event.date_end, end_date)
+        self.assertEqual(event.date_display, "1 — 5 октября 2026 г.")
+
+    def test_single_day_event_date_display(self):
+        start_date = date(2026, 10, 1)
+        event = services.create_event(owner=self.superuser, title="Single Day Event", date=start_date)
+        self.assertEqual(event.date_display, "1 октября 2026 г.")
+
+    def test_event_is_today_multi_day(self):
+        import datetime
+        from events.templatetags import events_tags
+        today = date.today()
+        yesterday = today - datetime.timedelta(days=1)
+        tomorrow = today + datetime.timedelta(days=1)
+
+        event = Event.objects.create(owner=self.superuser, title="Test Today", date=yesterday, date_end=tomorrow)
+        self.assertTrue(event.is_today)
+        self.assertTrue(events_tags.event_is_today(event))
+
+        expired_event = Event.objects.create(
+            owner=self.superuser,
+            title="Past Event",
+            date=today - datetime.timedelta(days=5),
+            date_end=today - datetime.timedelta(days=2)
+        )
+        self.assertFalse(expired_event.is_today)
+        self.assertFalse(events_tags.event_is_today(expired_event))
+
+    def test_create_event_form_validation(self):
+        from events.forms import CreateEventForm
+        form = CreateEventForm(data={
+            'title': 'Invalid Date Event',
+            'date': '10/10/2026',
+            'date_end': '10/05/2026'
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('date_end', form.errors)
+
+    def test_check_expired_command_with_date_end(self):
+        import datetime
+        from django.core.management import call_command
+        today = date.today()
+        # Event 1: past start date but date_end is in the future -> NOT expired
+        e1 = Event.objects.create(
+            owner=self.superuser,
+            title="Ongoing Event",
+            date=today - datetime.timedelta(days=3),
+            date_end=today + datetime.timedelta(days=2),
+            is_expired=False
+        )
+        # Event 2: date_end in the past -> EXPIRED
+        e2 = Event.objects.create(
+            owner=self.superuser,
+            title="Finished Multi-Day Event",
+            date=today - datetime.timedelta(days=5),
+            date_end=today - datetime.timedelta(days=1),
+            is_expired=False
+        )
+        call_command('check_expired')
+        e1.refresh_from_db()
+        e2.refresh_from_db()
+        self.assertFalse(e1.is_expired)
+        self.assertTrue(e2.is_expired)
+

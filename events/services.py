@@ -22,12 +22,13 @@ from events.models import ACCENT_REDPOINT, CustomUser, Event, PayDetail, PromoCo
 from events.models import ACCENT_NO, ACCENT_FLASH
 
 
-def create_event(owner: get_user_model(), title: str, date: datetime) -> Event:
+def create_event(owner: get_user_model(), title: str, date: datetime, date_end: datetime = None) -> Event:
     superuser = CustomUser.objects.get(id=1)
     event = Event.objects.create(
         owner=owner,
         title=title,
         date=date,
+        date_end=date_end,
         premium_price=superuser.premium_price,
     )
     create_event_routes(event=event)

@@ -13,7 +13,7 @@
     </div>
     <div class="col">
       <ul class="">
-        <li><strong>Дата: </strong>{{ event.date|date:'d E Y' }}</li>
+        <li><strong>Дата: </strong>{{ event.date_display }}</li>
         <li><strong>Скалодром: </strong>{{ event.gym }}</li>
         {% if event.group_num > 1 %}<li><strong>Группы: </strong>{{ event.group_list }}</li>{% endif %}
         {% if event.set_num > 1 %}<li><strong>Сеты: </strong>{{ event.set_list }}</li>{% endif %}

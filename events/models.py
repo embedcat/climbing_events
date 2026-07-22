@@ -203,6 +203,30 @@ class Event(models.Model):
     ]
     pay_type = models.CharField(max_length=20, choices=PAY_TYPE, default=PAY_TYPE_YOOMONEY)
 
+    @property
+    def date_display(self) -> str:
+        from django.utils.formats import date_format
+        if not self.date:
+            return ""
+        if self.date_end and self.date_end != self.date:
+            if self.date.year == self.date_end.year and self.date.month == self.date_end.month:
+                return f"{date_format(self.date, 'j')} — {date_format(self.date_end, 'j E Y г.')}"
+            elif self.date.year == self.date_end.year:
+                return f"{date_format(self.date, 'j E')} — {date_format(self.date_end, 'j E Y г.')}"
+            else:
+                return f"{date_format(self.date, 'j E Y г.')} — {date_format(self.date_end, 'j E Y г.')}"
+        return date_format(self.date, 'j E Y г.')
+
+    @property
+    def is_today(self) -> bool:
+        import datetime
+        today = datetime.date.today()
+        if not self.date:
+            return False
+        if self.date_end:
+            return self.date <= today <= self.date_end
+        return self.date == today
+
 
 class Participant(models.Model):
     first_name = models.CharField(max_length=32)

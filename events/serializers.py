@@ -20,6 +20,13 @@ class WalletSerializer(serializers.ModelSerializer):
 class EventSerializer(serializers.ModelSerializer):
     owner_details = UserSerializer(source='owner', read_only=True)
     
+    def validate(self, attrs):
+        date = attrs.get('date', getattr(self.instance, 'date', None))
+        date_end = attrs.get('date_end', getattr(self.instance, 'date_end', None))
+        if date and date_end and date_end < date:
+            raise serializers.ValidationError({'date_end': 'Дата окончания не может быть раньше даты начала.'})
+        return attrs
+
     class Meta:
         model = Event
         fields = '__all__'

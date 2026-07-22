@@ -30,7 +30,7 @@ def export_participants_to_start_list(event: Event):
     sheet.cell(row=1, column=1).value = event.gym
     sheet.cell(row=2, column=1).value = event.title
     sheet.merge_cells(start_row=3, start_column=6, end_row=3, end_column=8)
-    sheet.cell(row=3, column=6).value = event.date
+    sheet.cell(row=3, column=6).value = event.date_display
 
     group_list = services.get_group_list(event=event)
     reg_type_list = event.reg_type_list.split(',') if event.reg_type_num > 1 else []
@@ -69,7 +69,7 @@ def export_result(event: Event):
     sheet.cell(row=1, column=1).value = event.gym
     sheet.cell(row=2, column=1).value = event.title
     sheet.merge_cells(start_row=3, start_column=6, end_row=3, end_column=8)
-    sheet.cell(row=3, column=6).value = event.date
+    sheet.cell(row=3, column=6).value = event.date_display
 
     result = services.get_results(event=event, full_results=True)
     routes = event.route.all().order_by('number')

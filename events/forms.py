@@ -94,6 +94,17 @@ class AdminDescriptionForm(forms.ModelForm):
         self.fields['date'].input_formats = settings.INPUT_DATE_FORMATS
         self.fields['date'].widget.attrs['readonly'] = is_expired
         self.fields['date'].help_text = 'Событие уже состоялось, поменять дату нельзя' if is_expired else ''
+        self.fields['date_end'].input_formats = settings.INPUT_DATE_FORMATS
+        self.fields['date_end'].widget.attrs['readonly'] = is_expired
+        self.fields['date_end'].help_text = 'Событие уже состоялось, поменять дату нельзя' if is_expired else ''
+
+    def clean(self):
+        cleaned_data = super().clean()
+        date = cleaned_data.get('date')
+        date_end = cleaned_data.get('date_end')
+        if date and date_end and date_end < date:
+            self.add_error('date_end', 'Дата окончания не может быть раньше даты начала.')
+        return cleaned_data
 
     class Meta:
         model = Event
@@ -101,6 +112,7 @@ class AdminDescriptionForm(forms.ModelForm):
             'title',
             'gym',
             'date',
+            'date_end',
             'poster',
             'description',
             'short_description',
@@ -109,11 +121,13 @@ class AdminDescriptionForm(forms.ModelForm):
             'title': 'Название',
             'gym': 'Скалодром',
             'date': 'Дата (MM/DD/YYYY)',
+            'date_end': 'Дата окончания (MM/DD/YYYY)',
             'poster': 'Афиша',
             'short_description': 'Краткое описание',
         }
         widgets = {
             'date': DatePickerInput(),
+            'date_end': DatePickerInput(),
         }
 
 
@@ -431,19 +445,31 @@ class CreateEventForm(forms.ModelForm):
         self.helper.form_method = 'post'
         self.helper.add_input(Submit('submit', 'Создать'))
         self.fields['date'].input_formats = settings.INPUT_DATE_FORMATS
+        self.fields['date_end'].input_formats = settings.INPUT_DATE_FORMATS
+
+    def clean(self):
+        cleaned_data = super().clean()
+        date = cleaned_data.get('date')
+        date_end = cleaned_data.get('date_end')
+        if date and date_end and date_end < date:
+            self.add_error('date_end', 'Дата окончания не может быть раньше даты начала.')
+        return cleaned_data
 
     class Meta:
         model = Event
         fields = [
             'title',
             'date',
+            'date_end',
         ]
         labels = {
             'title': 'Название',
             'date': 'Дата (MM/DD/YYYY)',
+            'date_end': 'Дата окончания (MM/DD/YYYY)',
         }
         widgets = {
             'date': DatePickerInput(),
+            'date_end': DatePickerInput(),
         }
 
 

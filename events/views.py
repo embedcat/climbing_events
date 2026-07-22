@@ -216,6 +216,7 @@ class AdminDescriptionView(IsOwnerMixin, views.View):
             event.gym = cd['gym']
             event.title = cd['title']
             event.date = cd['date']
+            event.date_end = cd.get('date_end')
             event.description = cd['description']
             event.short_description = cd['short_description']
             event.save()
@@ -945,7 +946,8 @@ class CreateEventView(LoginRequiredMixin, views.View):
         form = CreateEventForm(request.POST)
         if form.is_valid():
             date = form.cleaned_data['date']
-            event = services.create_event(owner=request.user, title=form.cleaned_data['title'], date=date)
+            date_end = form.cleaned_data.get('date_end')
+            event = services.create_event(owner=request.user, title=form.cleaned_data['title'], date=date, date_end=date_end)
             return redirect('admin_description', event.id)
         else:
             return render(

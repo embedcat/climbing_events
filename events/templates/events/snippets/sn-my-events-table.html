@@ -35,7 +35,7 @@ id="dataTableProtocols" width="100%">
 {% if user.is_superuser %}
 <td>{{ event.owner }}</td>
 {% endif %}
-<td>{{ event.date }}</td>
+<td>{{ event.date_display }}</td>
 </tr>
 {% endfor %}
 </tbody>

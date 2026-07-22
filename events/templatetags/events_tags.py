@@ -29,5 +29,11 @@ def zip_lists(a, b):
 
 
 @register.filter
-def event_is_today(date):
-    return date == datetime.date.today()
+def event_is_today(val):
+    if hasattr(val, 'is_today'):
+        return val.is_today
+    if isinstance(val, (datetime.date, datetime.datetime)):
+        if isinstance(val, datetime.datetime):
+            val = val.date()
+        return val == datetime.date.today()
+    return False
