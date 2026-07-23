@@ -1062,3 +1062,14 @@ class PayDetailsView(views.View):
                           'event': event,
                           'pay_details': pay_details,
                       })
+
+
+class StatView(views.View):
+    @staticmethod
+    def get(request):
+        stats = services.get_platform_stats()
+        return render(
+            request=request,
+            template_name='events/stat.html',
+            context={'stats': stats}
+        )

@@ -18,6 +18,8 @@ urlpatterns = [
     path('api/', include(router.urls)),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/stat/', api_views.StatApiView.as_view(), name='api_stat'),
+    path('stat/', views.StatView.as_view(), name='stat'),
     path('', views.MainView.as_view(), name='main'),
     path('e/<int:event_id>/', views.EventView.as_view(), name='event'),
     path('e/<int:event_id>/admin_actions/', views.AdminActionsView.as_view(), name='admin_actions'),

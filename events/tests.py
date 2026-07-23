@@ -793,3 +793,58 @@ class MultiDayEventTests(TestCase):
         )
         self.assertTrue(form_valid.is_valid())
 
+
+class PlatformStatTests(TestCase):
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self.superuser = CustomUser.objects.create_superuser(
+            id=1,
+            username='admin',
+            email='admin@example.com',
+            password='password123',
+            premium_price=100
+        )
+        self.client = Client()
+
+    def test_get_platform_stats(self):
+        event = services.create_event(owner=self.superuser, title="Stat Event", date=date(2026, 10, 1))
+        event.gym = "Тестовый Скалодром"
+        event.is_published = True
+        event.save()
+
+        Participant.objects.create(
+            first_name="Иван",
+            last_name="Иванов",
+            event=event,
+            gender=Participant.GENDER_MALE,
+            city="Москва"
+        )
+
+        stats = services.get_platform_stats()
+        self.assertEqual(stats['total_events'], 1)
+        self.assertEqual(stats['published_events'], 1)
+        self.assertEqual(stats['total_participants'], 1)
+        self.assertEqual(stats['male_participants'], 1)
+        self.assertEqual(stats['female_participants'], 0)
+        self.assertEqual(stats['total_cities'], 1)
+        self.assertEqual(stats['total_gyms'], 1)
+
+    def test_stat_web_view(self):
+        url = reverse('stat')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Статистика платформы RockEvents")
+
+    def test_stat_api_view(self):
+        url = reverse('api_stat')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn('total_events', data)
+        self.assertIn('total_participants', data)
+        self.assertIn('top_gyms', data)
+        self.assertIn('top_cities', data)
+        self.assertIn('all_gyms', data)
+        self.assertIn('all_cities', data)
+

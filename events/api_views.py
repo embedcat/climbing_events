@@ -1,4 +1,5 @@
 from rest_framework import viewsets, permissions, status
+from rest_framework.views import APIView
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import Q
@@ -252,3 +253,11 @@ class PromoCodeViewSet(viewsets.ModelViewSet):
         if user.is_superuser:
             return PromoCode.objects.all()
         return PromoCode.objects.filter(event__owner=user)
+
+
+class StatApiView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, format=None):
+        stats = services.get_platform_stats()
+        return Response(stats, status=status.HTTP_200_OK)

@@ -11,6 +11,7 @@
 {% endif %}
 <hr>
 <a class="nav-link {% active_link 'help' type='workflow' %}" href="{% url 'help' type='workflow' %}">Инструкции</a>
+<a class="nav-link {% active_link 'stat' %}" href="{% url 'stat' %}">Статистика</a>
 <a class="nav-link {% active_link 'about' %}" href="{% url 'about' %}">О проекте</a>
 <hr>
 {% if user.is_superuser %}

@@ -1,0 +1,162 @@
+{% extends 'events/base.html' %}
+
+{% block title %}
+Статистика RockEvents
+{% endblock title %}
+
+{% block nav-staff %} {% include 'events/snippets/sn-nav-staff.html' %} {% endblock %}
+
+{% block container %}
+<div class="container-fluid py-3">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fa-solid fa-chart-line text-primary me-2"></i>Статистика платформы RockEvents</h2>
+    <span class="badge bg-secondary">Кэшируемые данные</span>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-4 col-xl-2.4">
+      <div class="card h-100 border-start border-primary border-4 shadow-sm">
+        <div class="card-body">
+          <div class="text-muted small fw-bold text-uppercase">Соревнования</div>
+          <div class="h2 mb-1 fw-bold text-primary">{{ stats.total_events }}</div>
+          <div class="small text-muted">
+            Опубликовано: <strong>{{ stats.published_events }}</strong><br>
+            Завершено: <strong>{{ stats.expired_events }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4 col-xl-2.4">
+      <div class="card h-100 border-start border-success border-4 shadow-sm">
+        <div class="card-body">
+          <div class="text-muted small fw-bold text-uppercase">Участники</div>
+          <div class="h2 mb-1 fw-bold text-success">{{ stats.total_participants }}</div>
+          <div class="small text-muted">
+            Мужчины: <strong>{{ stats.male_participants }}</strong><br>
+            Женщины: <strong>{{ stats.female_participants }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4 col-xl-2.4">
+      <div class="card h-100 border-start border-info border-4 shadow-sm">
+        <div class="card-body">
+          <div class="text-muted small fw-bold text-uppercase">Подготовлено трасс</div>
+          <div class="h2 mb-1 fw-bold text-info">{{ stats.total_routes }}</div>
+          <div class="small text-muted">Трасс в событиях</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-xl-2.4">
+      <div class="card h-100 border-start border-warning border-4 shadow-sm">
+        <div class="card-body">
+          <div class="text-muted small fw-bold text-uppercase">География городов</div>
+          <div class="h2 mb-1 fw-bold text-warning">{{ stats.total_cities }}</div>
+          <div class="small text-muted">Уникальных городов участников</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-xl-2.4">
+      <div class="card h-100 border-start border-danger border-4 shadow-sm">
+        <div class="card-body">
+          <div class="text-muted small fw-bold text-uppercase">Скалодромы</div>
+          <div class="h2 mb-1 fw-bold text-danger">{{ stats.total_gyms }}</div>
+          <div class="small text-muted">Площадок для соревнований</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <!-- All Cities -->
+    <div class="col-md-6">
+      <div class="card h-100 shadow-sm">
+        <div class="card-header bg-dark text-white fw-bold d-flex justify-content-between align-items-center">
+          <span><i class="fa-solid fa-city me-2"></i>Города участников</span>
+          <span class="badge bg-secondary">{{ stats.total_cities }}</span>
+        </div>
+        <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+          <ul class="list-group list-group-flush">
+            {% for item in stats.all_cities %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span><strong>{{ forloop.counter }}.</strong> {{ item.city }}</span>
+              <span class="badge bg-primary rounded-pill">{{ item.count }} участников</span>
+            </li>
+            {% empty %}
+            <li class="list-group-item text-muted">Нет данных</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- All Gyms -->
+    <div class="col-md-6">
+      <div class="card h-100 shadow-sm">
+        <div class="card-header bg-dark text-white fw-bold d-flex justify-content-between align-items-center">
+          <span><i class="fa-solid fa-location-dot me-2"></i>Скалодромы</span>
+          <span class="badge bg-secondary">{{ stats.total_gyms }}</span>
+        </div>
+        <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+          <ul class="list-group list-group-flush">
+            {% for item in stats.all_gyms %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span><strong>{{ forloop.counter }}.</strong> {{ item.gym }}</span>
+              <span class="badge bg-success rounded-pill">{{ item.count }} событий</span>
+            </li>
+            {% empty %}
+            <li class="list-group-item text-muted">Нет данных</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Events -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white fw-bold">
+          <i class="fa-solid fa-trophy me-2"></i>Топ-5 крупнейших соревнований
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 5%">#</th>
+                  <th>Название события</th>
+                  <th>Скалодром</th>
+                  <th>Дата</th>
+                  <th class="text-end">Участников</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for event in stats.top_events %}
+                <tr>
+                  <td><strong>{{ forloop.counter }}</strong></td>
+                  <td><a href="{% url 'event' event.id %}" class="fw-bold text-decoration-none">{{ event.title }}</a></td>
+                  <td>{{ event.gym }}</td>
+                  <td>{{ event.date|date:'d E Y' }}</td>
+                  <td class="text-end"><span class="badge bg-primary fs-6">{{ event.participants_count }}</span></td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="5" class="text-center text-muted py-3">Нет данных</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock container %}

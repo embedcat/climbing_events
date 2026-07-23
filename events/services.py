@@ -12,7 +12,8 @@ from events.xl_tools import save_virtual_workbook
 
 import segno
 from django.contrib.auth import get_user_model
-from django.db.models import QuerySet
+from django.core.cache import cache
+from django.db.models import QuerySet, Count
 from django.http import HttpResponse
 
 from config import settings
@@ -752,3 +753,70 @@ def save_pay_detail(event: Event, participant: Participant, promo_code: PromoCod
         operation_id=operation_id
     )
     return pd
+
+
+# ================================================
+# ================= Statistics ===================
+# ================================================
+
+def get_platform_stats() -> dict:
+    CACHE_KEY = 'platform_stats_data'
+    stats = cache.get(CACHE_KEY)
+    if stats is not None:
+        return stats
+
+    total_events = Event.objects.count()
+    published_events = Event.objects.filter(is_published=True).count()
+    expired_events = Event.objects.filter(is_expired=True).count()
+
+    total_participants = Participant.objects.count()
+    male_participants = Participant.objects.filter(gender=Participant.GENDER_MALE).count()
+    female_participants = Participant.objects.filter(gender=Participant.GENDER_FEMALE).count()
+
+    total_routes = Route.objects.count()
+
+    cities_qs = Participant.objects.exclude(city__isnull=True).exclude(city__exact='').values('city').distinct()
+    total_cities = cities_qs.count()
+
+    gyms_qs = Event.objects.exclude(gym__isnull=True).exclude(gym__exact='').values('gym').distinct()
+    total_gyms = gyms_qs.count()
+
+    all_gyms = list(
+        Event.objects.exclude(gym__isnull=True).exclude(gym__exact='')
+        .values('gym')
+        .annotate(count=Count('id'))
+        .order_by('-count', 'gym')
+    )
+
+    all_cities = list(
+        Participant.objects.exclude(city__isnull=True).exclude(city__exact='')
+        .values('city')
+        .annotate(count=Count('id'))
+        .order_by('-count', 'city')
+    )
+
+    top_events = list(
+        Event.objects.annotate(participants_count=Count('participant'))
+        .order_by('-participants_count')
+        .values('id', 'title', 'date', 'gym', 'participants_count')[:5]
+    )
+
+    stats = {
+        'total_events': total_events,
+        'published_events': published_events,
+        'expired_events': expired_events,
+        'total_participants': total_participants,
+        'male_participants': male_participants,
+        'female_participants': female_participants,
+        'total_routes': total_routes,
+        'total_cities': total_cities,
+        'total_gyms': total_gyms,
+        'all_cities': all_cities,
+        'all_gyms': all_gyms,
+        'top_cities': all_cities[:5],
+        'top_gyms': all_gyms[:5],
+        'top_events': top_events,
+    }
+
+    cache.set(CACHE_KEY, stats, timeout=3600)
+    return stats
