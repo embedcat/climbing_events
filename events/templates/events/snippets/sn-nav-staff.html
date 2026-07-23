@@ -10,9 +10,9 @@
 <a class="nav-link {% active_link 'account_signup' strict=True %}" href="{% url 'account_signup' %}">Регистрация</a>
 {% endif %}
 <hr>
-<a class="nav-link {% active_link 'help' type='workflow' %}" href="{% url 'help' type='workflow' %}">Инструкции</a>
-<a class="nav-link {% active_link 'stat' %}" href="{% url 'stat' %}">Статистика</a>
-<a class="nav-link {% active_link 'about' %}" href="{% url 'about' %}">О проекте</a>
+<a class="nav-link {% active_link 'help' type='workflow' strict=True %}" href="{% url 'help' type='workflow' %}">Инструкции</a>
+<a class="nav-link {% active_link 'stat' strict=True %}" href="{% url 'stat' %}">Статистика</a>
+<a class="nav-link {% active_link 'about' strict=True %}" href="{% url 'about' %}">О проекте</a>
 <hr>
 {% if user.is_superuser %}
 <a class="nav-link" href="/dja">dj-admin</a>
