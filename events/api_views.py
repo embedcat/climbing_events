@@ -182,7 +182,10 @@ class ParticipantViewSet(viewsets.ModelViewSet):
         event = participant.event
 
         pin = request.data.get('pin')
-        if pin is None or int(pin) != participant.pin:
+        try:
+            if pin is None or int(pin) != participant.pin:
+                return Response({"error": "Invalid PIN code"}, status=status.HTTP_400_BAD_REQUEST)
+        except (ValueError, TypeError):
             return Response({"error": "Invalid PIN code"}, status=status.HTTP_400_BAD_REQUEST)
 
         accents = request.data.get('accents')
@@ -224,6 +227,8 @@ class RouteViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         event = serializer.validated_data.get('event')
+        if not event:
+            raise serializers.ValidationError({"event": "Event is required."})
         user = self.request.user
         if not user.is_superuser and event.owner != user:
             raise permissions.exceptions.PermissionDenied("You are not the owner of this event.")

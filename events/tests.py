@@ -848,3 +848,40 @@ class PlatformStatTests(TestCase):
         self.assertIn('all_gyms', data)
         self.assertIn('all_cities', data)
 
+
+class ApiPatchAndValidationTests(ClimbingEventsBaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.event = services.create_event(owner=self.superuser, title="Test Event", date=date(2026, 10, 1))
+        self.participant = Participant.objects.create(
+            first_name="Иван",
+            last_name="Петров",
+            gender=Participant.GENDER_MALE,
+            birth_year=1995,
+            city="тула",
+            team="Скалолаз",
+            event=self.event,
+            pin=1234,
+            set_index=0
+        )
+        self.client.force_login(self.superuser)
+
+    def test_participant_patch_partial_city_update(self):
+        url = f"/api/participants/{self.participant.id}/"
+        response = self.client.patch(url, data={"city": "Москва"}, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.participant.refresh_from_db()
+        self.assertEqual(self.participant.city, "Москва")
+        self.assertEqual(self.participant.first_name, "Иван")
+
+    def test_participant_patch_empty_team_and_city(self):
+        url = f"/api/participants/{self.participant.id}/"
+        response = self.client.patch(url, data={"team": "", "city": ""}, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+
+    def test_enter_results_invalid_pin(self):
+        url = f"/api/participants/{self.participant.id}/enter_results/"
+        response = self.client.post(url, data={"pin": "invalid_pin", "accents": {}}, content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
+

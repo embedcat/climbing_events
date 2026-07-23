@@ -24,13 +24,14 @@ from events.models import ACCENT_NO, ACCENT_FLASH
 
 
 def create_event(owner: get_user_model(), title: str, date: datetime, date_end: datetime = None) -> Event:
-    superuser = CustomUser.objects.get(id=1)
+    superuser = CustomUser.objects.filter(is_superuser=True).first() or CustomUser.objects.filter(id=1).first()
+    premium_price = superuser.premium_price if superuser else 0
     event = Event.objects.create(
         owner=owner,
         title=title,
         date=date,
         date_end=date_end,
-        premium_price=superuser.premium_price,
+        premium_price=premium_price,
     )
     create_event_routes(event=event)
     return event
@@ -226,23 +227,36 @@ def get_registration_required_fields(event: Event) -> list:
 
 def update_participant(event: Event, participant: Participant, cd: dict) -> Participant:
     current_group_index = participant.group_index
-    new_group_index = get_group_list(event=event).index(cd['group_index']) if 'group_index' in cd else 0
+    new_group_index = get_group_list(event=event).index(cd['group_index']) if 'group_index' in cd else participant.group_index
     need_update_results = 'group_index' in cd and current_group_index != new_group_index
 
     participant.event = event
-    participant.first_name = cd['first_name']
-    participant.last_name = cd['last_name']
-    participant.gender = cd[Event.FIELD_GENDER] if Event.FIELD_GENDER in cd else Participant.GENDER_MALE
-    participant.birth_year = cd[Event.FIELD_BIRTH_YEAR] if Event.FIELD_BIRTH_YEAR in cd else 0
-    participant.city = cd[Event.FIELD_CITY] if Event.FIELD_CITY in cd else ''
-    participant.team = cd[Event.FIELD_TEAM] if Event.FIELD_TEAM in cd else ''
-    participant.grade = cd[Event.FIELD_GRADE] if Event.FIELD_GRADE in cd else Participant.GRADE_BR
-    participant.group_index = new_group_index
-    participant.set_index = get_set_list(event=event).index(cd['set_index']) if 'set_index' in cd else 0
-    participant.paid = cd['paid'] if 'paid' in cd else False
-    participant.email = cd['email'] if 'email' in cd else ''
-    participant.reg_type_index = cd['reg_type_index'] if 'reg_type_index' in cd else 0
-    participant.phone_number = cd['phone_number'] if 'phone_number' in cd else ''
+    if 'first_name' in cd:
+        participant.first_name = cd['first_name']
+    if 'last_name' in cd:
+        participant.last_name = cd['last_name']
+    if Event.FIELD_GENDER in cd:
+        participant.gender = cd[Event.FIELD_GENDER]
+    if Event.FIELD_BIRTH_YEAR in cd:
+        participant.birth_year = cd[Event.FIELD_BIRTH_YEAR]
+    if Event.FIELD_CITY in cd:
+        participant.city = cd[Event.FIELD_CITY]
+    if Event.FIELD_TEAM in cd:
+        participant.team = cd[Event.FIELD_TEAM]
+    if Event.FIELD_GRADE in cd:
+        participant.grade = cd[Event.FIELD_GRADE]
+    if 'group_index' in cd:
+        participant.group_index = new_group_index
+    if 'set_index' in cd:
+        participant.set_index = get_set_list(event=event).index(cd['set_index']) if isinstance(cd['set_index'], int) else get_set_list(event=event).index(cd['set_index'])
+    if 'paid' in cd:
+        participant.paid = cd['paid']
+    if 'email' in cd:
+        participant.email = cd['email']
+    if 'reg_type_index' in cd:
+        participant.reg_type_index = cd['reg_type_index']
+    if 'phone_number' in cd:
+        participant.phone_number = cd['phone_number']
     participant.save()
 
     if need_update_results:
@@ -293,24 +307,48 @@ def _create_participant(event: Event, first_name: str, last_name: str,
 
 
 def register_participant(event: Event, cd: dict) -> Participant:
-    if event.participant.filter(first_name=cd['first_name'], last_name=cd['last_name']):
+    first_name = cd.get('first_name', '')
+    last_name = cd.get('last_name', '')
+    if not first_name or not last_name:
+        raise ValueError("First name and last name are required.")
+
+    if event.participant.filter(first_name=first_name, last_name=last_name).exists():
         raise DuplicateParticipantError
-    if event.participant_min_age and datetime.today().year - cd[Event.FIELD_BIRTH_YEAR] < event.participant_min_age:
-        raise ParticipantTooYoungError(event.participant_min_age)
+
+    birth_year = cd.get(Event.FIELD_BIRTH_YEAR, 0)
+    if event.participant_min_age and birth_year:
+        if datetime.today().year - int(birth_year) < event.participant_min_age:
+            raise ParticipantTooYoungError(event.participant_min_age)
+
+    groups = get_group_list(event=event)
+    sets = get_set_list(event=event)
+
+    group_val = cd.get('group_index', 0)
+    if isinstance(group_val, int):
+        group_idx = group_val if 0 <= group_val < len(groups) else 0
+    else:
+        group_idx = groups.index(group_val) if group_val in groups else 0
+
+    set_val = cd.get('set_index', 0)
+    if isinstance(set_val, int):
+        set_idx = set_val if 0 <= set_val < len(sets) else 0
+    else:
+        set_idx = sets.index(set_val) if set_val in sets else 0
+
     participant = _create_participant(
         event=event,
-        first_name=cd['first_name'],
-        last_name=cd['last_name'],
-        gender=cd[Event.FIELD_GENDER] if Event.FIELD_GENDER in cd else Participant.GENDER_MALE,
-        birth_year=cd[Event.FIELD_BIRTH_YEAR] if Event.FIELD_BIRTH_YEAR in cd else 0,
-        city=cd[Event.FIELD_CITY] if Event.FIELD_CITY in cd else '',
-        team=cd[Event.FIELD_TEAM] if Event.FIELD_TEAM in cd else '',
-        grade=cd[Event.FIELD_GRADE] if Event.FIELD_GRADE in cd else Participant.GRADE_BR,
-        group_index=get_group_list(event=event).index(cd['group_index']) if 'group_index' in cd else 0,
-        set_index=get_set_list(event=event).index(cd['set_index']) if 'set_index' in cd else 0,
-        email=cd[Event.FIELD_EMAIL] if Event.FIELD_EMAIL in cd else '',
-        reg_type_index=cd['reg_type_index'] if 'reg_type_index' in cd else 0,
-        phone_number = cd['phone_number'] if 'phone_number' in cd else '',
+        first_name=first_name,
+        last_name=last_name,
+        gender=cd.get(Event.FIELD_GENDER, Participant.GENDER_MALE),
+        birth_year=birth_year or 0,
+        city=cd.get(Event.FIELD_CITY, ''),
+        team=cd.get(Event.FIELD_TEAM, ''),
+        grade=cd.get(Event.FIELD_GRADE, Participant.GRADE_BR),
+        group_index=group_idx,
+        set_index=set_idx,
+        email=cd.get(Event.FIELD_EMAIL, ''),
+        reg_type_index=cd.get('reg_type_index', 0),
+        phone_number=cd.get('phone_number', ''),
     )
     _check_participants_number_to_close_registration(event=event)
     return participant

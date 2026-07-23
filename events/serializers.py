@@ -34,6 +34,9 @@ class EventSerializer(serializers.ModelSerializer):
 
 
 class ParticipantSerializer(serializers.ModelSerializer):
+    city = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    team = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
     class Meta:
         model = Participant
         fields = '__all__'
