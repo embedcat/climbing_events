@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, date
 from django.test import TestCase, TransactionTestCase, Client
 from django.contrib.auth import get_user_model
@@ -885,3 +886,126 @@ class ApiPatchAndValidationTests(ClimbingEventsBaseTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("error", response.json())
 
+
+
+class RoutesNumChangeTests(ClimbingEventsBaseTestCase):
+    """Изменение количества трасс в настройках события и отображение их в формах ввода."""
+
+    ROUTES_NUM = 15
+
+    def setUp(self):
+        super().setUp()
+        self.event = services.create_event(owner=self.superuser, title="Routes Num Event", date=date(2026, 10, 1))
+        self.event.is_published = True
+        self.event.is_enter_result_allowed = True
+        self.event.save()
+        self.participant = Participant.objects.create(
+            first_name='Иван',
+            last_name='Иванов',
+            gender=Participant.GENDER_MALE,
+            birth_year=1995,
+            event=self.event,
+            pin=1234,
+            set_index=0,
+        )
+
+    def _settings_post_data(self, routes_num):
+        return {
+            'routes_num': routes_num,
+            'is_published': True,
+            'is_registration_open': True,
+            'registration_close_datetime': '',
+            'is_results_allowed': True,
+            'is_enter_result_allowed': True,
+            'is_count_only_entered_results': True,
+            'is_view_full_results': True,
+            'is_view_route_color': False,
+            'is_view_route_grade': False,
+            'is_view_route_score': True,
+            'is_separate_score_by_groups': True,
+            'is_without_registration': False,
+            'is_view_pin_after_registration': True,
+            'is_check_result_before_enter': False,
+            'is_update_result_allowed': True,
+            'score_type': Event.SCORE_SIMPLE_SUM,
+            'redpoint_points': 80,
+            'flash_points_pc': 25,
+            'count_routes_num': 0,
+            'group_num': 1,
+            'group_list': 'Общая группа',
+            'set_num': 1,
+            'set_list': 'Общий сет',
+            'set_max_participants': 0,
+            'registration_fields': [],
+            'required_fields': [],
+            'participant_min_age': 0,
+            'reg_type_list': '',
+        }
+
+    def _save_routes_num_via_settings_page(self, routes_num, **overrides):
+        data = self._settings_post_data(routes_num)
+        data.update(overrides)
+        self.client.force_login(self.superuser)
+        response = self.client.post(reverse('admin_settings', args=[self.event.id]), data=data)
+        self.assertEqual(response.status_code, 302)
+        self.event.refresh_from_db()
+
+    def test_routes_created_after_routes_num_increased_via_settings_page(self):
+        self._save_routes_num_via_settings_page(self.ROUTES_NUM)
+        self.assertEqual(self.event.routes_num, self.ROUTES_NUM)
+        self.assertEqual(Route.objects.filter(event=self.event).count(), self.ROUTES_NUM)
+
+    def test_routes_recreated_after_routes_num_decreased_via_settings_page(self):
+        self._save_routes_num_via_settings_page(5)
+        self.assertEqual(self.event.routes_num, 5)
+        self.assertEqual(Route.objects.filter(event=self.event).count(), 5)
+        self.assertEqual(
+            list(Route.objects.filter(event=self.event).order_by('number').values_list('number', flat=True)),
+            [1, 2, 3, 4, 5])
+
+    def test_enter_results_form_shows_all_routes(self):
+        self._save_routes_num_via_settings_page(self.ROUTES_NUM)
+        self.client.logout()
+        response = self.client.get(reverse('enter_results', args=[self.event.id]))
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        self.assertEqual(response.context['formset'].total_form_count(), self.ROUTES_NUM)
+        rendered = {int(i) for i in re.findall(r'accents-(\d+)-', html)}
+        self.assertEqual(len(rendered), self.ROUTES_NUM,
+                         f'В форме ввода результатов отрисовано {len(rendered)} трасс вместо {self.ROUTES_NUM}')
+
+    def test_participant_routes_form_shows_all_routes(self):
+        self._save_routes_num_via_settings_page(self.ROUTES_NUM)
+        response = self.client.get(reverse('participant_routes', args=[self.event.id, self.participant.id]))
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        self.assertEqual(response.context['formset'].total_form_count(), self.ROUTES_NUM)
+        rendered = {int(i) for i in re.findall(r'accents-(\d+)-', html)}
+        self.assertEqual(len(rendered), self.ROUTES_NUM,
+                         f'В форме редактирования результатов отрисовано {len(rendered)} трасс '
+                         f'вместо {self.ROUTES_NUM}')
+
+    def test_enter_wo_reg_form_shows_all_routes(self):
+        self._save_routes_num_via_settings_page(self.ROUTES_NUM, is_without_registration=True)
+        self.client.logout()
+        response = self.client.get(reverse('enter_wo_reg', args=[self.event.id]))
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        rendered = {int(i) for i in re.findall(r'accents-(\d+)-', html)}
+        self.assertEqual(len(rendered), self.ROUTES_NUM,
+                         f'В форме ввода без регистрации отрисовано {len(rendered)} трасс вместо {self.ROUTES_NUM}')
+
+    def test_score_type_change_via_settings_page_updates_results(self):
+        # флэш на всех трассах: SUM даёт 1.0 * 1.25 * 80 = 100 за трассу, NUM даёт 100 + 1 = 101
+        services.enter_results(event=self.event, participant=self.participant,
+                               accents={str(i): {'top': 1, 'zone': 1} for i in range(self.event.routes_num)})
+        self.participant.refresh_from_db()
+        self.assertEqual(self.participant.score, 100 * self.event.routes_num)
+
+        data = self._settings_post_data(self.event.routes_num)
+        data['score_type'] = Event.SCORE_NUM_ACCENTS
+        self.client.force_login(self.superuser)
+        response = self.client.post(reverse('admin_settings', args=[self.event.id]), data=data)
+        self.assertEqual(response.status_code, 302)
+        self.participant.refresh_from_db()
+        self.assertEqual(self.participant.score, 101 * self.event.routes_num)

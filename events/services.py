@@ -95,11 +95,13 @@ def clear_results(event: Event) -> None:
 # ================================================
 
 def update_event_settings(event: Event, cd: dict) -> None:
-    old_routes_num = event.routes_num
-    need_update_results = event.score_type != cd['score_type'] or \
-        event.redpoint_points != cd['redpoint_points'] or \
-        event.flash_points_pc != cd['flash_points_pc'] or \
-        event.count_routes_num != cd['count_routes_num']
+    # read previous values from DB: a bound ModelForm has already written cleaned_data into event
+    stored = Event.objects.get(pk=event.pk)
+    old_routes_num = stored.routes_num
+    need_update_results = stored.score_type != cd['score_type'] or \
+        stored.redpoint_points != cd['redpoint_points'] or \
+        stored.flash_points_pc != cd['flash_points_pc'] or \
+        stored.count_routes_num != cd['count_routes_num']
 
     event.routes_num = cd['routes_num']
     event.is_published = cd['is_published']
