@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.db.utils import IntegrityError
 from events.models import CustomUser, Event, Participant, Route, Wallet, PromoCode, PayDetail
+from events.models import ACCENT_FLASH, ACCENT_REDPOINT
 from events import services
 from events.forms import ParticipantRegistrationForm, CreateEventForm
 from events.exceptions import DuplicateParticipantError, ParticipantTooYoungError
@@ -579,6 +580,155 @@ class ProtocolAsyncTests(TransactionTestCase):
 
         for item in protocols:
             services.remove_file(f"{event.id}/{item['name']}")
+
+
+class ParticipantResultsEditTests(ClimbingEventsBaseTestCase):
+    """Редактирование результатов участника администратором события."""
+
+    def setUp(self):
+        super().setUp()
+        self.event = services.create_event(owner=self.superuser, title="Edit Event", date=date(2026, 10, 1))
+        self.event.is_published = True
+        self.event.save()
+        self.participant = Participant.objects.create(
+            first_name='Иван',
+            last_name='Иванов',
+            gender=Participant.GENDER_MALE,
+            birth_year=1995,
+            event=self.event,
+            pin=1234,
+            set_index=0,
+        )
+        self.client.force_login(self.superuser)
+        self.url = reverse('participant_routes', args=[self.event.id, self.participant.id])
+
+    @staticmethod
+    def _checked_radios(html):
+        """Значения отмеченных радиокнопок по номеру трассы — то, что реально отправит браузер."""
+        checked = {}
+        for tag in re.findall(r'<input type="radio"[^>]*>', html):
+            if 'checked' not in tag:
+                continue
+            name = re.search(r'name="(accents-\d+-top)"', tag)
+            value = re.search(r'value="(\d+)"', tag)
+            if name and value:
+                checked[name.group(1)] = value.group(1)
+        return checked
+
+    def _management_form(self, html):
+        return dict(re.findall(r'name="(accents-(?:TOTAL|INITIAL|MIN_NUM|MAX_NUM)_FORMS)"[^>]*value="(\d+)"', html))
+
+    def test_every_route_is_preselected_after_results_cleared(self):
+        # clear_results вызывается при смене количества трасс в настройках
+        services.clear_results(event=self.event)
+        self.participant.refresh_from_db()
+        self.assertEqual(self.participant.french_accents, {})
+
+        html = self.client.get(self.url).content.decode()
+        self.assertEqual(len(self._checked_radios(html)), self.event.routes_num,
+                         'На форме редактирования отмечен результат не на каждой трассе')
+
+    def test_edit_results_saved_after_results_cleared(self):
+        services.clear_results(event=self.event)
+        html = self.client.get(self.url).content.decode()
+
+        # отправляем то же, что отправил бы браузер: все предвыбранные значения плюс правки админа
+        data = self._management_form(html)
+        data.update(self._checked_radios(html))
+        data['accents-0-top'] = ACCENT_REDPOINT
+        data['accents-1-top'] = ACCENT_FLASH
+
+        response = self.client.post(self.url, data=data)
+        self.assertEqual(response.status_code, 302)
+        self.participant.refresh_from_db()
+        self.assertTrue(self.participant.is_entered_result)
+        self.assertEqual(self.participant.french_accents['0'], {'top': 2, 'zone': 2})
+        self.assertEqual(self.participant.french_accents['1'], {'top': 1, 'zone': 1})
+        self.assertEqual(self.participant.french_accents['2'], {'top': 0, 'zone': 0})
+
+    def test_edit_results_with_blank_fields_in_french_system(self):
+        self.event.score_type = Event.SCORE_FRENCH
+        self.event.save()
+        html = self.client.get(self.url).content.decode()
+
+        data = self._management_form(html)
+        for i in range(self.event.routes_num):
+            # незаполненные поля приходят пустыми строками, а не нулями
+            data[f'accents-{i}-top'] = '1' if i == 0 else ''
+            data[f'accents-{i}-zone'] = '1' if i == 0 else ''
+
+        response = self.client.post(self.url, data=data)
+        self.assertEqual(response.status_code, 302)
+        self.participant.refresh_from_db()
+        self.assertEqual(self.participant.french_accents['0'], {'top': 1, 'zone': 1})
+        self.assertEqual(self.participant.french_accents['1'], {'top': 0, 'zone': 0})
+
+    def test_invalid_formset_reports_error_instead_of_silent_noop(self):
+        html = self.client.get(self.url).content.decode()
+        data = self._management_form(html)
+        data['accents-0-top'] = ACCENT_REDPOINT  # результат указан только на одной трассе
+
+        response = self.client.post(self.url, data=data)
+        self.assertEqual(response.status_code, 200)
+        self.participant.refresh_from_db()
+        self.assertFalse(self.participant.is_entered_result)
+        self.assertContains(response, 'Результат не сохранён')
+
+
+class XlTemplateTests(ClimbingEventsBaseTestCase):
+    """Шаблоны протоколов лежат в static-исходниках приложения и должны находиться без collectstatic."""
+
+    XLSX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+
+    def setUp(self):
+        super().setUp()
+        self.event = services.create_event(owner=self.superuser, title="XL Event", date=date(2026, 10, 1))
+        Participant.objects.create(
+            first_name='Иван',
+            last_name='Иванов',
+            gender=Participant.GENDER_MALE,
+            birth_year=1995,
+            event=self.event,
+            pin=1234,
+            set_index=0,
+        )
+        self.client.force_login(self.superuser)
+
+    def test_load_template_finds_all_xl_templates(self):
+        from events import xl_tools
+        for name in ('result_template.xlsx', 'startlist_template.xlsx', 'results_example.xlsx'):
+            self.assertIsNotNone(xl_tools.load_template(f'events/xl_templates/{name}'))
+
+    def test_load_template_raises_on_unknown_name(self):
+        from events import xl_tools
+        with self.assertRaises(FileNotFoundError):
+            xl_tools.load_template('events/xl_templates/no_such_template.xlsx')
+
+    def test_export_result_creates_protocol_file(self):
+        from events import xl_tools
+        xl_tools.export_result(event=self.event)
+        protocols = services.get_list_of_protocols(self.event)
+        self.assertEqual(len(protocols), 1)
+        self.assertTrue(protocols[0]['name'].startswith('results_'))
+        self.assertTrue(protocols[0]['name'].endswith('.xlsx'))
+        for item in protocols:
+            services.remove_file(f"{self.event.id}/{item['name']}")
+
+    def test_export_startlist_response(self):
+        response = self.client.post(reverse('admin_protocols', args=[self.event.id]),
+                                    data={'export_startlist': ''})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], self.XLSX_CONTENT_TYPE)
+        self.assertGreater(len(response.content), 0)
+
+    def test_export_result_example_response_for_non_premium_event(self):
+        self.event.is_premium = False
+        self.event.save()
+        response = self.client.post(reverse('admin_protocols', args=[self.event.id]),
+                                    data={'export_result': ''})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], self.XLSX_CONTENT_TYPE)
+        self.assertGreater(len(response.content), 0)
 
 
 class MultiDayEventTests(TestCase):

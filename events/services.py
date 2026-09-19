@@ -7,7 +7,6 @@ import string
 from datetime import datetime
 from typing import Iterable
 import dacite
-from openpyxl import load_workbook
 from events.xl_tools import save_virtual_workbook
 
 import segno
@@ -395,7 +394,7 @@ def form_data_to_results(form_cleaned_data: list) -> dict:
     '''
     results = {}
     for i, result in enumerate(form_cleaned_data):
-        accent = Accent(top=int(result.get('top', 0)), zone=int(result.get('zone', 0)))
+        accent = Accent(top=int(result.get('top') or 0), zone=int(result.get('zone') or 0))
         if accent.top and accent.zone == 0:
             accent.zone = accent.top
         results.update({i: asdict(accent)})
@@ -509,7 +508,7 @@ def get_form_initial_results(event: Event, participant: Participant) -> list:
                 accent = ACCENT_NO if result == 0 else (ACCENT_FLASH if result == 1 else ACCENT_REDPOINT)
                 initial.append({'top': accent,})
         else:
-            initial = [{'label': i, 'accent': participant.accents.get(
+            initial = [{'top': participant.accents.get(
                 str(i), ACCENT_NO)} for i in range(event.routes_num)]
     return initial
 
@@ -661,7 +660,7 @@ def get_result_response(event: Event) -> HttpResponse:
 
 
 def get_result_example_response(event: Event) -> HttpResponse:
-    book = load_workbook(filename='static/events/xl_templates/results_example.xlsx')
+    book = xl_tools.load_template('events/xl_templates/results_example.xlsx')
     content = save_virtual_workbook(book)
     response = HttpResponse(content=content,
                             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')

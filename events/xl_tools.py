@@ -11,21 +11,24 @@ def save_virtual_workbook(workbook):
     virtual_workbook.seek(0)
     return virtual_workbook.read()
 
+from django.contrib.staticfiles import finders
+
 from config import settings
 from events import services
 from events.models import Event, Participant
 
 
-def load_template(filename: str) -> Workbook or None:
-    try:
-        return load_workbook(filename=filename)
-    except FileNotFoundError:
-        return None
+def load_template(filename: str) -> Workbook:
+    # resolve through staticfiles finders: STATIC_ROOT is only filled by collectstatic (prod)
+    path = finders.find(filename)
+    if path is None:
+        raise FileNotFoundError(f'xl template not found in static files: {filename}')
+    return load_workbook(filename=path)
 
 
 def export_participants_to_start_list(event: Event):
     ROW_OFFSET = 8
-    book = load_workbook(filename='static/events/xl_templates/startlist_template.xlsx')
+    book = load_template('events/xl_templates/startlist_template.xlsx')
     sheet = book.active
     sheet.cell(row=1, column=1).value = event.gym
     sheet.cell(row=2, column=1).value = event.title
@@ -64,7 +67,7 @@ def export_participants_to_start_list(event: Event):
 def export_result(event: Event):
     ROW_OFFSET = 9
     HEADS_ROW = 8
-    book = load_workbook(filename='static/events/xl_templates/result_template.xlsx')
+    book = load_template('events/xl_templates/result_template.xlsx')
     sheet = book.active
     sheet.cell(row=1, column=1).value = event.gym
     sheet.cell(row=2, column=1).value = event.title
