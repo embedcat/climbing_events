@@ -42,7 +42,7 @@ class ParticipantSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = [
             'pin', 'score', 'place', 'is_entered_result', 
-            'accents', 'french_accents', 'french_score', 'scores', 'counted_routes'
+            'french_accents', 'french_score', 'scores', 'counted_routes'
         ]
 
 

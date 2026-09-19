@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.db.utils import IntegrityError
 from events.models import CustomUser, Event, Participant, Route, Wallet, PromoCode, PayDetail
-from events.models import ACCENT_FLASH, ACCENT_REDPOINT
+from events.models import ACCENT_NO, ACCENT_FLASH, ACCENT_REDPOINT
 from events import services
 from events.forms import ParticipantRegistrationForm, CreateEventForm
 from events.exceptions import DuplicateParticipantError, ParticipantTooYoungError
@@ -582,6 +582,34 @@ class ProtocolAsyncTests(TransactionTestCase):
             services.remove_file(f"{event.id}/{item['name']}")
 
 
+class LegacyAccentsConversionTests(TestCase):
+    """Конвертация устаревшего Participant.accents в french_accents (миграция 0033).
+
+    Само поле accents удалено в 0034, поэтому проверяем функцию преобразования: на
+    восстановленной из старого бэкапа базе 0033 отработает до 0034 и данные перенесёт.
+    """
+
+    @staticmethod
+    def _convert(accents):
+        import importlib
+        migration = importlib.import_module('events.migrations.0033_backfill_french_accents')
+        return migration.convert_legacy_accents(accents)
+
+    def test_accent_codes_converted_to_top_and_zone(self):
+        self.assertEqual(self._convert({'0': '2', '1': '1', '2': '0'}), {
+            '0': {'top': 2, 'zone': 2},
+            '1': {'top': 1, 'zone': 1},
+            '2': {'top': 0, 'zone': 0},
+        })
+
+    def test_empty_input_gives_empty_result(self):
+        self.assertEqual(self._convert(None), {})
+        self.assertEqual(self._convert({}), {})
+
+    def test_broken_values_are_skipped_not_raised(self):
+        self.assertEqual(self._convert({'0': 'RP', '1': '2', '2': None}), {'1': {'top': 2, 'zone': 2}})
+
+
 class ParticipantResultsEditTests(ClimbingEventsBaseTestCase):
     """Редактирование результатов участника администратором события."""
 
@@ -662,6 +690,13 @@ class ParticipantResultsEditTests(ClimbingEventsBaseTestCase):
         self.participant.refresh_from_db()
         self.assertEqual(self.participant.french_accents['0'], {'top': 1, 'zone': 1})
         self.assertEqual(self.participant.french_accents['1'], {'top': 0, 'zone': 0})
+
+    def test_stored_results_reflected_in_form_initial(self):
+        services.enter_results(event=self.event, participant=self.participant,
+                               accents={'0': {'top': 2, 'zone': 2}, '1': {'top': 1, 'zone': 1}})
+        self.participant.refresh_from_db()
+        initial = services.get_form_initial_results(event=self.event, participant=self.participant)
+        self.assertEqual(initial[:3], [{'top': ACCENT_REDPOINT}, {'top': ACCENT_FLASH}, {'top': ACCENT_NO}])
 
     def test_invalid_formset_reports_error_instead_of_silent_noop(self):
         html = self.client.get(self.url).content.decode()

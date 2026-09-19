@@ -357,7 +357,6 @@ def register_participant(event: Event, cd: dict) -> Participant:
 
 def _clear_participant_score(participant: Participant) -> None:
     participant.score = 0
-    participant.accents = {}
     participant.french_accents = {}
     participant.is_entered_result = False
     participant.save()
@@ -497,19 +496,16 @@ def _update_results(event: Event, gender: Participant.GENDERS, group_index: int)
 
 def get_form_initial_results(event: Event, participant: Participant) -> list:
     initial = []
+    french_accents = participant.french_accents or {}
     if event.score_type == Event.SCORE_FRENCH:
         for i in range(event.routes_num):
-            result = participant.french_accents.get(str(i), {'top': 0, 'zone': 0})
+            result = french_accents.get(str(i), {'top': 0, 'zone': 0})
             initial.append({'top': str(result.get('top', 0)), 'zone': str(result.get('zone', 0))})
     else:
-        if participant.french_accents:
-            for i in range(event.routes_num):
-                result = participant.french_accents.get(str(i), {'top': 0}).get('top', 0)
-                accent = ACCENT_NO if result == 0 else (ACCENT_FLASH if result == 1 else ACCENT_REDPOINT)
-                initial.append({'top': accent,})
-        else:
-            initial = [{'top': participant.accents.get(
-                str(i), ACCENT_NO)} for i in range(event.routes_num)]
+        for i in range(event.routes_num):
+            result = french_accents.get(str(i), {'top': 0}).get('top', 0)
+            accent = ACCENT_NO if result == 0 else (ACCENT_FLASH if result == 1 else ACCENT_REDPOINT)
+            initial.append({'top': accent})
     return initial
 
 
@@ -557,10 +553,6 @@ def _accent_attempt_to_literal(attempt: str) -> str:
     return 'RP'
 
 
-def _accents_to_string(event: Event, accents: list) -> list:
-    return [_accent_attempt_to_literal(attempt) for attempt in accents]
-
-
 def _french_accents_to_string(event: Event, accents: list) -> list:
     if event.score_type == Event.SCORE_FRENCH:
         return [f"{result.get('top', 0)}T {result.get('zone', 0)}z" for result in accents]
@@ -580,15 +572,10 @@ def _get_sorted_participants_results(event: Event, participants: QuerySet, full_
     data = []
     for participant in participants:
         if (not event.is_count_only_entered_results) or participant.is_entered_result:
-            accents = []
-            if participant.french_accents:
-                accents = [participant.french_accents.get(str(i), {})
-                           for i in range(event.routes_num)] if full_results else []
-                accents = _french_accents_to_string(event=event, accents=accents)
-            else:
-                accents = [participant.accents.get(str(i), ACCENT_NO)
-                           for i in range(event.routes_num)] if full_results else []
-                accents = _accents_to_string(event=event, accents=accents)
+            french_accents = participant.french_accents or {}
+            accents = [french_accents.get(str(i), {})
+                       for i in range(event.routes_num)] if full_results else []
+            accents = _french_accents_to_string(event=event, accents=accents)
 
             counted_routes = [True if i in participant.counted_routes else False for i in range(event.routes_num)]
             data.append(dict(participant=participant,
