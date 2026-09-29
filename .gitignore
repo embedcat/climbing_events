@@ -136,6 +136,7 @@ dmypy.json
 /media/
 /events/protocols/*
 *.backup
+/backups/
 .vscode
 test.py
 .DS_Store
