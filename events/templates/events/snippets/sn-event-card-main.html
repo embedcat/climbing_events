@@ -2,8 +2,10 @@
 
 <div class="col-md-4 my-2">
   <div class="card mx-auto h-100 {% if event.is_expired %}card-expired{% endif %}">
+    {# первый ряд карточек виден сразу — его постеры грузим без lazy #}
     <a class="" href="{% url 'event' event.id %}"><img src="{{ event.poster.url }}"
                                                        class="card-img-top img-thumbnail"
+                                                       {% if forloop.counter > 3 %}loading="lazy"{% endif %}
                                                        alt="poster"></a>
     <div class="card-header">
       <h4 class="card-title">{{ event.title }}

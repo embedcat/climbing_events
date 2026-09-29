@@ -212,7 +212,7 @@ class AdminDescriptionView(IsOwnerMixin, views.View):
         if form.is_valid():
             cd = form.cleaned_data
             if 'poster' in request.FILES:
-                event.poster = request.FILES['poster']
+                event.poster = cd['poster']
             event.gym = cd['gym']
             event.title = cd['title']
             event.date = cd['date']
@@ -227,7 +227,7 @@ class AdminDescriptionView(IsOwnerMixin, views.View):
                 template_name='events/event/admin-description.html',
                 context={
                     'event': event,
-                    'form': AdminDescriptionForm(request.POST, request.FILES, is_expired=event.is_expired),
+                    'form': form,
                 }
             )
 

@@ -1,9 +1,18 @@
+from django import forms
 from django.contrib import admin
 from django.db.models import Count
+from events.forms import PosterFormMixin
 from events.models import Event, Participant, Route, CustomUser, PromoCode, Wallet
 
 
+class EventAdminForm(PosterFormMixin, forms.ModelForm):
+    class Meta:
+        model = Event
+        fields = '__all__'
+
+
 class EventAdmin(admin.ModelAdmin):
+    form = EventAdminForm
     list_display = ('title', 'owner', 'id')
     list_filter = ('owner', )
     search_fields = ('title', )

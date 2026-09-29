@@ -3,8 +3,10 @@ from crispy_forms.bootstrap import InlineRadios
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit, Layout, Field
 from django import forms
+from django.core.files.uploadedfile import UploadedFile
 from config import settings
 
+from events import img_tools
 from events.models import Participant, Event, ACCENT_TYPE, Route, PromoCode, Wallet
 from tinymce.widgets import TinyMCE
 from phonenumber_field.formfields import PhoneNumberField
@@ -82,7 +84,23 @@ class ParticipantRegistrationForm(forms.ModelForm):
         }
 
 
-class AdminDescriptionForm(forms.ModelForm):
+class PosterFormMixin:
+    def clean_poster(self):
+        poster = self.cleaned_data.get('poster')
+        if not isinstance(poster, UploadedFile):
+            return poster
+        width, height = poster.image.size
+        if width * height > img_tools.POSTER_MAX_PIXELS:
+            raise forms.ValidationError(
+                f'Слишком большое разрешение ({width}×{height}), '
+                f'максимум — {img_tools.POSTER_MAX_PIXELS // 1_000_000} мегапикселей.')
+        try:
+            return img_tools.compress_poster(poster)
+        except (OSError, ValueError):
+            raise forms.ValidationError('Не удалось обработать изображение, попробуйте сохранить его в JPEG или PNG.')
+
+
+class AdminDescriptionForm(PosterFormMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         is_expired = kwargs.pop('is_expired')
         super().__init__(*args, **kwargs)

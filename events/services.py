@@ -16,7 +16,7 @@ from django.db.models import QuerySet, Count
 from django.http import HttpResponse
 
 from config import settings
-from events import xl_tools, mock
+from events import img_tools, xl_tools, mock
 from events.exceptions import DuplicateParticipantError, ParticipantTooYoungError
 from events.models import ACCENT_REDPOINT, CustomUser, Event, PayDetail, PromoCode, Route, Participant, Wallet
 from events.models import ACCENT_NO, ACCENT_FLASH
@@ -742,6 +742,21 @@ def remove_file(file: str) -> bool:
         os.remove(path=path)
         return True
     return False
+
+
+def get_uploaded_poster_events() -> QuerySet:
+    # у событий без своего постера в поле лежит путь к дефолтной картинке из static
+    return Event.objects.filter(poster__startswith=f'{settings.MEDIA_POSTERS_DIR}/').order_by('id')
+
+
+def compress_event_poster(event: Event) -> None:
+    old_name = event.poster.name
+    with event.poster.open('rb') as f:
+        content = img_tools.compress_poster(f)
+    event.poster.save(content.name, content, save=False)
+    event.save(update_fields=['poster'])
+    if not Event.objects.filter(poster=old_name).exists():
+        event.poster.storage.delete(old_name)
 
 
 # ================================================

@@ -1,12 +1,19 @@
+import io
 import re
+import tempfile
 from datetime import datetime, date
+from unittest import mock
+from PIL import Image
+from django.core.files.base import ContentFile
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.management import call_command
 from django.test import TestCase, TransactionTestCase, Client
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.db.utils import IntegrityError
 from events.models import CustomUser, Event, Participant, Route, Wallet, PromoCode, PayDetail
 from events.models import ACCENT_NO, ACCENT_FLASH, ACCENT_REDPOINT
-from events import services
+from events import img_tools, services
 from events.forms import ParticipantRegistrationForm, CreateEventForm
 from events.exceptions import DuplicateParticipantError, ParticipantTooYoungError
 
@@ -1194,3 +1201,102 @@ class RoutesNumChangeTests(ClimbingEventsBaseTestCase):
         self.assertEqual(response.status_code, 302)
         self.participant.refresh_from_db()
         self.assertEqual(self.participant.score, 101 * self.event.routes_num)
+
+
+def _make_image_bytes(size, fmt='JPEG', mode='RGB', color='red', **save_kwargs) -> bytes:
+    buf = io.BytesIO()
+    Image.new(mode, size, color).save(buf, format=fmt, **save_kwargs)
+    return buf.getvalue()
+
+
+class PosterTests(ClimbingEventsBaseTestCase):
+    def setUp(self):
+        super().setUp()
+        media = tempfile.TemporaryDirectory()
+        self.addCleanup(media.cleanup)
+        media_override = self.settings(MEDIA_ROOT=media.name)
+        media_override.enable()
+        self.addCleanup(media_override.disable)
+        self.event = services.create_event(owner=self.superuser, title='Poster Event', date=datetime(2026, 10, 1))
+
+    def _post_description(self, poster):
+        self.client.force_login(self.superuser)
+        return self.client.post(reverse('admin_description', args=[self.event.id]), data={
+            'title': 'Poster Event',
+            'gym': 'Скалодром',
+            'date': '10/01/2026',
+            'description': 'Регламент',
+            'short_description': 'Кратко',
+            'poster': poster,
+        })
+
+    def test_compress_poster_resizes_to_webp(self):
+        f = ContentFile(_make_image_bytes((4000, 3000)), name='афиша.jpg')
+        result = img_tools.compress_poster(f)
+        self.assertEqual(result.name, 'афиша.webp')
+        with Image.open(result) as img:
+            self.assertEqual(img.format, 'WEBP')
+            self.assertEqual(img.size, (img_tools.POSTER_MAX_SIDE, 1200))
+
+    def test_compress_poster_applies_exif_orientation(self):
+        exif = Image.Exif()
+        exif[0x0112] = 6  # Orientation: повернуть на 90°
+        f = ContentFile(_make_image_bytes((4000, 3000), exif=exif.tobytes()), name='photo.jpg')
+        with Image.open(img_tools.compress_poster(f)) as img:
+            self.assertEqual(img.size, (1200, img_tools.POSTER_MAX_SIDE))
+
+    def test_compress_poster_keeps_transparency(self):
+        f = ContentFile(_make_image_bytes((800, 600), fmt='PNG', mode='RGBA', color=(255, 0, 0, 128)), name='logo.png')
+        with Image.open(img_tools.compress_poster(f)) as img:
+            self.assertEqual(img.mode, 'RGBA')
+            self.assertEqual(img.size, (800, 600))
+
+    def test_description_view_saves_compressed_poster(self):
+        poster = SimpleUploadedFile('poster.png', _make_image_bytes((2000, 3000), fmt='PNG'), 'image/png')
+        response = self._post_description(poster)
+        self.assertEqual(response.status_code, 302)
+        self.event.refresh_from_db()
+        self.assertTrue(self.event.poster.name.startswith('posters/'))
+        self.assertTrue(self.event.poster.name.endswith('.webp'))
+        self.assertEqual((self.event.poster.width, self.event.poster.height), (1067, img_tools.POSTER_MAX_SIDE))
+
+    def test_description_view_rejects_too_many_pixels(self):
+        poster = SimpleUploadedFile('poster.jpg', _make_image_bytes((200, 200)), 'image/jpeg')
+        with mock.patch.object(img_tools, 'POSTER_MAX_PIXELS', 100 * 100):
+            response = self._post_description(poster)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('poster', response.context['form'].errors)
+        self.event.refresh_from_db()
+        self.assertFalse(self.event.poster.name.startswith('posters/'))
+
+    def test_description_view_keeps_poster_without_upload(self):
+        self.event.poster.save('old.webp', ContentFile(_make_image_bytes((100, 100), fmt='WEBP')))
+        old_name = self.event.poster.name
+        response = self._post_description('')
+        self.assertEqual(response.status_code, 302)
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.poster.name, old_name)
+
+    def test_compress_posters_command(self):
+        self.event.poster.save('big.jpg', ContentFile(_make_image_bytes((3000, 4000))))
+        old_name = self.event.poster.name
+        storage = self.event.poster.storage
+        default_event = services.create_event(owner=self.superuser, title='Default', date=datetime(2026, 10, 1))
+        default_poster = default_event.poster.name
+
+        call_command('compress_posters', '--dry-run', stdout=io.StringIO())
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.poster.name, old_name)
+
+        call_command('compress_posters', stdout=io.StringIO())
+        self.event.refresh_from_db()
+        self.assertTrue(self.event.poster.name.endswith('.webp'))
+        self.assertEqual((self.event.poster.width, self.event.poster.height), (1200, img_tools.POSTER_MAX_SIDE))
+        self.assertFalse(storage.exists(old_name))
+        default_event.refresh_from_db()
+        self.assertEqual(default_event.poster.name, default_poster)
+
+        compressed_name = self.event.poster.name
+        call_command('compress_posters', stdout=io.StringIO())
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.poster.name, compressed_name)
