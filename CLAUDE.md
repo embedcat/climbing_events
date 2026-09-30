@@ -9,6 +9,10 @@ event setup, participant registration, entering climbing results (accents/routes
 live scoring/results, Excel protocols, and paid registration (YooMoney / SBP QR).
 UI and error messages are in Russian; locale is `ru-ru` / `Europe/Moscow`.
 
+**Read `docs/PRODUCT.md` before any feature or UX decision** — it records the owner's product concept:
+roles, devices (participants ~99% on phones), which scenarios are core vs rare, what is deliberately
+out of scope, and the roadmap.
+
 ## Commands
 
 ### Local development (Docker, primary workflow)
@@ -70,7 +74,8 @@ all domain logic lives in one app, organized by *layer* instead:
     templates (`events/templates/`), the main web app.
   - `api_views.py` + `serializers.py` — a separate DRF REST API mounted at `/api/`
     (JWT auth via `djangorestframework-simplejwt`, `DefaultRouter` in `events/urls.py`)
-    for external/mobile clients.
+    for external/mobile clients and a possible future SPA frontend — the API is actively developed,
+    so new features should get an API endpoint, not only a server-rendered view.
   - Because both surfaces share `services.py`, keep business rules consistent between
     them rather than duplicating logic in a view.
 - `pay_views.py` — payment integration; `Event.pay_type` selects **YooMoney** wallet
