@@ -1,0 +1,1052 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Матрица ввода результатов</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=Unbounded:wght@600&display=swap">
+<style>
+/* Layout: one-screen organizer tool. Header (event + mockup controls) → filters → key legend →
+   matrix scrolling on both axes, participant columns pinned left, score/place pinned right → save bar. */
+:root{
+  --bg:#eef1f4; --surface:#fbfcfd; --surface-2:#e5e9ee; --line:#d5dbe2; --line-strong:#b6bfca;
+  --ink:#17212c; --muted:#56626f; --faint:#a1abb6; --shadow:rgba(23,33,44,.16);
+  --fl:#157443; --fl-soft:#d6efdf; --rp:#1d52bb; --rp-soft:#dbe5fa;
+  --accent:#cf4812; --accent-soft:#fde5d6; --on-accent:#ffffff;
+  --danger:#bf262c; --danger-soft:#fadede; --cross:#e1e8f1;
+  --font-display:"Unbounded","IBM Plex Sans",system-ui,sans-serif;
+  --font-ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-data:"IBM Plex Mono",ui-monospace,Consolas,"Liberation Mono",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1319; --surface:#151c24; --surface-2:#1c2530; --line:#28323e; --line-strong:#3b4756;
+    --ink:#e4e9ef; --muted:#98a4b1; --faint:#56626f; --shadow:rgba(0,0,0,.55);
+    --fl:#5bcb8c; --fl-soft:#15321f; --rp:#89aaf6; --rp-soft:#1a2746;
+    --accent:#ff8f55; --accent-soft:#3b2317; --on-accent:#1a0d05;
+    --danger:#ff7b7b; --danger-soft:#3a1a1c; --cross:#1f2935;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1319; --surface:#151c24; --surface-2:#1c2530; --line:#28323e; --line-strong:#3b4756;
+  --ink:#e4e9ef; --muted:#98a4b1; --faint:#56626f; --shadow:rgba(0,0,0,.55);
+  --fl:#5bcb8c; --fl-soft:#15321f; --rp:#89aaf6; --rp-soft:#1a2746;
+  --accent:#ff8f55; --accent-soft:#3b2317; --on-accent:#1a0d05;
+  --danger:#ff7b7b; --danger-soft:#3a1a1c; --cross:#1f2935;
+  color-scheme:dark;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:14px;line-height:1.4}
+button{font:inherit;color:inherit}
+kbd{display:inline-block;min-width:18px;padding:3px 5px;border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:4px;
+  background:var(--surface);color:var(--ink);font-family:var(--font-data);font-size:11px;line-height:1;text-align:center}
+
+.app{height:100%;display:flex;flex-direction:column;gap:10px;padding-inline:16px;padding-block:12px 0}
+@media (max-width:900px){.app{height:auto;min-height:100%}}
+
+/* header */
+.top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:10px 24px}
+.crumbs{display:flex;flex-wrap:wrap;gap:2px 6px;font-size:12.5px;color:var(--muted)}
+.crumbs .sep{color:var(--faint)}
+.title-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;margin-top:2px}
+h1{margin:0;font-family:var(--font-display);font-weight:600;font-size:21px;letter-spacing:-.01em;text-wrap:balance}
+.ev-meta{font-size:12.5px;color:var(--muted)}
+.mock{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:6px 10px;border:1px dashed var(--line-strong);border-radius:8px;font-size:12.5px;color:var(--muted)}
+.mock-title{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.check{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.linkbtn{border:0;background:none;padding:0;color:var(--muted);font-size:12.5px;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+
+/* toolbar */
+.toolbar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:10px 20px}
+.group{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 16px;min-width:0}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.label{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.seg{display:inline-flex;flex-wrap:wrap;gap:2px;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)}
+.seg button{border:0;background:transparent;padding:5px 10px;border-radius:6px;color:var(--muted);font-size:13px;white-space:nowrap;cursor:pointer}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:0 1px 2px var(--shadow)}
+.seg.sm button{padding:3px 8px;font-size:12px}
+.seg .t{margin-left:4px;font-family:var(--font-data);font-size:11px;font-weight:400;color:var(--muted)}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font-size:13px;cursor:pointer}
+.chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.chip b{font-variant-numeric:tabular-nums}
+.search{position:relative}
+.search input{width:230px;max-width:100%;padding:7px 34px 7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit}
+.search input:focus{outline:2px solid var(--ink);outline-offset:-1px}
+.search kbd{position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none}
+.sr{position:absolute;left:0;top:calc(100% + 4px);z-index:20;width:max-content;min-width:100%;max-width:min(380px,calc(100vw - 32px));
+  padding:4px;border:1px solid var(--line);border-radius:8px;background:var(--surface);box-shadow:0 10px 28px var(--shadow)}
+.sr-item{display:flex;flex-direction:column;gap:1px;padding:6px 8px;border-radius:6px;cursor:pointer}
+.sr-item[aria-selected="true"]{background:var(--surface-2)}
+.sr-meta{font-family:var(--font-data);font-size:11.5px;color:var(--muted)}
+.sr-meta em{font-family:var(--font-ui);font-style:normal;color:var(--accent)}
+.sr-empty{padding:6px 8px;color:var(--muted)}
+
+/* legend + messages */
+.keys{display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;font-size:12.5px;color:var(--muted)}
+.keys>span{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px}
+.sw{position:relative;display:inline-grid;place-items:center;width:24px;height:18px;border-radius:3px;font-family:var(--font-data);font-size:10px;font-weight:600;font-style:normal}
+.sw.v1{background:var(--fl-soft);color:var(--fl)}
+.sw.v2{background:var(--rp-soft);color:var(--rp)}
+.sw.bl{border:1px solid var(--line);background:var(--surface)}
+.sw.bl::after{content:"";position:absolute;top:0;right:0;border-style:solid;border-width:0 7px 7px 0;border-color:transparent var(--accent) transparent transparent}
+.hint{color:var(--accent);font-weight:500}
+.focus-hint{color:var(--ink);font-weight:500}
+.app.focused .focus-hint{display:none}
+.banner{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:8px 12px;border:1px solid var(--line);border-radius:8px}
+.banner.info{border-color:var(--accent);background:var(--accent-soft)}
+.banner.error{border-color:var(--danger);background:var(--danger-soft)}
+.banner-actions{display:flex;flex-wrap:wrap;gap:8px}
+.phone-note{display:none;margin:0;padding:8px 12px;border-radius:8px;background:var(--surface-2);font-size:13px;color:var(--muted)}
+@media (max-width:720px){.phone-note{display:block}}
+
+/* matrix */
+.wrap{position:relative;flex:1 1 auto;min-height:260px;overflow:auto;overscroll-behavior:contain;
+  border:1px solid var(--line);border-radius:10px;background:var(--surface);outline:none}
+.wrap:focus-within{border-color:var(--line-strong)}
+@media (max-width:900px){.wrap{flex:none;max-height:72vh}}
+.matrix{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums;user-select:none;-webkit-user-select:none}
+.matrix th,.matrix td{padding:0;border-right:1px solid var(--line);border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}
+.matrix thead th{position:sticky;top:0;z-index:2;height:28px;background:var(--surface-2);font-size:12px;font-weight:600}
+.matrix thead tr+tr th{top:var(--h1,29px);height:20px;font-size:10.5px;font-weight:500;color:var(--muted)}
+.matrix thead th.rh{min-width:34px;font-family:var(--font-data)}
+.matrix thead th.hcur{background:var(--ink);color:var(--surface)}
+.matrix tbody td{height:38px}
+.matrix .stk,.matrix .stkr{position:sticky;z-index:1;background:var(--surface)}
+.matrix thead th.stk,.matrix thead th.stkr{z-index:3;background:var(--surface-2);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.matrix th small{display:block;font-size:9.5px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--faint)}
+.matrix .s-no{left:0;min-width:36px;font-family:var(--font-data);font-size:11.5px;color:var(--muted)}
+.matrix .s-name{left:var(--l1,37px);min-width:214px;padding:0 10px;text-align:left}
+.matrix .s-pin{left:var(--l2,251px);padding:0 10px;font-family:var(--font-data);font-size:12.5px;box-shadow:6px 0 8px -6px var(--shadow)}
+.matrix .s-score{right:var(--r1,57px);min-width:78px;padding:0 10px;text-align:right;font-family:var(--font-data);font-size:12px;box-shadow:-6px 0 8px -6px var(--shadow)}
+.matrix .s-place{right:0;min-width:58px;padding:0 8px;font-weight:600}
+.nm{display:flex;align-items:center;gap:7px;max-width:196px;font-weight:500}
+.nmt{overflow:hidden;text-overflow:ellipsis}
+.meta{display:flex;gap:6px;padding-left:14px;font-size:11px;color:var(--muted)}
+.miss{color:var(--accent);font-weight:600}
+.dot{flex:none;display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--fl)}
+.dot.missing{background:transparent;box-shadow:inset 0 0 0 1.5px var(--accent)}
+
+.matrix td.c{position:relative;width:34px;min-width:34px;font-family:var(--font-data);font-size:12px;font-weight:600;cursor:pointer}
+.matrix.fr td.c{width:27px;min-width:27px}
+.matrix.fr td.c.sub0{border-right-style:dashed}
+.matrix td.c.g5{border-right-color:var(--line-strong);border-right-style:solid}
+.matrix td.c.v0::before{content:"";display:inline-block;width:3px;height:3px;border-radius:50%;background:var(--faint);vertical-align:middle}
+.matrix td.c.v1,.matrix td.c.ft{background:var(--fl-soft);color:var(--fl)}
+.matrix td.c.v2,.matrix td.c.fz{background:var(--rp-soft);color:var(--rp)}
+.matrix td.c.bad{background:var(--danger-soft);color:var(--danger)}
+.matrix td.c.dirty::after{content:"";position:absolute;top:0;right:0;border-style:solid;border-width:0 8px 8px 0;border-color:transparent var(--accent) transparent transparent}
+.matrix td.c.cur{box-shadow:inset 0 0 0 2px var(--faint)}
+.wrap:focus-within .matrix td.c.cur{box-shadow:inset 0 0 0 2px var(--ink)}
+.matrix td.c.editing,.matrix tr.row-cur td.c.editing{background:var(--accent-soft);color:var(--ink)}
+.matrix td.c.editing::before{display:none}
+.matrix tr.row-cur td.stk,.matrix tr.row-cur td.stkr,.matrix tr.row-cur td.c.v0{background:var(--cross)}
+.matrix col.col-cur{background:var(--cross)}
+.s-score.stale{color:var(--faint)}
+.delta{margin-left:4px;font-family:var(--font-data);font-size:10px}
+.delta.up{color:var(--fl)}
+.delta.down{color:var(--danger)}
+.tcnt{margin-left:3px;font-size:9.5px;font-weight:500;color:var(--muted)}
+.matrix thead th.hcur .tcnt{color:inherit}
+.caret{display:inline-block;width:1.5px;height:14px;margin-left:1px;vertical-align:-2px;background:var(--ink);animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.matrix tr.flash td.stk{animation:flashrow 1.4s ease-out}
+@keyframes flashrow{from{background:var(--accent-soft)}}
+.matrix td.empty{height:auto;padding:24px 16px;text-align:left;color:var(--muted);white-space:normal}
+@media (prefers-reduced-motion:reduce){.caret,.matrix tr.flash td.stk{animation:none}}
+
+/* save bar */
+.bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px;padding-block:10px calc(12px + env(safe-area-inset-bottom,0px));background:var(--bg)}
+@media (max-width:900px){.bar{position:sticky;bottom:0}}
+#status{font-size:13px;color:var(--muted)}
+#status b{color:var(--ink)}
+#status.ok{color:var(--fl)}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.btn{padding:8px 14px;border:1px solid var(--line-strong);border-radius:8px;background:var(--surface);color:var(--ink);font-size:13.5px;font-weight:600;cursor:pointer}
+.btn.small{padding:4px 10px;font-size:12.5px}
+.btn.primary{min-width:150px;border-color:var(--accent);background:var(--accent);color:var(--on-accent)}
+.btn.danger{border-color:var(--danger);color:var(--danger)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn:focus-visible,.seg button:focus-visible,.chip:focus-visible,.linkbtn:focus-visible,.check input:focus-visible,.goto:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+#status.err{color:var(--danger)}
+#status.err b{color:var(--danger)}
+.goto{margin-left:6px;padding:0;border:0;background:none;color:inherit;font:inherit;font-weight:600;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+</style>
+
+<div class="app" id="app">
+  <header class="top">
+    <div>
+      <nav class="crumbs" aria-label="Путь">
+        <span>Мои события</span><span class="sep">/</span><span>Осенний фестиваль боулдеринга</span><span class="sep">/</span><span>4 октября 2026</span>
+      </nav>
+      <div class="title-row"><h1>Ввод результатов</h1><span class="ev-meta" id="ev-meta"></span></div>
+    </div>
+    <div class="mock" role="group" aria-label="Настройки макета">
+      <span class="mock-title">Макет</span>
+      <div class="seg sm" id="m-mode"></div>
+      <div class="seg sm" id="m-n"></div>
+      <label class="check" for="m-offline"><input type="checkbox" id="m-offline"> нет связи при сохранении</label>
+      <button type="button" class="linkbtn" id="m-reset">сбросить демо</button>
+    </div>
+  </header>
+
+  <section class="toolbar" aria-label="Фильтры">
+    <div class="group">
+      <div class="field"><span class="label" id="l-set">Сет</span><div class="seg" id="f-set" role="group" aria-labelledby="l-set"></div></div>
+      <div class="field"><span class="label" id="l-group">Группа</span><div class="seg" id="f-group" role="group" aria-labelledby="l-group"></div></div>
+      <div class="field"><span class="label" id="l-gender">Пол</span><div class="seg" id="f-gender" role="group" aria-labelledby="l-gender"></div></div>
+      <button type="button" class="chip" id="chip-missing" aria-pressed="false" title="Показать только тех, у кого ещё нет результата">
+        <span class="dot missing"></span>Без результата: <b id="missing-n">0</b>
+      </button>
+    </div>
+    <div class="group">
+      <div class="field">
+        <label class="label" for="search">Найти участника</label>
+        <div class="search">
+          <input id="search" type="text" placeholder="Фамилия или PIN" autocomplete="off" enterkeyhint="go">
+          <kbd>/</kbd>
+          <div class="sr" id="sr" role="listbox" hidden></div>
+        </div>
+      </div>
+      <div class="field"><span class="label" id="l-dir">Курсор после ввода</span><div class="seg" id="f-dir" role="group" aria-labelledby="l-dir"></div></div>
+    </div>
+  </section>
+
+  <div class="keys" id="keys"></div>
+  <div class="banner" id="banner" hidden></div>
+  <p class="phone-note">Матрица рассчитана на экран ноутбука. На телефоне будет ввод по шагам: участник → его трассы или трасса → участники.</p>
+
+  <div class="wrap" id="wrap" tabindex="0" aria-label="Матрица результатов: строки — участники, столбцы — трассы">
+    <table class="matrix" id="matrix"></table>
+  </div>
+
+  <footer class="bar">
+    <div id="status" aria-live="polite"></div>
+    <div class="actions">
+      <button type="button" class="btn" id="btn-discard">Отменить изменения</button>
+      <button type="button" class="btn primary" id="btn-save">Сохранить</button>
+    </div>
+  </footer>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+const GROUP_SHORT = ['Нов', 'Люб', 'Спорт'];
+const MALE_FIRST = ['Алексей', 'Дмитрий', 'Иван', 'Никита', 'Сергей', 'Павел', 'Артём', 'Михаил', 'Егор', 'Роман', 'Андрей', 'Глеб'];
+const FEMALE_FIRST = ['Анна', 'Мария', 'Екатерина', 'Ольга', 'Дарья', 'Полина', 'Ксения', 'Алина', 'Вера', 'Софья', 'Юлия', 'Ева'];
+const SURNAMES = [
+  ['Кузнецов', 'Кузнецова'], ['Орлов', 'Орлова'], ['Соколов', 'Соколова'], ['Лебедев', 'Лебедева'],
+  ['Волков', 'Волкова'], ['Морозов', 'Морозова'], ['Зайцев', 'Зайцева'], ['Белов', 'Белова'],
+  ['Карпов', 'Карпова'], ['Громов', 'Громова'], ['Ершов', 'Ершова'], ['Тихонов', 'Тихонова'],
+  ['Сомов', 'Сомова'], ['Жуков', 'Жукова'], ['Панов', 'Панова'], ['Фролов', 'Фролова'],
+  ['Гусев', 'Гусева'], ['Титов', 'Титова'], ['Беляев', 'Беляева'], ['Мельников', 'Мельникова'],
+  ['Щукин', 'Щукина'], ['Архипов', 'Архипова'], ['Рябов', 'Рябова'], ['Никитин', 'Никитина'],
+];
+// как в services.py: redpoint_points = 80, flash_points_pc = 25
+const RP_POINTS = 80, FLASH_K = 1.25;
+const PEOPLE = 48;
+
+const $ = (s) => document.querySelector(s);
+const app = $('#app'), wrap = $('#wrap'), table = $('#matrix'), searchInput = $('#search'), sr = $('#sr');
+
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },
+  del(k) { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } },
+};
+
+const state = {
+  mode: 'PROP', N: 15, offline: false,
+  f: { set: 2, group: -1, gender: 'all', missing: false },
+  dir: 'right',
+  people: [], byId: new Map(),
+  draft: new Map(),
+  cursor: null,          // {pid, r, sub}
+  edit: null,            // FR: набираемое число
+  deltas: new Map(),
+  rows: [], rowIdx: new Map(), rowEls: [], cellEls: [], cols: [], routeHeads: [], countEls: [],
+  missingCount: 0, saving: false, storageOk: true, savedMsg: null,
+  decor: null, m: { left: 0, right: 0, head: 0 },
+};
+
+/* ---------- helpers ---------- */
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function shuffle(arr, rnd) {
+  for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+  return arr;
+}
+const sig = (x) => 1 / (1 + Math.exp(-x));
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+function plural(n, one, few, many) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return one;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+  return many;
+}
+const byName = (a, b) => (a.last + ' ' + a.first).localeCompare(b.last + ' ' + b.first, 'ru');
+const isFR = () => state.mode === 'FR';
+const subs = () => (isFR() ? 2 : 1);
+const key = (pid, r) => pid + ':' + r;
+const norm = (s) => s.toLowerCase().replace(/ё/g, 'е');
+
+/* ---------- demo data ---------- */
+function gen(N) {
+  const rnd = mulberry32(20261004 + N * 7);
+  const sur = shuffle(SURNAMES.slice(), rnd);
+  const pins = new Set(), people = [];
+  for (let i = 0; i < PEOPLE; i++) {
+    const female = i % 2 === 1;
+    const pair = sur[i >> 1];
+    const first = (female ? FEMALE_FIRST : MALE_FIRST)[Math.floor(rnd() * 12)];
+    const set = (i >> 1) % 3;
+    const g = rnd();
+    const group = g < 0.3 ? 0 : g < 0.75 ? 1 : 2;
+    let pin;
+    do { pin = 1000 + Math.floor(rnd() * 9000); } while (pins.has(pin));
+    pins.add(pin);
+    const skill = [0.3, 0.5, 0.7][group] + (rnd() - 0.5) * 0.22;
+    const prop = [], fr = [];
+    for (let r = 0; r < N; r++) {
+      const d = (N > 1 ? r / (N - 1) : 0.5) * 0.9 + rnd() * 0.1;
+      if (rnd() < sig((skill - d) * 9)) {
+        prop.push(rnd() < clamp(0.75 - d * 0.7 + (skill - 0.5) * 0.5, 0.05, 0.9) ? 1 : 2);
+        const t = 1 + Math.floor(rnd() * (1 + d * 4));
+        fr.push({ t, z: 1 + Math.floor(rnd() * t) });
+      } else {
+        prop.push(0);
+        fr.push(rnd() < sig((skill - d + 0.2) * 9) ? { t: 0, z: 1 + Math.floor(rnd() * 4) } : { t: 0, z: 0 });
+      }
+    }
+    people.push({ id: i + 1, last: female ? pair[1] : pair[0], first, female, set, group, pin, prop, fr, entered: true });
+  }
+  // у части участников бумажная карточка ещё не перенесена
+  const markMissing = (list, n) => shuffle(list, rnd).slice(0, n).forEach((p) => {
+    p.entered = false; p.cardProp = p.prop; p.cardFr = p.fr;
+    p.prop = Array(N).fill(0);
+    p.fr = Array.from({ length: N }, () => ({ t: 0, z: 0 }));
+  });
+  markMissing(people.filter((p) => p.set === 2), 6);
+  markMissing(people.filter((p) => p.set === 1), 1);
+  return people;
+}
+
+/* ---------- scoring (упрощённая копия services._update_results) ---------- */
+function computeScores() {
+  const N = state.N;
+  for (const female of [false, true]) {
+    for (let gi = 0; gi < 3; gi++) {
+      const members = state.people.filter((p) => p.female === female && p.group === gi);
+      if (!isFR()) {
+        const val = [];
+        for (let r = 0; r < N; r++) {
+          const n = members.filter((p) => p.entered && p.prop[r] > 0).length;
+          val.push(n ? 1 / n : 0);
+        }
+        for (const p of members) {
+          let s = 0;
+          for (let r = 0; r < N; r++) {
+            const a = p.prop[r];
+            if (a > 0) s += val[r] * (a === 1 ? FLASH_K : 1) * RP_POINTS;
+          }
+          p.score = Math.round(s * 100) / 100;
+          p.label = p.score.toFixed(2).replace('.', ',');
+        }
+      } else {
+        for (const p of members) {
+          let T = 0, Ta = 0, Z = 0, Za = 0;
+          for (let r = 0; r < N; r++) {
+            const a = p.fr[r];
+            if (a.t > 0) { T++; Ta += a.t; }
+            if (a.z > 0) { Z++; Za += a.z; }
+          }
+          p.score = 10000 * T + 1000 * Z + 100 * (100 - Ta) + 10 * (100 - Za);
+          p.label = `${T}T${Ta} ${Z}z${Za}`;
+        }
+      }
+      const ranked = members.filter((p) => p.entered).sort((a, b) => b.score - a.score);
+      ranked.forEach((p, i) => { p.place = i > 0 && ranked[i - 1].score === p.score ? ranked[i - 1].place : i + 1; });
+      members.filter((p) => !p.entered).forEach((p) => { p.place = null; });
+    }
+  }
+}
+
+/* ---------- values & draft ---------- */
+const saved = (p, r) => (isFR() ? p.fr[r] : p.prop[r]);
+function cur(p, r) { const k = key(p.id, r); return state.draft.has(k) ? state.draft.get(k) : saved(p, r); }
+const same = (a, b) => (isFR() ? a.t === b.t && a.z === b.z : a === b);
+const draftKey = () => `rockevents-matrix-draft:${state.mode}:${state.N}`;
+function persist() { state.storageOk = store.set(draftKey(), JSON.stringify([...state.draft])); }
+function loadDraft() {
+  const raw = store.get(draftKey());
+  if (raw === null) return null;
+  try { return new Map(JSON.parse(raw)); } catch (e) { return new Map(); }
+}
+function rowDirty(p) { for (let r = 0; r < state.N; r++) if (state.draft.has(key(p.id, r))) return true; return false; }
+
+function setVal(p, r, v) {
+  const k = key(p.id, r);
+  // у участника без результата любое введённое значение (даже «нет») — изменение: карточку перенесли
+  if (p.entered && same(v, saved(p, r))) state.draft.delete(k); else state.draft.set(k, v);
+  state.savedMsg = null;
+  persist();
+  paintRoute(p, r); paintCount(r); paintRowState(p); updateStatus();
+}
+
+/* ---------- painting ---------- */
+function paintCell(td, p, r, s) {
+  const v = cur(p, r), c = state.cursor;
+  let cls = td.dataset.base, html = '', title = '';
+  if (!isFR()) {
+    cls += ' v' + v;
+    html = v === 1 ? 'FL' : v === 2 ? 'RP' : '';
+  } else {
+    const n = s === 0 ? v.t : v.z;
+    if (n > 0) { cls += s === 0 ? ' ft' : ' fz'; html = String(n); } else cls += ' v0';
+    if (s === 1 && v.t > 0 && v.z > v.t) { cls += ' bad'; title = 'Зона позже топа. Проверьте попытки.'; }
+  }
+  if (state.draft.has(key(p.id, r))) cls += ' dirty';
+  if (c && c.pid === p.id && c.r === r && c.sub === s) {
+    cls += ' cur';
+    if (state.edit !== null) { cls += ' editing'; html = state.edit + '<span class="caret"></span>'; }
+  }
+  td.className = cls;
+  td.innerHTML = html;
+  td.title = title;
+}
+function paintRoute(p, r) {
+  const i = state.rowIdx.get(p.id);
+  if (i == null) return;
+  const k = subs();
+  for (let s = 0; s < k; s++) paintCell(state.cellEls[i][r * k + s], p, r, s);
+}
+function paintCount(r) {
+  const el = state.countEls[r];
+  if (!el) return;
+  let n = 0;
+  for (const p of state.rows) { const v = cur(p, r); if (isFR() ? v.t > 0 : v > 0) n++; }
+  el.textContent = isFR() ? (n ? n + 'т' : '') : String(n);
+}
+function paintRowState(p) {
+  const i = state.rowIdx.get(p.id);
+  if (i == null) return;
+  const tr = state.rowEls[i];
+  const nameTd = tr.children[1], scoreTd = tr.children[tr.children.length - 2], placeTd = tr.lastElementChild;
+  nameTd.innerHTML =
+    `<div class="nm"><span class="dot${p.entered ? '' : ' missing'}"></span><span class="nmt">${p.last} ${p.first}</span></div>` +
+    `<div class="meta"><span>${GROUP_SHORT[p.group]} · ${p.female ? 'Ж' : 'М'} · сет ${p.set + 1}</span>` +
+    (p.entered ? '' : '<span class="miss">нет результата</span>') + '</div>';
+  const dirty = rowDirty(p);
+  scoreTd.textContent = p.entered ? p.label : '—';
+  scoreTd.classList.toggle('stale', dirty);
+  scoreTd.title = dirty ? 'Пересчитается после сохранения' : '';
+  const d = state.deltas.get(p.id);
+  placeTd.innerHTML = (p.place ?? '—') +
+    (d ? `<span class="delta ${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲' : '▼'}${Math.abs(d)}</span>` : '');
+}
+
+/* ---------- render ---------- */
+function visibleRows() {
+  const f = state.f;
+  let rows = state.people.filter((p) =>
+    (f.set < 0 || p.set === f.set) &&
+    (f.group < 0 || p.group === f.group) &&
+    (f.gender === 'all' || (f.gender === 'F') === p.female));
+  state.missingCount = rows.filter((p) => !p.entered).length;
+  if (f.missing) rows = rows.filter((p) => !p.entered);
+  rows.sort(byName);
+  return rows;
+}
+
+function render() {
+  if (state.edit !== null) commitEdit();
+  const rows = visibleRows();
+  state.rows = rows;
+  state.rowIdx = new Map(rows.map((p, i) => [p.id, i]));
+  const N = state.N, FR = isFR(), k = subs();
+  table.classList.toggle('fr', FR);
+
+  let h = '<colgroup><col><col><col>';
+  for (let r = 0; r < N; r++) for (let s = 0; s < k; s++) h += '<col class="rc">';
+  h += '<col><col></colgroup><thead><tr>';
+  h += '<th class="stk s-no" rowspan="2">№</th>';
+  h += '<th class="stk s-name" rowspan="2">Участник</th>';
+  h += '<th class="stk s-pin" rowspan="2">PIN</th>';
+  for (let r = 0; r < N; r++) {
+    h += FR
+      ? `<th class="rh" colspan="2" title="Трасса ${r + 1}">${r + 1}<span class="tcnt" data-cnt="${r}"></span></th>`
+      : `<th class="rh" title="Трасса ${r + 1}">${r + 1}</th>`;
+  }
+  h += '<th class="stkr s-score" rowspan="2">Баллы<small>по сохранённым</small></th>';
+  h += '<th class="stkr s-place" rowspan="2">Место<small>в группе</small></th></tr><tr>';
+  for (let r = 0; r < N; r++) {
+    h += FR
+      ? `<th class="sh" data-r="${r}" data-s="0">Т</th><th class="sh" data-r="${r}" data-s="1">З</th>`
+      : `<th class="sh" data-r="${r}" data-cnt="${r}" title="Пролазов среди показанных участников"></th>`;
+  }
+  h += '</tr></thead>';
+  table.innerHTML = h;
+
+  const tbody = document.createElement('tbody');
+  state.rowEls = []; state.cellEls = [];
+  rows.forEach((p, i) => {
+    const tr = document.createElement('tr');
+    tr.dataset.i = i;
+    tr.innerHTML = `<td class="stk s-no">${i + 1}</td><td class="stk s-name"></td><td class="stk s-pin">${p.pin}</td>`;
+    const cells = [];
+    for (let r = 0; r < N; r++) {
+      for (let s = 0; s < k; s++) {
+        const td = document.createElement('td');
+        td.dataset.r = r; td.dataset.s = s;
+        td.dataset.base = 'c' + (FR ? ' sub' + s : '') + ((r + 1) % 5 === 0 && s === k - 1 ? ' g5' : '');
+        tr.appendChild(td);
+        cells.push(td);
+      }
+    }
+    tr.insertAdjacentHTML('beforeend', '<td class="stkr s-score"></td><td class="stkr s-place"></td>');
+    tbody.appendChild(tr);
+    state.rowEls.push(tr);
+    state.cellEls.push(cells);
+  });
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td class="empty" colspan="${5 + N * k}">Под этот фильтр никто не попал. Выберите другой сет или группу.</td></tr>`;
+  }
+  table.appendChild(tbody);
+
+  state.cols = [...table.querySelectorAll('col.rc')];
+  state.routeHeads = [...table.querySelectorAll('th.rh')];
+  state.countEls = [];
+  table.querySelectorAll('[data-cnt]').forEach((el) => { state.countEls[+el.dataset.cnt] = el; });
+  state.decor = null;
+
+  const c = state.cursor;
+  if (!c || !state.rowIdx.has(c.pid)) state.cursor = rows.length ? { pid: rows[0].id, r: 0, sub: 0 } : null;
+  if (state.cursor) {
+    state.cursor.r = Math.min(state.cursor.r, N - 1);
+    if (!FR) state.cursor.sub = 0;
+  }
+  rows.forEach((p) => { paintRowState(p); for (let r = 0; r < N; r++) paintRoute(p, r); });
+  for (let r = 0; r < N; r++) paintCount(r);
+  measure();
+  applyCursorDecor();
+  updateFilters();
+  updateStatus();
+}
+
+function measure() {
+  const no = table.querySelector('th.s-no');
+  if (!no) return;
+  const nm = table.querySelector('th.s-name'), pin = table.querySelector('th.s-pin');
+  const sc = table.querySelector('th.s-score'), pl = table.querySelector('th.s-place');
+  const l1 = no.offsetWidth, l2 = l1 + nm.offsetWidth, r1 = pl.offsetWidth;
+  table.style.setProperty('--l1', l1 + 'px');
+  table.style.setProperty('--l2', l2 + 'px');
+  table.style.setProperty('--r1', r1 + 'px');
+  table.style.setProperty('--h1', table.tHead.rows[0].getBoundingClientRect().height + 'px');
+  state.m = { left: l2 + pin.offsetWidth, right: r1 + sc.offsetWidth, head: table.tHead.getBoundingClientRect().height };
+}
+
+function applyCursorDecor() {
+  const d = state.decor;
+  if (d) {
+    d.tr.classList.remove('row-cur');
+    d.cols.forEach((x) => x.classList.remove('col-cur'));
+    d.heads.forEach((x) => x.classList.remove('hcur'));
+  }
+  state.decor = null;
+  const c = state.cursor;
+  if (!c) return;
+  const i = state.rowIdx.get(c.pid);
+  if (i == null) return;
+  const k = subs();
+  const tr = state.rowEls[i];
+  const cols = [];
+  for (let s = 0; s < k; s++) cols.push(state.cols[c.r * k + s]);
+  const heads = [state.routeHeads[c.r]];
+  const sh = table.querySelector(`th.sh[data-r="${c.r}"]` + (isFR() ? `[data-s="${c.sub}"]` : ''));
+  if (sh) heads.push(sh);
+  tr.classList.add('row-cur');
+  cols.forEach((x) => x.classList.add('col-cur'));
+  heads.forEach((x) => x.classList.add('hcur'));
+  state.decor = { tr, cols, heads };
+}
+
+function ensureVisible() {
+  const c = state.cursor;
+  if (!c) return;
+  const i = state.rowIdx.get(c.pid);
+  if (i == null) return;
+  const td = state.cellEls[i][c.r * subs() + c.sub];
+  const { left: L, right: R, head: T } = state.m;
+  const x = td.offsetLeft, w = td.offsetWidth, y = td.offsetTop, hh = td.offsetHeight;
+  if (x - L < wrap.scrollLeft) wrap.scrollLeft = x - L;
+  else if (x + w + R > wrap.scrollLeft + wrap.clientWidth) wrap.scrollLeft = x + w + R - wrap.clientWidth;
+  if (y - T < wrap.scrollTop) wrap.scrollTop = y - T;
+  else if (y + hh > wrap.scrollTop + wrap.clientHeight) wrap.scrollTop = y + hh - wrap.clientHeight;
+}
+
+/* ---------- cursor & editing ---------- */
+const curP = () => state.byId.get(state.cursor.pid);
+
+function moveTo(nc) {
+  const old = state.cursor;
+  state.cursor = nc;
+  if (old) { const op = state.byId.get(old.pid); if (op) paintRoute(op, old.r); }
+  paintRoute(state.byId.get(nc.pid), nc.r);
+  applyCursorDecor();
+  ensureVisible();
+}
+
+function step(dr, dc) {
+  const c = state.cursor;
+  const N = state.N;
+  const i = clamp(state.rowIdx.get(c.pid) + dr, 0, state.rows.length - 1);
+  let r = c.r, sub = c.sub;
+  if (dc) {
+    if (isFR()) { const idx = clamp(r * 2 + sub + dc, 0, 2 * N - 1); r = Math.floor(idx / 2); sub = idx % 2; }
+    else r = clamp(r + dc, 0, N - 1);
+  }
+  moveTo({ pid: state.rows[i].id, r, sub });
+}
+
+function flashRow(p) {
+  const tr = state.rowEls[state.rowIdx.get(p.id)];
+  if (!tr) return;
+  tr.classList.remove('flash'); void tr.offsetWidth; tr.classList.add('flash');
+}
+
+function advance() {
+  const c = state.cursor;
+  const i = state.rowIdx.get(c.pid), last = state.rows.length - 1, N = state.N;
+  if (isFR() && c.sub === 0) { moveTo({ pid: c.pid, r: c.r, sub: 1 }); return; }
+  if (state.dir === 'right') {
+    // по карточке: в конце строки сразу к следующему участнику
+    if (c.r < N - 1) { moveTo({ pid: c.pid, r: c.r + 1, sub: 0 }); return; }
+    if (i < last) {
+      const p = state.rows[i + 1];
+      moveTo({ pid: p.id, r: 0, sub: 0 });
+      flashRow(p);
+      hint(`Следующий участник: ${p.last} ${p.first}`);
+      return;
+    }
+    hint('Это последний участник в списке.');
+  } else {
+    // по протоколу трассы: в конце столбца сразу к следующей трассе
+    if (i < last) { moveTo({ pid: state.rows[i + 1].id, r: c.r, sub: 0 }); return; }
+    if (c.r < N - 1) {
+      moveTo({ pid: state.rows[0].id, r: c.r + 1, sub: 0 });
+      hint(`Следующая трасса: ${c.r + 2}`);
+      return;
+    }
+    hint('Это последняя трасса.');
+  }
+}
+
+function setCur(v) { const c = state.cursor; setVal(curP(), c.r, v); }
+
+function setFR(n) {
+  const c = state.cursor, p = curP();
+  const v = { ...cur(p, c.r) };
+  if (c.sub === 0) v.t = n; else v.z = n;
+  if (v.t > 0 && v.z === 0) v.z = v.t; // как form_data_to_results: топ без зоны → зона на той же попытке
+  setVal(p, c.r, v);
+}
+function commitEdit() {
+  if (state.edit === null) return;
+  const n = state.edit === '' ? 0 : parseInt(state.edit, 10);
+  state.edit = null;
+  setFR(n);
+}
+function cancelEdit() {
+  if (state.edit === null) return;
+  state.edit = null;
+  paintRoute(curP(), state.cursor.r);
+}
+
+let hintTimer;
+function hint(msg) {
+  const el = $('#hint');
+  if (!el) return;
+  el.textContent = msg;
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(() => { el.textContent = ''; }, 4500);
+}
+
+const isSlash = (e) => e.code === 'Slash' || e.key === '/';
+
+wrap.addEventListener('keydown', (e) => {
+  if (e.target !== wrap || e.ctrlKey || e.metaKey || e.altKey || !state.cursor) return;
+  const k = e.key, FR = isFR();
+  const nav = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[k];
+  if (nav) { e.preventDefault(); commitEdit(); step(nav[0], nav[1]); return; }
+  if (k === 'Tab') { e.preventDefault(); commitEdit(); step(0, e.shiftKey ? -1 : 1); return; }
+  if (k === 'Home' || k === 'End') {
+    e.preventDefault(); commitEdit();
+    const c = state.cursor;
+    moveTo(k === 'Home' ? { pid: c.pid, r: 0, sub: 0 } : { pid: c.pid, r: state.N - 1, sub: FR ? 1 : 0 });
+    return;
+  }
+  if (isSlash(e)) { e.preventDefault(); cancelEdit(); searchInput.focus(); return; }
+  if (!FR) {
+    if (k === '0' || k === '1' || k === '2') { e.preventDefault(); setCur(+k); advance(); return; }
+    if (k === 'Backspace' || k === 'Delete') { e.preventDefault(); setCur(0); return; }
+    if (k === ' ') { e.preventDefault(); setCur((cur(curP(), state.cursor.r) + 1) % 3); return; }
+    if (k === 'Enter') { e.preventDefault(); step(1, 0); return; }
+    if (/^[3-9]$/.test(k)) { e.preventDefault(); hint('В этой системе: 1 — flash, 2 — redpoint, 0 — нет.'); }
+    return;
+  }
+  if (/^[0-9]$/.test(k)) {
+    e.preventDefault();
+    state.edit = ((state.edit || '') + k).replace(/^0+(?=\d)/, '').slice(0, 2);
+    paintRoute(curP(), state.cursor.r);
+    return;
+  }
+  if (k === 'Backspace') {
+    e.preventDefault();
+    if (state.edit !== null) { state.edit = state.edit.slice(0, -1); paintRoute(curP(), state.cursor.r); } else setFR(0);
+    return;
+  }
+  if (k === 'Delete') { e.preventDefault(); state.edit = null; setFR(0); return; }
+  if (k === 'Escape') { e.preventDefault(); cancelEdit(); return; }
+  if (k === 'Enter' || k === ' ') { e.preventDefault(); commitEdit(); advance(); }
+});
+
+table.addEventListener('mousedown', (e) => {
+  const td = e.target.closest('td');
+  if (!td || !td.parentElement.dataset.i) return;
+  const p = state.rows[+td.parentElement.dataset.i];
+  if (td.dataset.r !== undefined) {
+    e.preventDefault();
+    wrap.focus({ preventScroll: true });
+    const r = +td.dataset.r, s = +td.dataset.s, c = state.cursor;
+    const onCursor = c && c.pid === p.id && c.r === r && c.sub === s;
+    commitEdit();
+    if (onCursor && !isFR()) setCur((cur(p, r) + 1) % 3);
+    else moveTo({ pid: p.id, r, sub: s });
+  } else if (td.classList.contains('s-name') || td.classList.contains('s-pin')) {
+    e.preventDefault();
+    wrap.focus({ preventScroll: true });
+    commitEdit();
+    moveTo({ pid: p.id, r: 0, sub: 0 });
+  }
+});
+wrap.addEventListener('focusin', () => app.classList.add('focused'));
+wrap.addEventListener('focusout', () => { commitEdit(); app.classList.remove('focused'); });
+
+/* ---------- search ---------- */
+let srItems = [], srActive = 0;
+function closeSR() { sr.hidden = true; srItems = []; }
+function drawSR() {
+  if (!srItems.length) { sr.innerHTML = '<div class="sr-empty">Никого не нашли</div>'; sr.hidden = false; return; }
+  sr.innerHTML = srItems.map((p, i) =>
+    `<div class="sr-item" role="option" data-i="${i}" aria-selected="${i === srActive}">` +
+    `<span><b>${p.last}</b> ${p.first}</span>` +
+    `<span class="sr-meta">${p.pin} · сет ${p.set + 1} · ${GROUP_SHORT[p.group]} · ${p.female ? 'Ж' : 'М'}` +
+    (state.rowIdx.has(p.id) ? '' : ' · <em>вне фильтра, переключу</em>') + '</span></div>').join('');
+  sr.hidden = false;
+}
+function updateSearch() {
+  const q = norm(searchInput.value.trim());
+  if (!q) { closeSR(); return; }
+  const num = /^\d+$/.test(q);
+  srItems = state.people
+    .filter((p) => (num ? String(p.pin).startsWith(q) : norm(p.last + ' ' + p.first).includes(q) || norm(p.first + ' ' + p.last).includes(q)))
+    .sort((a, b) => (state.rowIdx.has(b.id) - state.rowIdx.has(a.id)) || byName(a, b))
+    .slice(0, 6);
+  srActive = 0;
+  drawSR();
+}
+function goTo(p, r, sub) {
+  if (!state.rowIdx.has(p.id)) {
+    state.f = { set: p.set, group: -1, gender: 'all', missing: false };
+    state.cursor = { pid: p.id, r, sub };
+    render();
+  }
+  wrap.focus({ preventScroll: true });
+  moveTo({ pid: p.id, r, sub });
+  flashRow(p);
+}
+function pick(p) {
+  searchInput.value = '';
+  closeSR();
+  goTo(p, 0, 0);
+}
+searchInput.addEventListener('input', updateSearch);
+searchInput.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowDown' && srItems.length) { e.preventDefault(); srActive = Math.min(srActive + 1, srItems.length - 1); drawSR(); }
+  else if (e.key === 'ArrowUp' && srItems.length) { e.preventDefault(); srActive = Math.max(srActive - 1, 0); drawSR(); }
+  else if (e.key === 'Enter') { e.preventDefault(); if (srItems[srActive]) pick(srItems[srActive]); }
+  else if (e.key === 'Escape') { e.preventDefault(); searchInput.value = ''; closeSR(); wrap.focus({ preventScroll: true }); }
+});
+searchInput.addEventListener('blur', () => setTimeout(closeSR, 150));
+sr.addEventListener('mousedown', (e) => {
+  const it = e.target.closest('.sr-item');
+  if (!it) return;
+  e.preventDefault();
+  pick(srItems[+it.dataset.i]);
+});
+
+/* ---------- filters & controls ---------- */
+function buildSeg(el, opts) {
+  el.innerHTML = opts.map(([v, label, title]) =>
+    `<button type="button" data-v="${v}" aria-pressed="false"${title ? ` title="${title}"` : ''}>${label}</button>`).join('');
+}
+function bindSeg(el, fn) {
+  el.addEventListener('click', (e) => { const b = e.target.closest('button[data-v]'); if (b) fn(b.dataset.v); });
+}
+function updateFilters() {
+  const pressed = (sel, v) => $(sel).querySelectorAll('button[data-v]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === String(v))));
+  pressed('#f-set', state.f.set);
+  pressed('#f-group', state.f.group);
+  pressed('#f-gender', state.f.gender);
+  pressed('#f-dir', state.dir);
+  pressed('#m-mode', state.mode);
+  pressed('#m-n', state.N);
+  $('#chip-missing').setAttribute('aria-pressed', String(state.f.missing));
+  $('#missing-n').textContent = state.missingCount;
+  $('#ev-meta').textContent = `${PEOPLE} участников · ${state.N} трасс · ${isFR() ? 'французская система' : 'PROP, от количества пролазов'}`;
+}
+
+buildSeg($('#f-set'), [[-1, 'Все'], [0, '1<span class="t">10:00</span>'], [1, '2<span class="t">13:00</span>'], [2, '3<span class="t">16:00</span>']]);
+buildSeg($('#f-group'), [[-1, 'Все'], [0, 'Новички'], [1, 'Любители'], [2, 'Спорт']]);
+buildSeg($('#f-gender'), [['all', 'Все'], ['M', 'М'], ['F', 'Ж']]);
+buildSeg($('#f-dir'), [['right', '→ по участнику', 'Удобно переносить карточку участника'], ['down', '↓ по трассе', 'Удобно переносить протокол трассы']]);
+buildSeg($('#m-mode'), [['PROP', 'PROP'], ['FR', 'FR топ/зона']]);
+buildSeg($('#m-n'), [[15, '15 трасс'], [45, '45 трасс']]);
+
+bindSeg($('#f-set'), (v) => { state.f.set = +v; render(); });
+bindSeg($('#f-group'), (v) => { state.f.group = +v; render(); });
+bindSeg($('#f-gender'), (v) => { state.f.gender = v; render(); });
+bindSeg($('#f-dir'), (v) => { state.dir = v; store.set('rockevents-matrix-dir', v); updateFilters(); wrap.focus({ preventScroll: true }); });
+bindSeg($('#m-mode'), (v) => { if (state.mode !== v) { state.mode = v; boot(); } });
+bindSeg($('#m-n'), (v) => { if (state.N !== +v) { state.N = +v; boot(); } });
+$('#chip-missing').addEventListener('click', () => { state.f.missing = !state.f.missing; render(); });
+$('#m-offline').addEventListener('change', (e) => { state.offline = e.target.checked; });
+$('#m-reset').addEventListener('click', () => {
+  for (const m of ['PROP', 'FR']) for (const n of [15, 45]) store.del(`rockevents-matrix-draft:${m}:${n}`);
+  boot();
+});
+
+function renderKeys() {
+  const common =
+    '<span><kbd>←</kbd><kbd>↑</kbd><kbd>→</kbd><kbd>↓</kbd> перейти</span>' +
+    '<span><kbd>/</kbd> найти участника по фамилии или PIN</span>' +
+    '<span><kbd>Ctrl</kbd>+<kbd>S</kbd> сохранить</span>';
+  const legend = isFR()
+    ? '<span><i class="sw v1">2</i> топ <i class="sw v2">1</i> зона <i class="sw bl"></i> не сохранено</span>'
+    : '<span><i class="sw v1">FL</i> flash <i class="sw v2">RP</i> redpoint <i class="sw bl"></i> не сохранено</span>';
+  const keys = isFR()
+    ? '<span>цифры — номер попытки, <kbd>Enter</kbd> записать и дальше</span>' +
+      '<span><kbd>Esc</kbd> отменить набор</span>' +
+      '<span>топ без зоны → зона на той же попытке</span>' +
+      '<span>зона позже топа подсвечивается, сохранить нельзя</span>'
+    : '<span><kbd>1</kbd> flash <kbd>2</kbd> redpoint <kbd>0</kbd> нет, курсор идёт дальше</span>' +
+      '<span><kbd>Пробел</kbd> или клик по выбранной — по кругу</span>';
+  $('#keys').innerHTML = legend + keys + common +
+    '<span class="focus-hint">Кликните по ячейке, чтобы вводить с клавиатуры</span><span class="hint" id="hint" aria-live="polite"></span>';
+}
+
+/* ---------- status, banner, save ---------- */
+// зона позже топа: такие изменения сохранить нельзя (на сервере проверку ещё предстоит добавить)
+function invalidCells() {
+  if (!isFR()) return [];
+  const out = [];
+  for (const [k, v] of state.draft) {
+    if (v.t > 0 && v.z > v.t) { const [pid, r] = k.split(':').map(Number); out.push({ p: state.byId.get(pid), r }); }
+  }
+  return out;
+}
+
+function updateStatus() {
+  const n = state.draft.size;
+  const m = new Set([...state.draft.keys()].map((k) => k.split(':')[0])).size;
+  const st = $('#status'), save = $('#btn-save'), discard = $('#btn-discard');
+  const bad = invalidCells();
+  if (state.saving) {
+    st.className = ''; st.textContent = 'Отправляю на сервер…';
+  } else if (bad.length) {
+    const b = bad[0];
+    st.className = 'err';
+    st.innerHTML = `<b>Нельзя сохранить:</b> зона позже топа, трасса ${b.r + 1} у участника ${b.p.last} ${b.p.first}` +
+      (bad.length > 1 ? ` и ещё ${bad.length - 1}` : '') + '.<button type="button" class="goto" data-goto="1">Перейти</button>';
+  } else if (!n) {
+    st.className = state.savedMsg ? 'ok' : '';
+    st.textContent = state.savedMsg || 'Все изменения сохранены';
+  } else {
+    st.className = '';
+    st.innerHTML = `<b>Не сохранено:</b> ${n} ${plural(n, 'результат', 'результата', 'результатов')} у ${m} ${plural(m, 'участника', 'участников', 'участников')}` +
+      (state.storageOk ? ' · черновик хранится в этом браузере' : '');
+  }
+  save.disabled = !n || state.saving || bad.length > 0;
+  save.textContent = state.saving ? 'Сохраняю…' : n ? `Сохранить · ${n}` : 'Сохранить';
+  if (!discardArmed) discard.textContent = 'Отменить изменения';
+  discard.disabled = !n || state.saving;
+}
+
+function showBanner(kind, text, actions) {
+  const b = $('#banner');
+  b.className = 'banner ' + kind;
+  b.innerHTML = `<span>${text}</span><span class="banner-actions"></span>`;
+  actions.forEach(([label, fn]) => {
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'btn small'; btn.textContent = label;
+    btn.addEventListener('click', fn);
+    b.lastChild.appendChild(btn);
+  });
+  b.hidden = false;
+}
+function hideBanner() { $('#banner').hidden = true; }
+
+let deltaTimer;
+async function save() {
+  if (state.saving) return;
+  commitEdit();
+  if (!state.draft.size) return;
+  if (invalidCells().length) { hint('Сначала исправьте трассы, где зона позже топа.'); return; }
+  state.saving = true;
+  hideBanner();
+  updateStatus();
+  await new Promise((res) => setTimeout(res, 650));
+  state.saving = false;
+  if (state.offline) {
+    updateStatus();
+    showBanner('error', 'Не удалось сохранить: нет связи с сервером. Изменения остались в черновике в этом браузере.', [['Повторить', save]]);
+    return;
+  }
+  const before = new Map(state.people.map((p) => [p.id, p.place]));
+  const pids = new Set();
+  let n = 0;
+  for (const [k, v] of state.draft) {
+    const [pid, r] = k.split(':').map(Number);
+    const p = state.byId.get(pid);
+    if (isFR()) p.fr[r] = { ...v }; else p.prop[r] = v;
+    p.entered = true;
+    pids.add(pid);
+    n++;
+  }
+  state.draft.clear();
+  persist();
+  computeScores();
+  state.deltas.clear();
+  for (const p of state.people) {
+    const b = before.get(p.id);
+    if (b != null && p.place != null && b !== p.place) state.deltas.set(p.id, b - p.place);
+  }
+  state.savedMsg = `Сохранено ${n} ${plural(n, 'результат', 'результата', 'результатов')} у ${pids.size} ${plural(pids.size, 'участника', 'участников', 'участников')}. Баллы и места пересчитаны.`;
+  render();
+  clearTimeout(deltaTimer);
+  deltaTimer = setTimeout(() => { state.deltas.clear(); state.rows.forEach(paintRowState); }, 8000);
+}
+
+let discardArmed = false, discardTimer;
+function disarm() {
+  discardArmed = false;
+  clearTimeout(discardTimer);
+  $('#btn-discard').classList.remove('danger');
+  updateStatus();
+}
+function discardNow() {
+  disarm();
+  state.edit = null;
+  state.draft.clear();
+  state.savedMsg = null;
+  persist();
+  hideBanner();
+  render();
+}
+$('#btn-save').addEventListener('click', save);
+$('#status').addEventListener('click', (e) => {
+  if (!e.target.closest('[data-goto]')) return;
+  const b = invalidCells()[0];
+  if (b) goTo(b.p, b.r, 1);
+});
+$('#btn-discard').addEventListener('click', () => {
+  const btn = $('#btn-discard');
+  if (!discardArmed) {
+    discardArmed = true;
+    btn.textContent = `Точно отменить ${state.draft.size}?`;
+    btn.classList.add('danger');
+    discardTimer = setTimeout(disarm, 3000);
+    return;
+  }
+  discardNow();
+});
+
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.code === 'KeyS') { e.preventDefault(); save(); return; }
+  const tag = document.activeElement && document.activeElement.tagName;
+  if (isSlash(e) && tag !== 'INPUT' && tag !== 'TEXTAREA' && document.activeElement !== wrap) {
+    e.preventDefault();
+    searchInput.focus();
+  }
+});
+
+/* ---------- boot ---------- */
+function seedDemo() {
+  // орг начал переносить карточку участника из сета 3 и заполнил первые трассы
+  const p = state.people.filter((x) => x.set === 2 && !x.entered).sort(byName)[0];
+  const k = isFR() ? 3 : 5;
+  for (let r = 0; r < k; r++) state.draft.set(key(p.id, r), isFR() ? { ...p.cardFr[r] } : p.cardProp[r]);
+  state.f = { set: 2, group: -1, gender: 'all', missing: false };
+  state.cursor = { pid: p.id, r: k, sub: 0 };
+}
+
+function boot() {
+  state.edit = null;
+  state.savedMsg = null;
+  state.deltas.clear();
+  hideBanner();
+  state.people = gen(state.N);
+  state.byId = new Map(state.people.map((p) => [p.id, p]));
+  computeScores();
+  state.draft = new Map();
+  const d = loadDraft();
+  if (d === null) {
+    seedDemo();
+    persist();
+  } else {
+    for (const [k, v] of d) {
+      const [pid, r] = k.split(':').map(Number);
+      if (state.byId.has(pid) && r < state.N) state.draft.set(k, v);
+    }
+    if (state.draft.size) {
+      const n = state.draft.size;
+      const pid = Number(state.draft.keys().next().value.split(':')[0]);
+      let last = 0;
+      for (const k of state.draft.keys()) {
+        const [p2, r2] = k.split(':').map(Number);
+        if (p2 === pid) last = Math.max(last, r2);
+      }
+      state.cursor = { pid, r: Math.min(last + 1, state.N - 1), sub: 0 };
+      const p0 = state.byId.get(pid), f = state.f;
+      const hidden = (f.set >= 0 && p0.set !== f.set) || (f.group >= 0 && p0.group !== f.group) ||
+        (f.gender !== 'all' && (f.gender === 'F') !== p0.female) || (f.missing && p0.entered);
+      if (hidden) state.f = { set: p0.set, group: -1, gender: 'all', missing: false };
+      showBanner('info', `Восстановлен несохранённый черновик: ${n} ${plural(n, 'результат', 'результата', 'результатов')}.`,
+        [['Сохранить', save], ['Отбросить', discardNow]]);
+    } else {
+      state.cursor = null;
+    }
+  }
+  renderKeys();
+  render();
+}
+
+const savedDir = store.get('rockevents-matrix-dir');
+if (savedDir === 'right' || savedDir === 'down') state.dir = savedDir;
+boot();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { measure(); ensureVisible(); });
+window.addEventListener('resize', measure);
+})();
+</script>

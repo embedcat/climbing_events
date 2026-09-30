@@ -1,0 +1,826 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ввод результатов с телефона</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=Unbounded:wght@600&display=swap">
+<style>
+/* Layout: mockup settings column beside a phone frame. Inside the frame: the participant's event mini-app,
+   fixed event header with tabs, scrolling entry form, action bar pinned to the bottom, check sheet over it. */
+:root{
+  --bg:#e9edf1; --app-bg:#f3f5f8; --surface:#fbfcfd; --surface-2:#e6eaef; --line:#d5dbe2; --line-strong:#b6bfca;
+  --ink:#17212c; --muted:#56626f; --faint:#a1abb6; --shadow:rgba(23,33,44,.16); --scrim:rgba(8,12,16,.45);
+  --fl:#157443; --fl-soft:#d6efdf; --rp:#1d52bb; --rp-soft:#dbe5fa;
+  --accent:#cf4812; --accent-soft:#fde5d6; --on-accent:#ffffff;
+  --danger:#bf262c; --danger-soft:#fadede;
+  --frame:#1a2129; --frame-line:#2e3844;
+  --font-display:"Unbounded","IBM Plex Sans",system-ui,sans-serif;
+  --font-ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-data:"IBM Plex Mono",ui-monospace,Consolas,"Liberation Mono",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b1015; --app-bg:#0f141a; --surface:#161d25; --surface-2:#1d2631; --line:#29333f; --line-strong:#3b4756;
+    --ink:#e4e9ef; --muted:#98a4b1; --faint:#56626f; --shadow:rgba(0,0,0,.55); --scrim:rgba(0,0,0,.6);
+    --fl:#5bcb8c; --fl-soft:#15321f; --rp:#89aaf6; --rp-soft:#1a2746;
+    --accent:#ff8f55; --accent-soft:#3b2317; --on-accent:#1a0d05;
+    --danger:#ff7b7b; --danger-soft:#3a1a1c;
+    --frame:#05070a; --frame-line:#27303b;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b1015; --app-bg:#0f141a; --surface:#161d25; --surface-2:#1d2631; --line:#29333f; --line-strong:#3b4756;
+  --ink:#e4e9ef; --muted:#98a4b1; --faint:#56626f; --shadow:rgba(0,0,0,.55); --scrim:rgba(0,0,0,.6);
+  --fl:#5bcb8c; --fl-soft:#15321f; --rp:#89aaf6; --rp-soft:#1a2746;
+  --accent:#ff8f55; --accent-soft:#3b2317; --on-accent:#1a0d05;
+  --danger:#ff7b7b; --danger-soft:#3a1a1c;
+  --frame:#05070a; --frame-line:#27303b;
+  color-scheme:dark;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:14px;line-height:1.4}
+button{font:inherit;color:inherit}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.muted{color:var(--muted)}
+.small{font-size:12.5px}
+
+/* page: settings + device */
+.page{display:grid;grid-template-columns:minmax(0,330px) auto;justify-content:center;align-items:start;gap:40px;padding-inline:16px;padding-block:24px}
+@media (max-width:800px){.page{grid-template-columns:minmax(0,1fr);gap:24px}}
+.panel{display:flex;flex-direction:column;gap:16px;padding-top:8px;min-width:0}
+.eyebrow{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.panel h1{margin:4px 0 0;font-family:var(--font-display);font-weight:600;font-size:22px;letter-spacing:-.01em;text-wrap:balance}
+.panel p{margin:0;max-width:44ch;color:var(--muted)}
+.opt{display:flex;flex-direction:column;gap:6px}
+.label{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.seg{display:inline-flex;flex-wrap:wrap;align-self:flex-start;gap:2px;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)}
+.seg button{border:0;background:transparent;padding:5px 10px;border-radius:6px;color:var(--muted);font-size:13px;white-space:nowrap;cursor:pointer}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:0 1px 2px var(--shadow)}
+.seg[aria-disabled="true"]{opacity:.45;pointer-events:none}
+.check{display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:13.5px}
+.check input{margin-top:3px}
+.pins ul{margin:4px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(--muted)}
+.pins b{display:inline-block;min-width:44px;font-family:var(--font-data);color:var(--ink)}
+.linkbtn{align-self:flex-start;padding:0;border:0;background:none;color:var(--muted);font-size:13px;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+
+.device{width:390px;height:clamp(620px,calc(100vh - 48px),820px);padding:11px;border-radius:46px;background:var(--frame);
+  box-shadow:0 24px 60px var(--shadow),inset 0 0 0 1px var(--frame-line)}
+@media (max-width:800px){.device{margin-inline:auto}}
+@media (max-width:460px){.device{width:100%;height:min(760px,calc(100svh - 32px));padding:0;border-radius:20px;box-shadow:0 0 0 1px var(--line)}}
+.screen{position:relative;width:100%;height:100%;overflow:hidden;border-radius:36px;background:var(--app-bg)}
+@media (max-width:460px){.screen{border-radius:19px}}
+
+/* app */
+.app{position:absolute;inset:0;display:flex;flex-direction:column;color:var(--ink);font-size:15px}
+.ev-head{flex:none;padding:16px 18px 0;background:var(--surface);border-bottom:1px solid var(--line)}
+.ev-title{font-family:var(--font-display);font-weight:600;font-size:15px;line-height:1.25;text-wrap:balance}
+.ev-date{margin-top:2px;font-size:12.5px;color:var(--muted)}
+.tabs{display:flex;margin-top:8px}
+.tabs button{flex:1;padding:10px 0 11px;border:0;border-bottom:2px solid transparent;background:none;color:var(--muted);font-size:13px;cursor:pointer}
+.tabs button[aria-current="page"]{border-bottom-color:var(--accent);color:var(--ink);font-weight:600}
+.main{flex:1 1 auto;display:flex;flex-direction:column;gap:14px;padding:16px 16px 24px;overflow-y:auto;overscroll-behavior:contain}
+.main>*{flex-shrink:0}
+.main h2{margin:0;font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-.01em}
+.action{flex:none;display:flex;flex-direction:column;gap:8px;padding:10px 16px calc(16px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line)}
+.act-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.act-row.two{display:grid;grid-template-columns:1fr 1.5fr}
+.sum{display:flex;flex-wrap:wrap;align-items:baseline;gap:1px 12px;min-width:0;font-size:14px}
+.sum .s b{font-family:var(--font-data);font-size:16px}
+.sum .s.fl b{color:var(--fl)}
+.sum .s.rp b{color:var(--rp)}
+.sum .of{width:100%;font-size:12.5px;color:var(--muted)}
+.sum .err{font-size:13px;font-weight:500;color:var(--danger)}
+.btn{padding:12px 18px;border:1.5px solid var(--line-strong);border-radius:12px;background:var(--surface);color:var(--ink);font-size:15px;font-weight:600;cursor:pointer;touch-action:manipulation}
+.btn.primary{border-color:var(--accent);background:var(--accent);color:var(--on-accent)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn:focus-visible,.tile:focus-visible,.stepper button:focus-visible,.choice button:focus-visible,
+.tabs button:focus-visible,.seg button:focus-visible,.linkbtn:focus-visible,.pin-chip:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.send-err{padding:9px 12px;border:1px solid var(--danger);border-radius:10px;background:var(--danger-soft);font-size:13px}
+
+/* identify */
+.ident{display:flex;flex-direction:column;gap:12px;padding-top:12px}
+.pin{width:100%;height:68px;padding:0 0 0 .45em;border:2px solid var(--line-strong);border-radius:14px;background:var(--surface);color:var(--ink);
+  font-family:var(--font-data);font-size:34px;font-weight:600;letter-spacing:.45em;text-align:center}
+.pin:focus{outline:none;border-color:var(--ink)}
+.pin::placeholder{color:var(--line-strong)}
+.pin-msg{min-height:20px;margin:0;font-size:13.5px}
+.pin-msg.err{color:var(--danger)}
+.demo-pins{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.pin-chip{padding:5px 10px;border:1px dashed var(--line-strong);border-radius:999px;background:none;font-family:var(--font-data);font-size:13px;cursor:pointer}
+
+/* entry */
+.who{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.who-name{font-size:16px;font-weight:600}
+.who-meta{font-size:13px;color:var(--muted)}
+.who .linkbtn{flex:none}
+.note{margin:-6px 0 0;font-size:12.5px;color:var(--muted)}
+.banner{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:13.5px}
+.banner.info{border-color:var(--accent);background:var(--accent-soft)}
+.list-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 10px;margin-top:2px}
+.draft-state{font-size:12px;color:var(--muted)}
+.how{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:-6px 0 0;font-size:13px;color:var(--muted)}
+.mini{display:inline-grid;place-items:center;min-width:26px;height:20px;padding:0 4px;border:1px solid var(--line);border-radius:5px;background:var(--surface);font-family:var(--font-data);font-size:10.5px;font-weight:600}
+.mini.fl{border-color:var(--fl);background:var(--fl-soft);color:var(--fl)}
+.mini.rp{border-color:var(--rp);background:var(--rp-soft);color:var(--rp)}
+
+.tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;max-width:100%;aspect-ratio:1/1.08;padding:0;
+  border:1.5px solid var(--line);border-radius:12px;background:var(--surface);cursor:pointer;touch-action:manipulation;transition:transform .08s}
+.tile:active{transform:scale(.94)}
+.tn{font-family:var(--font-data);font-size:19px;font-weight:600;line-height:1}
+.tl{font-size:10px;line-height:1;color:var(--faint)}
+.tile.fl{border-color:var(--fl);background:var(--fl-soft);color:var(--fl)}
+.tile.rp{border-color:var(--rp);background:var(--rp-soft);color:var(--rp)}
+.tile.fl .tl,.tile.rp .tl{color:inherit;font-weight:600}
+
+.rn{flex:none;width:30px;font-family:var(--font-data);font-size:15px;font-weight:600;text-align:center}
+
+.fhead,.frow{display:grid;grid-template-columns:30px 1fr 1fr;gap:10px;align-items:center}
+.fhead{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.fhead span:first-child{text-align:center}
+.flist{display:flex;flex-direction:column}
+.frow{padding:6px 0;border-bottom:1px solid var(--line)}
+.stepper{display:grid;grid-template-columns:40px 1fr 40px;align-items:center;height:44px;overflow:hidden;border:1.5px solid var(--line);border-radius:10px;background:var(--surface)}
+.stepper button{height:100%;border:0;background:none;color:var(--muted);font-size:20px;line-height:1;cursor:pointer;touch-action:manipulation}
+.stepper output{font-family:var(--font-data);font-size:16px;font-weight:600;text-align:center}
+.stepper.on-t{border-color:var(--fl);background:var(--fl-soft);color:var(--fl)}
+.stepper.on-z{border-color:var(--rp);background:var(--rp-soft);color:var(--rp)}
+.frow.bad .stepper.z{border-color:var(--danger);background:var(--danger-soft);color:var(--danger)}
+.frow .err{grid-column:2/-1;margin:0;font-size:12.5px;color:var(--danger)}
+
+/* registration fields (ввод без регистрации) */
+.form{display:flex;flex-direction:column;gap:12px;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fld{display:flex;flex-direction:column;gap:5px;min-width:0}
+.fld>span{font-size:12.5px;font-weight:500;color:var(--muted)}
+.fld input{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--app-bg);color:var(--ink);font:inherit;font-size:16px}
+.fld input:focus{outline:none;border-color:var(--ink)}
+.choice{display:flex;flex-wrap:wrap;gap:6px}
+.choice button{padding:8px 12px;border:1.5px solid var(--line);border-radius:999px;background:var(--app-bg);font-size:14px;cursor:pointer;touch-action:manipulation}
+.choice button[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--surface)}
+.fld.invalid>span{color:var(--danger)}
+.fld.invalid input,.fld.invalid .choice button{border-color:var(--danger)}
+
+/* done */
+.done{display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:14px;text-align:center}
+.done p{margin:0}
+.done-mark{width:56px;height:56px}
+.done-mark circle{fill:var(--fl-soft);stroke:var(--fl);stroke-width:2}
+.done-mark path{fill:none;stroke:var(--fl);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.place-card{width:100%;margin-top:6px;padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+.pc-label{font-size:12.5px;color:var(--muted)}
+.pc-row{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:6px}
+.pc-place{font-family:var(--font-display);font-size:54px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.pc-of{font-size:13px;line-height:1.25;text-align:left;color:var(--muted)}
+.remember{padding:10px 12px;border-radius:12px;background:var(--surface-2);font-size:13px}
+
+/* check sheet */
+.sheet-host{position:absolute;inset:0;z-index:10;pointer-events:none}
+.sheet-host.open{pointer-events:auto}
+.sheet-bg{position:absolute;inset:0;background:var(--scrim)}
+.sheet{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:12px;max-height:80%;overflow-y:auto;
+  padding:10px 16px calc(18px + env(safe-area-inset-bottom,0px));border-radius:20px 20px 0 0;background:var(--surface);box-shadow:0 -8px 30px var(--shadow)}
+.grabber{align-self:center;width:40px;height:4px;border-radius:2px;background:var(--line-strong)}
+.sheet h3{margin:0;font-size:17px;font-weight:600}
+.sheet p{margin:0}
+.ck{display:grid;grid-template-columns:84px minmax(0,1fr);gap:8px;align-items:start}
+.ck-k{padding-top:4px;font-size:13px;font-weight:600}
+.ck-k.fl{color:var(--fl)}
+.ck-k.rp{color:var(--rp)}
+.ck-v{display:flex;flex-wrap:wrap;gap:6px}
+.num{min-width:32px;padding:4px 6px;border-radius:8px;background:var(--surface-2);font-family:var(--font-data);font-weight:600;text-align:center}
+.ck-table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+.ck-table th{padding:4px 6px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;text-align:left;color:var(--muted)}
+.ck-table td{padding:6px;border-top:1px solid var(--line)}
+.ck-table td:first-child{font-family:var(--font-data);font-weight:600}
+.sheet-actions{display:grid;grid-template-columns:1fr 1.6fr;gap:8px;margin-top:4px}
+
+.toast{position:absolute;left:16px;right:16px;bottom:100px;z-index:20;padding:10px 14px;border-radius:12px;background:var(--ink);color:var(--surface);
+  font-size:13.5px;text-align:center;box-shadow:0 8px 24px var(--shadow)}
+@media (prefers-reduced-motion:reduce){.tile{transition:none}.tile:active{transform:none}}
+</style>
+
+<div class="page">
+  <aside class="panel" aria-label="Настройки макета">
+    <div>
+      <div class="eyebrow">Макет · RockEvents</div>
+      <h1>Ввод результатов с телефона</h1>
+    </div>
+    <p>Экран, где участник в конце сета отмечает свои трассы. Всё кликается, настройки ниже меняют сценарий.</p>
+
+    <div class="opt">
+      <span class="label" id="o-path">Как участник попал на экран</span>
+      <div class="seg" data-opt="path" role="group" aria-labelledby="o-path">
+        <button type="button" data-v="pin">PIN</button>
+        <button type="button" data-v="qr">QR с карточки</button>
+        <button type="button" data-v="wo">Без регистрации</button>
+      </div>
+    </div>
+    <div class="opt">
+      <span class="label" id="o-mode">Система подсчёта</span>
+      <div class="seg" data-opt="mode" role="group" aria-labelledby="o-mode">
+        <button type="button" data-v="PROP">PROP</button>
+        <button type="button" data-v="FR">FR топ/зона</button>
+      </div>
+    </div>
+    <div class="opt">
+      <span class="label" id="o-n">Трасс</span>
+      <div class="seg" data-opt="N" role="group" aria-labelledby="o-n">
+        <button type="button" data-v="15">15</button>
+        <button type="button" data-v="45">45</button>
+      </div>
+    </div>
+    <label class="check" for="o-check"><input type="checkbox" id="o-check" checked><span>Проверка перед отправкой <span class="muted">(опция организатора)</span></span></label>
+    <label class="check" for="o-offline"><input type="checkbox" id="o-offline"><span>Нет связи при отправке</span></label>
+
+    <div class="pins">
+      <span class="label">PIN для демо</span>
+      <ul>
+        <li><b>8335</b> Зайцева Юлия, ещё не вводила</li>
+        <li><b>7358</b> Зайцев Егор, уже вводил</li>
+        <li><b>1111</b> такого участника нет</li>
+      </ul>
+    </div>
+    <p class="small">Черновик хранится в браузере. Обновите страницу посреди ввода и снова введите PIN: отмеченное вернётся.</p>
+    <button type="button" class="linkbtn" data-act="reset">Сбросить демо</button>
+  </aside>
+
+  <div class="device">
+    <div class="screen">
+      <div class="app">
+        <header class="ev-head">
+          <div class="ev-title">Осенний фестиваль боулдеринга</div>
+          <div class="ev-date">4 октября · идёт сет 3, 16:00</div>
+          <nav class="tabs" aria-label="Разделы события">
+            <button type="button" data-act="tab">Инфо</button>
+            <button type="button" aria-current="page">Ввод</button>
+            <button type="button" data-act="tab">Участники</button>
+            <button type="button" data-act="tab">Результаты</button>
+          </nav>
+        </header>
+        <main class="main" id="main"></main>
+        <footer class="action" id="action"></footer>
+      </div>
+      <div class="sheet-host" id="sheet"></div>
+      <div class="toast" id="toast" role="status" hidden></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+const GROUPS = ['Новички', 'Любители', 'Спорт'];
+const SET_TIMES = ['10:00', '13:00', '16:00'];
+const RP_POINTS = 80, FLASH_K = 1.25, MAX_ATT = 20; // как в services.py и форме FR
+const DB = {
+  8335: { pin: 8335, last: 'Зайцева', first: 'Юлия', female: true, group: 1, set: 2, entered: false, seed: 5, saved: {} },
+  7358: { pin: 7358, last: 'Зайцев', first: 'Егор', female: false, group: 1, set: 2, entered: true, seed: 11, saved: {} },
+};
+const SEED_FLAG = 'rockevents-entry-seeded';
+
+const $ = (s) => document.querySelector(s);
+const main = $('#main'), action = $('#action'), sheetHost = $('#sheet'), toastEl = $('#toast');
+
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },
+  del(k) { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } },
+  keys() { try { return Object.keys(localStorage); } catch (e) { return []; } },
+};
+
+const emptyFields = () => ({ last: '', first: '', gender: '', group: -1, set: -1 });
+const state = {
+  path: 'pin', mode: 'PROP', N: 15, check: true, offline: false,
+  step: 'identify', who: null, values: [], fields: emptyFields(), woSaved: {},
+  showFieldErr: false, restoredAt: null, draftSavedAt: null, storageOk: true,
+  sending: false, sendError: false, sheet: false, result: null, pinMsg: '', pinErr: false,
+};
+
+/* ---------- helpers ---------- */
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+const sig = (x) => 1 / (1 + Math.exp(-x));
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+function plural(n, one, few, many) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return one;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+  return many;
+}
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmtTime = (ts) => new Date(ts).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+const isFR = () => state.mode === 'FR';
+const clone = (a) => JSON.parse(JSON.stringify(a));
+const modeKey = () => state.mode + ':' + state.N;
+
+/* ---------- demo data ---------- */
+function genResults(seed, skill, N) {
+  const rnd = mulberry32(seed * 1000 + N);
+  const prop = [], fr = [];
+  for (let r = 0; r < N; r++) {
+    const d = (N > 1 ? r / (N - 1) : 0.5) * 0.9 + rnd() * 0.1;
+    if (rnd() < sig((skill - d) * 9)) {
+      prop.push(rnd() < clamp(0.75 - d * 0.7 + (skill - 0.5) * 0.5, 0.05, 0.9) ? 1 : 2);
+      const t = 1 + Math.floor(rnd() * (1 + d * 4));
+      fr.push({ t, z: 1 + Math.floor(rnd() * t) });
+    } else {
+      prop.push(0);
+      fr.push(rnd() < sig((skill - d + 0.2) * 9) ? { t: 0, z: 1 + Math.floor(rnd() * 4) } : { t: 0, z: 0 });
+    }
+  }
+  return { prop, fr };
+}
+function zeros() { return isFR() ? Array.from({ length: state.N }, () => ({ t: 0, z: 0 })) : Array(state.N).fill(0); }
+function serverValues(who) {
+  if (!who) return state.woSaved[modeKey()] ? clone(state.woSaved[modeKey()]) : zeros();
+  if (who.saved[modeKey()]) return clone(who.saved[modeKey()]);
+  if (!who.entered) return zeros();
+  const g = genResults(who.seed, 0.55, state.N);
+  return isFR() ? g.fr : g.prop;
+}
+// остальные участники группы, чтобы посчитать место после отправки
+function groupOthers(female, group) {
+  const out = [];
+  for (let i = 0; i < 8; i++) {
+    const rnd = mulberry32((female ? 97 : 31) * 100 + group * 10 + i);
+    const g = genResults(1000 + (female ? 500 : 0) + group * 50 + i, [0.3, 0.5, 0.7][group] + (rnd() - 0.5) * 0.25, state.N);
+    out.push(isFR() ? g.fr : g.prop);
+  }
+  return out;
+}
+function placeFor(values, female, group) {
+  const all = groupOthers(female, group).concat([values]);
+  const N = state.N;
+  let scores;
+  if (!isFR()) {
+    const val = [];
+    for (let r = 0; r < N; r++) { const n = all.filter((a) => a[r] > 0).length; val.push(n ? 1 / n : 0); }
+    scores = all.map((a) => Math.round(a.reduce((s, x, r) => s + (x > 0 ? val[r] * (x === 1 ? FLASH_K : 1) * RP_POINTS : 0), 0) * 100) / 100);
+  } else {
+    scores = all.map((a) => {
+      let T = 0, Ta = 0, Z = 0, Za = 0;
+      a.forEach((x) => { if (x.t > 0) { T++; Ta += x.t; } if (x.z > 0) { Z++; Za += x.z; } });
+      return 10000 * T + 1000 * Z + 100 * (100 - Ta) + 10 * (100 - Za);
+    });
+  }
+  const mine = scores[scores.length - 1];
+  return { place: 1 + scores.filter((s) => s > mine).length, of: all.length };
+}
+
+/* ---------- draft ---------- */
+const draftKey = () => `rockevents-entry:${modeKey()}:${state.path === 'wo' ? 'wo' : state.who ? state.who.pin : 'none'}`;
+function saveDraft() {
+  const ts = Date.now();
+  state.storageOk = store.set(draftKey(), JSON.stringify({ v: state.values, f: state.fields, ts }));
+  state.draftSavedAt = ts;
+  paintDraftState();
+}
+function loadDraft() {
+  const raw = store.get(draftKey());
+  if (!raw) return null;
+  try {
+    const d = JSON.parse(raw);
+    return Array.isArray(d.v) && d.v.length === state.N ? d : null;
+  } catch (e) { return null; }
+}
+function clearDraft() { store.del(draftKey()); state.draftSavedAt = null; }
+function paintDraftState() {
+  const el = $('#draft-state');
+  if (!el) return;
+  el.textContent = !state.storageOk ? 'Браузер не даёт сохранить черновик'
+    : state.draftSavedAt ? `Черновик на телефоне · ${fmtTime(state.draftSavedAt)}` : 'Черновик сохраняется на телефоне';
+}
+
+/* ---------- validation ---------- */
+function invalidRoutes() {
+  if (!isFR()) return [];
+  const out = [];
+  state.values.forEach((v, r) => { if (v.t > 0 && v.z > v.t) out.push(r); });
+  return out;
+}
+function missingFields() {
+  const f = state.fields, m = [];
+  if (!f.last.trim()) m.push('фамилию');
+  if (!f.first.trim()) m.push('имя');
+  if (!f.gender) m.push('пол');
+  if (f.group < 0) m.push('группу');
+  if (f.set < 0) m.push('сет');
+  return m;
+}
+function displayWho() {
+  if (state.who) {
+    const w = state.who;
+    return { name: `${w.last} ${w.first}`, female: w.female, group: w.group, meta: `${GROUPS[w.group]} · ${w.female ? 'Ж' : 'М'} · сет ${w.set + 1}` };
+  }
+  const f = state.fields;
+  return { name: esc(`${f.last.trim()} ${f.first.trim()}`), female: f.gender === 'F', group: f.group, meta: `${GROUPS[f.group]} · ${f.gender === 'F' ? 'Ж' : 'М'} · сет ${f.set + 1}` };
+}
+
+/* ---------- screens ---------- */
+function identifyHTML() {
+  return `<section class="ident">
+    <h2>Ввод результатов</h2>
+    <p class="muted" style="margin:0">Введите PIN с вашей карточки участника.</p>
+    <label for="pin"><span class="sr-only">PIN</span>
+      <input id="pin" class="pin" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="0000" aria-describedby="pin-msg"></label>
+    <p id="pin-msg" class="pin-msg" aria-live="polite"></p>
+    <div class="demo-pins"><span class="muted small">Для демо:</span>
+      <button type="button" class="pin-chip" data-act="demo-pin" data-pin="8335">8335</button>
+      <button type="button" class="pin-chip" data-act="demo-pin" data-pin="7358">7358</button>
+      <button type="button" class="pin-chip" data-act="demo-pin" data-pin="1111">1111</button></div>
+    <p class="muted small" style="margin:0">PIN выдаёт организатор, он напечатан на карточке. Нет карточки — спросите организатора.</p>
+  </section>`;
+}
+
+function woFormHTML() {
+  const f = state.fields, e = state.showFieldErr;
+  const bad = (ok) => (e && !ok ? ' invalid' : '');
+  const choice = (key, opts, cur) => opts.map(([v, label]) =>
+    `<button type="button" data-act="field" data-f="${key}" data-v="${v}" aria-pressed="${String(v) === String(cur)}">${label}</button>`).join('');
+  return `<section class="form" id="form">
+    <h2>Кто вы</h2>
+    <p class="muted small" style="margin:-4px 0 0">Уже вводили результаты? Укажите те же фамилию и имя, и результаты обновятся.</p>
+    <div class="row2">
+      <label class="fld${bad(f.last.trim())}" for="f-last"><span>Фамилия</span><input id="f-last" data-f="last" value="${esc(f.last)}" autocomplete="family-name" autocapitalize="words"></label>
+      <label class="fld${bad(f.first.trim())}" for="f-first"><span>Имя</span><input id="f-first" data-f="first" value="${esc(f.first)}" autocomplete="given-name" autocapitalize="words"></label>
+    </div>
+    <div class="fld${bad(f.gender)}"><span id="l-g">Пол</span><div class="choice" role="group" aria-labelledby="l-g">${choice('gender', [['M', 'Мужчины'], ['F', 'Женщины']], f.gender)}</div></div>
+    <div class="fld${bad(f.group >= 0)}"><span id="l-gr">Группа</span><div class="choice" role="group" aria-labelledby="l-gr">${choice('group', GROUPS.map((g, i) => [i, g]), f.group)}</div></div>
+    <div class="fld${bad(f.set >= 0)}"><span id="l-s">Сет</span><div class="choice" role="group" aria-labelledby="l-s">${choice('set', SET_TIMES.map((t, i) => [i, `${i + 1} · ${t}`]), f.set)}</div></div>
+  </section>`;
+}
+
+function tileHTML(r) {
+  const v = state.values[r];
+  const cls = v === 1 ? ' fl' : v === 2 ? ' rp' : '';
+  const lbl = v === 1 ? 'flash' : v === 2 ? 'redpoint' : '—';
+  return `<button type="button" class="tile${cls}" data-act="tile" data-r="${r}" aria-label="Трасса ${r + 1}: ${v === 0 ? 'нет' : lbl}"><span class="tn">${r + 1}</span><span class="tl">${lbl}</span></button>`;
+}
+function frRowHTML(r) {
+  const v = state.values[r], bad = v.t > 0 && v.z > v.t;
+  const st = (k, n) => {
+    const name = k === 't' ? 'топ' : 'зона';
+    return `<div class="stepper ${k}${n > 0 ? ' on-' + k : ''}">` +
+      `<button type="button" data-act="dec" data-r="${r}" data-k="${k}" aria-label="Трасса ${r + 1}, ${name}: на попытку меньше">−</button>` +
+      `<output>${n > 0 ? n : '—'}</output>` +
+      `<button type="button" data-act="inc" data-r="${r}" data-k="${k}" aria-label="Трасса ${r + 1}, ${name}: на попытку больше">+</button></div>`;
+  };
+  return `<div class="frow${bad ? ' bad' : ''}" data-row="${r}"><span class="rn">${r + 1}</span>${st('t', v.t)}${st('z', v.z)}` +
+    (bad ? '<p class="err">Зона не может быть позже топа</p>' : '') + '</div>';
+}
+function routesHTML() {
+  const N = state.N;
+  const idx = Array.from({ length: N }, (_, r) => r);
+  if (isFR()) {
+    return '<p class="how">Номер попытки, с которой взяли топ и зону. «—» — не взяли.</p>' +
+      '<div class="fhead"><span>№</span><span>Топ</span><span>Зона</span></div>' +
+      `<div class="flist">${idx.map(frRowHTML).join('')}</div>`;
+  }
+  return '<p class="how">Нажимайте на трассу: <span class="mini">—</span>→<span class="mini fl">FL</span>→<span class="mini rp">RP</span>→<span class="mini">—</span></p>' +
+    `<div class="tiles">${idx.map(tileHTML).join('')}</div>`;
+}
+
+function entryHTML() {
+  let h = '';
+  if (state.path === 'wo') {
+    h += woFormHTML();
+  } else {
+    const w = state.who;
+    h += `<section class="who"><div><div class="who-name">${w.last} ${w.first}</div>` +
+      `<div class="who-meta">${GROUPS[w.group]} · ${w.female ? 'Ж' : 'М'} · сет ${w.set + 1}, ${SET_TIMES[w.set]}</div></div>` +
+      '<button type="button" class="linkbtn" data-act="not-me">Не вы?</button></section>';
+    if (state.path === 'qr') h += `<p class="note">PIN ${w.pin} подставлен из QR-кода на карточке.</p>`;
+    if (w.entered && !state.restoredAt) h += '<div class="banner">Вы уже вводили результаты. Их можно исправить и отправить заново.</div>';
+  }
+  if (state.restoredAt) {
+    h += `<div class="banner info"><span>Восстановлен черновик от ${fmtTime(state.restoredAt)}. Ничего не потерялось.</span>` +
+      '<button type="button" class="linkbtn" data-act="drop-draft">Начать заново</button></div>';
+  }
+  h += '<div class="list-head"><h2>Трассы</h2><span class="draft-state" id="draft-state"></span></div>';
+  h += routesHTML();
+  return h;
+}
+
+function doneHTML() {
+  const r = state.result, w = displayWho();
+  return `<section class="done">
+    <svg class="done-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22"/><path d="M14 24.5l7 7 13-14"/></svg>
+    <h2>Результаты отправлены</h2>
+    <p class="muted">${w.name} · ${w.meta}</p>
+    <div class="place-card">
+      <div class="pc-label">Сейчас в группе «${GROUPS[w.group]}», ${w.female ? 'женщины' : 'мужчины'}</div>
+      <div class="pc-row"><span class="pc-place">${r.place}</span><span class="pc-of">место<br>из ${r.of}</span></div>
+    </div>
+    <p class="muted small">Места будут меняться, пока другие участники вводят результаты.</p>
+    <p class="remember">Мы запомнили вас на этом телефоне: в результатах сразу откроется ваша группа.</p>
+  </section>`;
+}
+
+function actionEntryHTML() {
+  const N = state.N, bad = invalidRoutes();
+  let sum;
+  if (bad.length) {
+    sum = `<span class="err">${bad.length > 1 ? 'Трассы' : 'Трасса'} ${bad.map((r) => r + 1).join(', ')}: зона позже топа. Исправьте, чтобы отправить.</span>`;
+  } else if (isFR()) {
+    const T = state.values.filter((v) => v.t > 0).length, Z = state.values.filter((v) => v.z > 0).length;
+    sum = `<span class="s"><b>${T}</b> ${plural(T, 'топ', 'топа', 'топов')}</span><span class="s"><b>${Z}</b> ${plural(Z, 'зона', 'зоны', 'зон')}</span><span class="of">из ${N} трасс</span>`;
+  } else {
+    const fl = state.values.filter((v) => v === 1).length, rp = state.values.filter((v) => v === 2).length;
+    sum = `<span class="s fl">FL <b>${fl}</b></span><span class="s rp">RP <b>${rp}</b></span><span class="of">отмечено ${fl + rp} из ${N}</span>`;
+  }
+  const label = state.sending ? 'Отправляю…' : state.sendError ? 'Отправить ещё раз' : 'Отправить';
+  return (state.sendError ? '<div class="send-err" role="alert">Нет связи с сервером. Результаты сохранены на телефоне, ничего не потеряется.</div>' : '') +
+    `<div class="act-row"><div class="sum" aria-live="polite">${sum}</div>` +
+    `<button type="button" class="btn primary" data-act="submit"${bad.length || state.sending ? ' disabled' : ''}>${label}</button></div>`;
+}
+
+function sheetHTML() {
+  if (!state.sheet) return '';
+  const w = displayWho();
+  let body;
+  if (!isFR()) {
+    const fl = [], rp = [];
+    state.values.forEach((v, r) => { if (v === 1) fl.push(r + 1); if (v === 2) rp.push(r + 1); });
+    const none = state.N - fl.length - rp.length;
+    const nums = (list) => (list.length ? list.map((n) => `<span class="num">${n}</span>`).join('') : '<span class="muted">нет</span>');
+    body = `<div class="ck"><span class="ck-k fl">Flash</span><div class="ck-v">${nums(fl)}</div></div>` +
+      `<div class="ck"><span class="ck-k rp">Redpoint</span><div class="ck-v">${nums(rp)}</div></div>` +
+      `<p class="muted small">Без пролаза: ${none} ${plural(none, 'трасса', 'трассы', 'трасс')}.</p>`;
+  } else {
+    const rows = state.values.map((v, r) => ({ r, t: v.t, z: v.z })).filter((x) => x.t > 0 || x.z > 0);
+    body = rows.length
+      ? '<table class="ck-table"><thead><tr><th>Трасса</th><th>Топ</th><th>Зона</th></tr></thead><tbody>' +
+        rows.map((x) => `<tr><td>${x.r + 1}</td><td>${x.t ? x.t + '-я попытка' : '—'}</td><td>${x.z ? x.z + '-я попытка' : '—'}</td></tr>`).join('') +
+        '</tbody></table>'
+      : '<p class="muted">Ни одной отметки.</p>';
+  }
+  return '<div class="sheet-bg" data-act="sheet-close"></div>' +
+    '<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-t"><div class="grabber"></div>' +
+    `<h3 id="sh-t">Проверьте перед отправкой</h3><p class="muted small">${w.name} · ${w.meta}</p>${body}` +
+    '<div class="sheet-actions"><button type="button" class="btn" data-act="sheet-close">Изменить</button>' +
+    '<button type="button" class="btn primary" data-act="send">Всё верно, отправить</button></div></div>';
+}
+
+/* ---------- rendering ---------- */
+function renderMain() {
+  main.innerHTML = state.step === 'identify' ? identifyHTML() : state.step === 'done' ? doneHTML() : entryHTML();
+  if (state.step === 'entry') { paintDraftState(); if (state.path === 'wo') bindFields(); }
+  if (state.step === 'identify') {
+    const inp = $('#pin');
+    inp.addEventListener('input', () => onPinInput(inp));
+    paintPinMsg();
+  }
+}
+function renderAction() {
+  if (state.step === 'identify') { action.hidden = true; action.innerHTML = ''; return; }
+  action.hidden = false;
+  action.innerHTML = state.step === 'done'
+    ? '<div class="act-row two"><button type="button" class="btn" data-act="edit">Исправить</button><button type="button" class="btn primary" data-act="results">Смотреть результаты</button></div>'
+    : actionEntryHTML();
+}
+function renderSheet() {
+  sheetHost.innerHTML = sheetHTML();
+  sheetHost.classList.toggle('open', state.sheet);
+  if (state.sheet) { const b = sheetHost.querySelector('[data-act="send"]'); if (b) b.focus({ preventScroll: true }); }
+}
+function renderAll() { renderMain(); renderAction(); renderSheet(); paintOpts(); }
+
+let toastTimer;
+function toast(msg) {
+  toastEl.textContent = msg;
+  toastEl.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toastEl.hidden = true; }, 2600);
+}
+
+/* ---------- flow ---------- */
+function openEntry(who, quiet) {
+  state.who = who;
+  state.step = 'entry';
+  state.sendError = false; state.sheet = false; state.showFieldErr = false; state.result = null;
+  state.values = serverValues(who);
+  state.restoredAt = null; state.draftSavedAt = null;
+  const d = loadDraft();
+  if (d) {
+    state.values = d.v;
+    if (state.path === 'wo' && d.f) state.fields = { ...state.fields, ...d.f };
+    state.draftSavedAt = d.ts;
+    if (!quiet) state.restoredAt = d.ts;
+  }
+  renderAll();
+  main.scrollTop = 0;
+}
+
+function start() {
+  state.result = null; state.pinMsg = ''; state.pinErr = false;
+  state.sheet = false; state.sendError = false; state.sending = false;
+  state.fields = emptyFields();
+  state.woSaved = {};
+  if (state.path === 'qr') openEntry(DB[8335]);
+  else if (state.path === 'wo') openEntry(null);
+  else { state.who = null; state.step = 'identify'; renderAll(); }
+}
+
+function paintPinMsg() {
+  const el = $('#pin-msg');
+  if (!el) return;
+  el.textContent = state.pinMsg;
+  el.classList.toggle('err', state.pinErr);
+}
+function onPinInput(inp) {
+  const pin = inp.value.replace(/\D/g, '').slice(0, 4);
+  inp.value = pin;
+  state.pinMsg = ''; state.pinErr = false;
+  paintPinMsg();
+  if (pin.length < 4) return;
+  state.pinMsg = 'Ищу участника…';
+  paintPinMsg();
+  setTimeout(() => {
+    if (state.step !== 'identify') return;
+    const who = DB[pin];
+    if (who) { openEntry(who); return; }
+    state.pinMsg = `Участник с PIN ${pin} не найден. Проверьте карточку или спросите организатора.`;
+    state.pinErr = true;
+    paintPinMsg();
+  }, 450);
+}
+
+function changed() {
+  saveDraft();
+  renderAction();
+}
+
+function refocus(sel) { const el = main.querySelector(sel); if (el) el.focus({ preventScroll: true }); }
+
+function stepFR(r, k, d) {
+  const v = { ...state.values[r] };
+  if (k === 't') {
+    v.t = clamp(v.t + d, 0, MAX_ATT);
+    if (v.t > 0 && v.z === 0) v.z = v.t; // как form_data_to_results: топ без зоны → зона на той же попытке
+  } else {
+    v.z = clamp(v.z + d, v.t > 0 ? 1 : 0, MAX_ATT);
+  }
+  state.values[r] = v;
+}
+
+function submit() {
+  if (invalidRoutes().length || state.sending) return;
+  if (state.path === 'wo') {
+    const m = missingFields();
+    if (m.length) {
+      state.showFieldErr = true;
+      const form = $('#form');
+      form.outerHTML = woFormHTML();
+      bindFields();
+      main.scrollTop = 0;
+      toast('Заполните ' + m.join(', ') + '.');
+      return;
+    }
+  }
+  if (state.check) { state.sheet = true; renderSheet(); return; }
+  send();
+}
+
+async function send() {
+  state.sheet = false;
+  renderSheet();
+  state.sending = true; state.sendError = false;
+  renderAction();
+  await new Promise((res) => setTimeout(res, 900));
+  state.sending = false;
+  if (state.offline) { state.sendError = true; renderAction(); return; }
+  const w = displayWho();
+  state.result = placeFor(state.values, w.female, w.group);
+  if (state.who) { state.who.entered = true; state.who.saved[modeKey()] = clone(state.values); }
+  else state.woSaved[modeKey()] = clone(state.values);
+  clearDraft();
+  state.restoredAt = null;
+  state.step = 'done';
+  renderAll();
+  main.scrollTop = 0;
+}
+
+function bindFields() {
+  main.querySelectorAll('input[data-f]').forEach((inp) => {
+    inp.addEventListener('input', () => {
+      state.fields[inp.dataset.f] = inp.value;
+      if (state.showFieldErr) inp.closest('.fld').classList.toggle('invalid', !inp.value.trim());
+      saveDraft();
+    });
+  });
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const act = el.dataset.act;
+  const r = el.dataset.r !== undefined ? +el.dataset.r : -1;
+  switch (act) {
+    case 'tile': {
+      state.values[r] = (state.values[r] + 1) % 3;
+      el.outerHTML = tileHTML(r);
+      refocus(`.tile[data-r="${r}"]`);
+      changed();
+      break;
+    }
+    case 'inc': case 'dec': {
+      stepFR(r, el.dataset.k, act === 'inc' ? 1 : -1);
+      main.querySelector(`.frow[data-row="${r}"]`).outerHTML = frRowHTML(r);
+      refocus(`.frow[data-row="${r}"] button[data-act="${act}"][data-k="${el.dataset.k}"]`);
+      changed();
+      break;
+    }
+    case 'field': {
+      const f = el.dataset.f;
+      state.fields[f] = f === 'gender' ? el.dataset.v : +el.dataset.v;
+      $('#form').outerHTML = woFormHTML();
+      bindFields();
+      refocus(`button[data-f="${f}"][data-v="${el.dataset.v}"]`);
+      saveDraft();
+      break;
+    }
+    case 'submit': submit(); break;
+    case 'send': send(); break;
+    case 'sheet-close': state.sheet = false; renderSheet(); break;
+    case 'not-me': {
+      if (state.path === 'qr') state.path = 'pin'; // дальше участник набирает PIN сам
+      state.who = null; state.step = 'identify'; state.pinMsg = ''; state.pinErr = false;
+      renderAll(); refocusPin();
+      break;
+    }
+    case 'drop-draft': {
+      clearDraft();
+      state.values = serverValues(state.who);
+      state.restoredAt = null;
+      renderMain(); renderAction();
+      break;
+    }
+    case 'edit': openEntry(state.path === 'wo' ? null : state.who, true); break;
+    case 'results': toast('Экран результатов будет следующим макетом.'); break;
+    case 'tab': toast('В этом макете показан только ввод результатов.'); break;
+    case 'demo-pin': { const inp = $('#pin'); if (inp) { inp.value = el.dataset.pin; onPinInput(inp); } break; }
+    case 'reset': {
+      store.keys().filter((k) => k.startsWith('rockevents-entry')).forEach((k) => store.del(k));
+      Object.values(DB).forEach((w) => { w.saved = {}; });
+      DB[8335].entered = false;
+      start();
+      refocusPin();
+      break;
+    }
+    default: break;
+  }
+});
+function refocusPin() { const inp = $('#pin'); if (inp) inp.focus({ preventScroll: true }); }
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && state.sheet) { state.sheet = false; renderSheet(); }
+});
+
+function paintOpts() {
+  document.querySelectorAll('.seg[data-opt]').forEach((seg) => {
+    const v = String(state[seg.dataset.opt]);
+    seg.querySelectorAll('button[data-v]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+  });
+}
+document.querySelectorAll('.seg[data-opt]').forEach((seg) => seg.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-v]');
+  if (!b) return;
+  const opt = seg.dataset.opt;
+  const v = opt === 'N' ? +b.dataset.v : b.dataset.v;
+  if (state[opt] === v) return;
+  state[opt] = v;
+  if (opt === 'path') { start(); if (v === 'pin') refocusPin(); }
+  else if (state.step === 'identify') renderAll();
+  else openEntry(state.path === 'wo' ? null : state.who, true);
+}));
+$('#o-check').addEventListener('change', (e) => { state.check = e.target.checked; });
+$('#o-offline').addEventListener('change', (e) => { state.offline = e.target.checked; });
+
+/* ---------- boot ---------- */
+// первый заход: Юлия уже отметила несколько трасс, черновик лежит на телефоне
+if (!store.get(SEED_FLAG)) {
+  state.who = DB[8335];
+  const g = genResults(DB[8335].seed, 0.5, 15).prop;
+  const v = g.map((x, r) => (r < 7 ? x : 0));
+  store.set(draftKey(), JSON.stringify({ v, f: emptyFields(), ts: Date.now() - 4 * 60 * 1000 }));
+  store.set(SEED_FLAG, '1');
+  openEntry(DB[8335], true);
+} else {
+  start();
+}
+})();
+</script>

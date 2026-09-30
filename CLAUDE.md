@@ -59,6 +59,15 @@ Periodic state transitions are cron-driven, not in-process: `manage.py check_exp
 `manage.py check_close_registration` (see README for the crontab entries) flip `Event.is_expired`
 / registration-closed state.
 
+## Product direction
+
+`docs/PRODUCT.md` is the product source of truth: roles, priorities, agreed UX decisions, roadmap and what
+we deliberately don't build. Read it before changing functionality or UI; if a change contradicts it,
+discuss first and update the doc afterwards. Clickable mockups of the agreed screens live in
+`docs/mockups/` (open directly in a browser). New frontend screens are Vue 3 components mounted into
+Django templates and fed only by `/api/`; every new feature gets a `services.py` function and an API
+endpoint.
+
 ## Architecture
 
 Single Django app `events` inside project `config` — there is no per-domain app split;
