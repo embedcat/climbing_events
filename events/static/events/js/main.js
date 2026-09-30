@@ -20,9 +20,3 @@ function copy_to_clipboard(element_id) {
     copyText.setSelectionRange(0, 99999); // For mobile devices
     navigator.clipboard.writeText(copyText.value);
 }
-
-function page_reload() {
-    setTimeout(() => {
-        document.location.reload();
-      }, 10000);
-}

@@ -1,0 +1,16 @@
+{% extends 'events/event/base.html' %}
+{% load vite %}
+
+{% block title %}
+Ввод результатов
+{% endblock %}
+{% block scripts %}{% vite_entry 'src/entries/matrix.ts' %}{% endblock %}
+
+{# Экран сам занимает высоту окна, поэтому общий заголовок события здесь не нужен #}
+{% block container %}
+<div id="matrix-app" data-event-id="{{ event.id }}" data-csrf-token="{{ csrf_token }}"
+     data-results-url="{% url 'results' event.id %}" data-manage-url="{% url 'admin_actions' event.id %}"></div>
+<noscript>
+  {% include 'events/snippets/sn-card-banner.html' with message='Для ввода результатов нужен включённый JavaScript' %}
+</noscript>
+{% endblock %}

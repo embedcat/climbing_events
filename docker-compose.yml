@@ -30,9 +30,25 @@ services:
       - DEFAULT_FROM_EMAIL=noreply@localhost
       - EMAIL_HOST_USER=dev@localhost
       - EMAIL_HOST_PASSWORD=dev-placeholder
+      # Vue-экраны грузятся с dev-сервера Vite (сервис frontend), а не из сборки
+      - VITE_DEV_SERVER=http://localhost:5173
     depends_on:
       - db
+
+  frontend:
+    image: node:22-alpine
+    working_dir: /app/frontend
+    command: sh -c "npm install --no-audit --no-fund && npm run dev"
+    environment:
+      # на bind-mount из Windows события файловой системы не доходят, Vite следит за файлами опросом
+      - VITE_POLLING=1
+    volumes:
+      - ./frontend:/app/frontend
+      - frontend_node_modules:/app/frontend/node_modules
+    ports:
+      - "5173:5173"
 
 volumes:
   postgres_data:
   media_data:
+  frontend_node_modules:

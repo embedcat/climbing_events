@@ -1,4 +1,5 @@
 from django.urls import path, include
+from django.views.generic import RedirectView
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -33,10 +34,10 @@ urlpatterns = [
     path('e/<int:event_id>/admin_paydetails/', views.PayDetailsView.as_view(), name='pay_details'),
     path('async_get_results/<int:event_id>/', views.async_get_results, name='async_get_results'),
     path('e/<int:event_id>/enter/', views.EnterResultsView.as_view(), name='enter_results'),
-    path('e/<int:event_id>/enter_ok/', views.EnterResultsOKView.as_view(), name='enter_results_ok'),
-    path('e/<int:event_id>/enter_check/', views.EnterCheckView.as_view(), name='enter_check'),
-    path('e/<int:event_id>/enter_wo_reg/', views.EnterWithoutReg.as_view(), name='enter_wo_reg'),
+    # старая ссылка «ввод без регистрации»: теперь это тот же экран ввода
+    path('e/<int:event_id>/enter_wo_reg/', RedirectView.as_view(pattern_name='enter_results'), name='enter_wo_reg'),
     path('e/<int:event_id>/results/', views.ResultsView.as_view(), name='results'),
+    path('e/<int:event_id>/matrix/', views.MatrixView.as_view(), name='matrix'),
     path('e/<int:event_id>/participants/', views.ParticipantsView.as_view(), name='participants'),
     path('e/<int:event_id>/registration/', views.RegistrationView.as_view(), name='registration'),
     path('e/<int:event_id>/registration_ok/<int:participant_id>', views.EventRegistrationOkView.as_view(),
@@ -51,7 +52,6 @@ urlpatterns = [
     path('my_events/', views.MyEventsView.as_view(), name='my_events'),
     path('profile/', views.ProfileView.as_view(), name='profile'),
 
-    path('ajax/check_pin_code/', views.check_pin_code, name='check_pin_code'),
     path('ajax/check_promo_code/', views.check_promo_code, name='check_promo_code'),
 
     path('pay/notify/', pay_views.NotifyView.as_view(), name='pay_notify'),

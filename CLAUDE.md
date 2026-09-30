@@ -37,6 +37,23 @@ docker-compose exec web python manage.py test events.tests.ModelsTestCase.test_e
 
 (Same commands work without Docker via the `.venv` + `uv`-managed environment if one is active.)
 
+### Frontend (Vue 3 + Vite + TypeScript, `frontend/`)
+
+Node на хосте не установлен, всё идёт через Docker. `docker-compose up` поднимает сервис `frontend` (dev-сервер Vite,
+порт 5173); Django подключает его через `VITE_DEV_SERVER` и шаблонный тег `{% vite_entry %}`
+(`events/templatetags/vite.py`). Без `VITE_DEV_SERVER` тег берёт собранные файлы из `events/static/events/vue/`
+по манифесту Vite (в проде их кладёт стадия `frontend` в `Dockerfile.prod`, в git сборка не хранится).
+
+```bash
+docker-compose exec frontend npm test            # vitest
+docker-compose exec frontend npm run typecheck   # vue-tsc
+docker-compose exec frontend npm run build       # сборка в events/static/events/vue
+```
+
+Разовый запуск без поднятого стека:
+`docker run --rm -v "<путь к репозиторию>:/work" -w /work/frontend node:22-alpine npm test`.
+TypeScript закреплён на 6.x: `vue-tsc` ещё не работает с TypeScript 7.
+
 ### Lint
 
 ```bash
@@ -87,6 +104,16 @@ all domain logic lives in one app, organized by *layer* instead:
     so new features should get an API endpoint, not only a server-rendered view.
   - Because both surfaces share `services.py`, keep business rules consistent between
     them rather than duplicating logic in a view.
+- Экран ввода результатов участником (`/e/<id>/enter/`) целиком на Vue: страницу отдаёт `EnterResultsView`, данные
+  идут через `/api/events/<id>/entry/{config,identify,submit,submit-without-registration}/`, логика в
+  `services.py` (`get_entry_config`, `identify_participant`, `submit_results_by_pin`,
+  `submit_results_without_registration`, `parse_results`, `check_results`). Код экрана — `frontend/src/screens/entry/`.
+- Экран результатов (`/e/<id>/results/`) тоже на Vue: данные из `/api/events/<id>/results/`
+  (`services.get_results_payload`), код — `frontend/src/screens/results/`. Места считает `_update_results` только для
+  тех, кто ввёл результат; у остальных `place == 0`. `services.get_results` остался для Excel-протокола.
+- Массовый ввод организатором (`/e/<id>/matrix/`, только владелец и суперпользователь): Vue-экран
+  `frontend/src/screens/matrix/`, API `/api/events/<id>/matrix/` и `matrix/save/` (`services.get_matrix_payload`,
+  `services.save_matrix_changes`: всё-или-ничего, пишет только переданные трассы, места пересчитывает после записи).
 - `pay_views.py` — payment integration; `Event.pay_type` selects **YooMoney** wallet
   or **SBP QR** (generated with `segno`); `NotifyView` handles the payment webhook;
   `Wallet` model holds payout destinations.

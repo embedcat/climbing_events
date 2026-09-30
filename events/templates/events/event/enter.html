@@ -1,44 +1,20 @@
 {% extends 'events/event/base.html' %}
-{% load crispy_forms_tags %}
+{% load vite %}
 
 {% block title %}
 Ввод результатов
 {% endblock %}
+{% block scripts %}{% if can_view %}{% vite_entry 'src/entries/entry.ts' %}{% endif %}{% endblock %}
 {% block body %}
 
-{% if event.is_published or user == event.owner or user.is_superuser %}
-{% if event.is_enter_result_allowed %}
-
-<form action="" method="post">
-    {% csrf_token %}
-    <!--  {% crispy participant_form %}-->
-    <div class="form-group" id="div_id_participant-pin">
-        <label class="" for="id_participant-pin">PIN-код</label>
-        <div class=""><input class="numberinput form-control" id="id_participant-pin" min="0" name="participant-pin"
-                             oninput="CheckPinCode({{ event.id }}, this.value)"
-                             type="text"
-                             maxlength="4"
-                             {% if pin %}value="{{ pin }}" {% endif %}></div>
-    </div>
-    <div class="alert alert-success" id="alert-ok" role="alert" style="display: none;">
-    </div>
-    <div class="alert alert-danger" id="alert-error" role="alert" style="display: none;">
-    </div>
-    <div id="enter-result-form" {% if not pin %} style="display:none" {% endif %}>
-        {{ formset.management_form }}
-        {% include 'events/snippets/sn-enter-form.html' %}
-    </div>
-</form>
-
-<script src="/static/events/js/check_pin_code.js" type="text/javascript"></script>
-
-{% else %}
-{% include 'events/snippets/sn-card-banner.html' with message='Ввод результатов закрыт' %}
-{% endif %}
+{% if can_view %}
+<div id="entry-app" data-event-id="{{ event.id }}" data-csrf-token="{{ csrf_token }}"
+     data-results-url="{% url 'results' event.id %}"></div>
+<noscript>
+  {% include 'events/snippets/sn-card-banner.html' with message='Для ввода результатов нужен включённый JavaScript' %}
+</noscript>
 {% else %}
 {% include 'events/snippets/sn-card-banner.html' with message='Событие не опубликовано' %}
 {% endif %}
 
-
 {% endblock %}
-

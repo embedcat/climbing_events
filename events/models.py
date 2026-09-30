@@ -49,16 +49,6 @@ GRADES = [
     (GRADE_8Cp, GRADE_8Cp),
 ]
 
-ACCENT_NO = '0'
-ACCENT_FLASH = '1'
-ACCENT_REDPOINT = '2'
-ACCENT_TYPE = [
-    (ACCENT_NO, 'NO'),
-    (ACCENT_FLASH, 'FLASH'),
-    (ACCENT_REDPOINT, 'REDPOINT'),
-]
-
-
 def _get_blank_json():
     return {}
 

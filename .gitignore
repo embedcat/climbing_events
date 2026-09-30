@@ -143,3 +143,9 @@ test.py
 events/static/events/xl_templates/card_template.xlsx
 do_backup
 .env.prod
+
+# сборка Vue-экранов (frontend/)
+/events/static/events/vue/
+
+# локальные настройки Claude Code (предпросмотр и т. п.)
+.claude/

@@ -7,7 +7,7 @@ from django.core.files.uploadedfile import UploadedFile
 from config import settings
 
 from events import img_tools
-from events.models import Participant, Event, ACCENT_TYPE, Route, PromoCode, Wallet
+from events.models import Participant, Event, Route, PromoCode, Wallet
 from tinymce.widgets import TinyMCE
 from phonenumber_field.formfields import PhoneNumberField
 
@@ -322,57 +322,6 @@ class EventAdminServiceForm(forms.Form):
         self.helper.add_input(Submit('create_routes', 'Создать трассы', css_class='btn-primary'))
         self.helper.add_input(Submit('create_participant', 'Создать участника', css_class='btn-primary'))
         self.helper.add_input(Submit('update_score', 'Посчтитать рузультаты', css_class='btn-primary'))
-
-
-class AccentForm(forms.Form):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['top'] = forms.ChoiceField(widget=forms.RadioSelect, choices=ACCENT_TYPE)
-
-        self.helper = FormHelper()
-        self.helper.form_tag = False
-        self.helper.disable_csrf = True
-        self.helper.layout = Layout(
-            InlineRadios('top', template='events/snippets/sn-form-accent.html'),
-        )
-
-
-class AccentFrenchForm(forms.Form):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['top'] = forms.IntegerField(label="T", required=False)
-        self.fields['zone'] = forms.IntegerField(label="Z", required=False)
-
-        self.helper = FormHelper()
-        self.helper.form_tag = False
-        self.helper.disable_csrf = True
-        self.helper.layout = Layout(
-            Field('top', template='events/snippets/sn-form-accent_french.html'),
-            Field('zone', template='events/snippets/sn-form-accent_french.html'),
-        )
-
-
-class AccentParticipantForm(forms.ModelForm):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.helper = FormHelper()
-        self.helper.form_tag = False
-        self.fields['pin'].required = False
-        self.fields['first_name'].required = False
-        self.fields['last_name'].required = False
-
-    class Meta:
-        model = Participant
-        fields = [
-            'first_name',
-            'last_name',
-            'pin',
-        ]
-        labels = {
-            'pin': 'PIN-код',
-            'first_name': 'Имя',
-            'last_name': 'Фамилия',
-        }
 
 
 class ScoreTableForm(forms.Form):

@@ -12,14 +12,18 @@ from events.xl_tools import save_virtual_workbook
 import segno
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
+from django.db import transaction
 from django.db.models import QuerySet, Count
 from django.http import HttpResponse
 
 from config import settings
 from events import img_tools, xl_tools, mock
-from events.exceptions import DuplicateParticipantError, ParticipantTooYoungError
-from events.models import ACCENT_REDPOINT, CustomUser, Event, PayDetail, PromoCode, Route, Participant, Wallet
-from events.models import ACCENT_NO, ACCENT_FLASH
+from events.exceptions import (
+    DuplicateParticipantError, EntryClosedError, InvalidResultsError, ParticipantNotFoundError,
+    ParticipantTooYoungError, RegistrationClosedError, ResultsUpdateNotAllowedError, SetFullError,
+    WithoutRegistrationDisabledError,
+)
+from events.models import CustomUser, Event, PayDetail, PromoCode, Route, Participant, Wallet
 
 
 def create_event(owner: get_user_model(), title: str, date: datetime, date_end: datetime = None) -> Event:
@@ -357,6 +361,7 @@ def register_participant(event: Event, cd: dict) -> Participant:
 
 def _clear_participant_score(participant: Participant) -> None:
     participant.score = 0
+    participant.place = 0
     participant.french_accents = {}
     participant.is_entered_result = False
     participant.save()
@@ -485,28 +490,17 @@ def _update_results(event: Event, gender: Participant.GENDERS, group_index: int)
     for p in participants:
         _update_participant_score(event=event, participant=p, routes=routes, json_key=json_key)
 
-    # update participant place:
-    participants = sorted(participants, key=operator.attrgetter("score"), reverse=True)
-    for index, p in enumerate(participants):
+    # update participant place: место только у тех, кто ввёл результат, остальные стоят без места (place == 0)
+    ranked = sorted((p for p in participants if p.is_entered_result), key=operator.attrgetter("score"), reverse=True)
+    for index, p in enumerate(ranked):
         p.place = index + 1
-        if index != 0 and participants[index - 1].score == p.score:
-            p.place = participants[index - 1].place
-        p.save()
-
-
-def get_form_initial_results(event: Event, participant: Participant) -> list:
-    initial = []
-    french_accents = participant.french_accents or {}
-    if event.score_type == Event.SCORE_FRENCH:
-        for i in range(event.routes_num):
-            result = french_accents.get(str(i), {'top': 0, 'zone': 0})
-            initial.append({'top': str(result.get('top', 0)), 'zone': str(result.get('zone', 0))})
-    else:
-        for i in range(event.routes_num):
-            result = french_accents.get(str(i), {'top': 0}).get('top', 0)
-            accent = ACCENT_NO if result == 0 else (ACCENT_FLASH if result == 1 else ACCENT_REDPOINT)
-            initial.append({'top': accent})
-    return initial
+        if index != 0 and ranked[index - 1].score == p.score:
+            p.place = ranked[index - 1].place
+        p.save(update_fields=['place'])
+    for p in participants:
+        if not p.is_entered_result and p.place != 0:
+            p.place = 0
+            p.save(update_fields=['place'])
 
 
 def update_results(event: Event):
@@ -515,7 +509,24 @@ def update_results(event: Event):
             _update_results(event=event, gender=gender, group_index=group_index)
 
 
+def check_results(event: Event, results: dict, participant: Participant = None) -> None:
+    """ Во французской системе зона не может быть позже топа: если топ есть, попытка зоны не больше попытки топа.
+    Если передан участник, в ошибке будет его имя: так понятно, кого поправить при проверке сразу многих """
+    if event.score_type != Event.SCORE_FRENCH:
+        return
+    bad_routes = sorted(int(no) + 1 for no, result in results.items()
+                        if result.get('top', 0) > 0 and result.get('zone', 0) > result['top'])
+    if bad_routes:
+        if participant is None:
+            raise InvalidResultsError(routes=bad_routes)
+        raise InvalidResultsError(
+            f"Зона позже топа: {participant.last_name} {participant.first_name}, "
+            f"{'трассы' if len(bad_routes) > 1 else 'трасса'} {', '.join(str(r) for r in bad_routes)}.",
+            routes=bad_routes, participant_id=participant.id)
+
+
 def enter_results(event: Event, participant: Participant, accents: dict, force_update_disable: bool = False):
+    check_results(event=event, results=accents)
     # save participant accents:
     participant.french_accents = accents
     participant.is_entered_result = True
@@ -523,6 +534,165 @@ def enter_results(event: Event, participant: Participant, accents: dict, force_u
 
     if not force_update_disable:
         _update_results(event=event, gender=participant.gender, group_index=participant.group_index)
+
+
+# ================================================
+# ========== Enter results by participant ========
+# ================================================
+
+MAX_ATTEMPTS = 20  # предел номера попытки в форме ввода французской системы
+
+
+def get_set_choices(event: Event) -> list:
+    """ Сеты события с признаком, что в сете не осталось мест """
+    choices = []
+    for index, name in enumerate(get_set_list(event=event)):
+        is_full = 0 < event.set_max_participants <= event.participant.filter(set_index=index).count()
+        choices.append(dict(index=index, name=name, is_full=is_full))
+    return choices
+
+
+def get_entry_config(event: Event) -> dict:
+    """ Всё, что нужно экрану ввода результатов, чтобы нарисовать форму """
+    return dict(
+        id=event.id,
+        title=event.title,
+        date=event.date_display,
+        gym=event.gym,
+        score_type=event.score_type,
+        routes_num=event.routes_num,
+        max_attempts=MAX_ATTEMPTS,
+        groups=get_group_list(event=event) if event.group_num > 1 else [],
+        sets=get_set_choices(event=event),
+        grades=[dict(value=value, label=label) for value, label in Participant.GRADES],
+        registration_fields=get_registration_fields(event=event),
+        required_fields=get_registration_required_fields(event=event),
+        is_enter_result_allowed=event.is_enter_result_allowed,
+        is_without_registration=event.is_without_registration,
+        is_check_result_before_enter=event.is_check_result_before_enter,
+        is_update_result_allowed=event.is_update_result_allowed,
+    )
+
+
+def get_participant_public(event: Event, participant: Participant) -> dict:
+    """ Данные участника, которые можно показывать ему самому: без email, телефона и PIN """
+    groups = get_group_list(event=event) if event.group_num > 1 else []
+    sets = get_set_list(event=event)
+    return dict(
+        first_name=participant.first_name,
+        last_name=participant.last_name,
+        gender=participant.gender,
+        group_index=participant.group_index,
+        group=groups[participant.group_index] if participant.group_index < len(groups) else '',
+        set_index=participant.set_index,
+        set=sets[participant.set_index] if participant.set_index < len(sets) else '',
+        is_entered_result=participant.is_entered_result,
+    )
+
+
+def get_participant_results(event: Event, participant: Participant) -> list:
+    """ Сохранённые результаты участника списком по трассам: [{'top': 1, 'zone': 1}, ...].
+    Вне французской системы top: 0 — нет, 1 — flash, 2 — redpoint """
+    stored = participant.french_accents or {}
+    is_french = event.score_type == Event.SCORE_FRENCH
+    results = []
+    for i in range(event.routes_num):
+        accent = stored.get(str(i)) or {}
+        top, zone = int(accent.get('top') or 0), int(accent.get('zone') or 0)
+        if not is_french:
+            top, zone = min(top, 2), 0
+        results.append(dict(top=top, zone=zone))
+    return results
+
+
+def _parse_cell(event: Event, raw) -> dict:
+    """ Проверяет результат на одной трассе, пришедший от клиента, и приводит его к формату enter_results """
+    is_french = event.score_type == Event.SCORE_FRENCH
+    max_top = MAX_ATTEMPTS if is_french else 2
+    try:
+        top, zone = int(raw.get('top') or 0), int(raw.get('zone') or 0)
+    except (AttributeError, TypeError, ValueError):
+        raise InvalidResultsError('Результаты в неверном формате.')
+    if not 0 <= top <= max_top or not 0 <= zone <= MAX_ATTEMPTS:
+        raise InvalidResultsError('Номер попытки вне допустимых значений.')
+    return form_data_to_results(form_cleaned_data=[dict(top=top, zone=zone if is_french else 0)])[0]
+
+
+def parse_results(event: Event, raw) -> dict:
+    """ Проверяет результаты, пришедшие от клиента списком по трассам, и приводит их к формату enter_results.
+    Вне французской системы достаточно top: 0 — нет, 1 — flash, 2 — redpoint """
+    if not isinstance(raw, list) or len(raw) != event.routes_num:
+        raise InvalidResultsError(f'Ожидались результаты по {event.routes_num} трассам.')
+    results = {i: _parse_cell(event=event, raw=item) for i, item in enumerate(raw)}
+    check_results(event=event, results=results)
+    return results
+
+
+def find_participant_by_pin(event: Event, pin) -> Participant:
+    try:
+        pin = int(pin)
+    except (TypeError, ValueError):
+        raise ParticipantNotFoundError
+    participant = event.participant.filter(pin=pin).first() if 0 <= pin <= 32767 else None
+    if participant is None:
+        raise ParticipantNotFoundError
+    return participant
+
+
+def _ensure_entry_open(event: Event) -> None:
+    if not event.is_enter_result_allowed:
+        raise EntryClosedError
+
+
+def _ensure_update_allowed(event: Event, participant: Participant) -> None:
+    if participant.is_entered_result and not event.is_update_result_allowed:
+        raise ResultsUpdateNotAllowedError
+
+
+def identify_participant(event: Event, pin) -> Participant:
+    """ Участник, который по PIN открывает ввод результатов """
+    _ensure_entry_open(event=event)
+    participant = find_participant_by_pin(event=event, pin=pin)
+    _ensure_update_allowed(event=event, participant=participant)
+    return participant
+
+
+def get_participant_standing(event: Event, participant: Participant) -> dict:
+    """ Место участника в своей группе и сколько всего участников в этом зачёте """
+    ranked = event.participant.filter(gender=participant.gender)
+    if event.is_separate_score_by_groups:
+        ranked = ranked.filter(group_index=participant.group_index)
+    if event.is_count_only_entered_results:
+        ranked = ranked.filter(is_entered_result=True)
+    return dict(place=participant.place, of=ranked.count())
+
+
+def submit_results_by_pin(event: Event, pin, raw_results) -> Participant:
+    participant = identify_participant(event=event, pin=pin)
+    enter_results(event=event, participant=participant, accents=parse_results(event=event, raw=raw_results))
+    participant.refresh_from_db()
+    return participant
+
+
+def submit_results_without_registration(event: Event, cd: dict, raw_results) -> Participant:
+    """ Ввод без регистрации: участник находится по имени и фамилии, а если его нет, регистрируется """
+    _ensure_entry_open(event=event)
+    if not event.is_without_registration:
+        raise WithoutRegistrationDisabledError
+    results = parse_results(event=event, raw=raw_results)
+    participant = event.participant.filter(first_name__iexact=cd['first_name'],
+                                           last_name__iexact=cd['last_name']).first()
+    if participant:
+        _ensure_update_allowed(event=event, participant=participant)
+    else:
+        if not is_registration_open(event=event):
+            raise RegistrationClosedError
+        participant = register_participant(event=event, cd=cd)
+        if participant is None:
+            raise SetFullError
+    enter_results(event=event, participant=participant, accents=results)
+    participant.refresh_from_db()
+    return participant
 
 
 def get_registration_msg_html(event: Event, participant: Participant, pay_url: str) -> str:
@@ -623,6 +793,196 @@ def get_results(event: Event, full_results: bool = False) -> dict:
                                     scores=scores))
         data.update({gender: gender_data})
     return data
+
+
+def is_event_live(event: Event) -> bool:
+    """ Событие идёт: ввод результатов открыт и оно не завершено. Пока идёт, результаты меняются """
+    return event.is_enter_result_allowed and not event.is_expired
+
+
+def _get_route_points(event: Event, routes: list, json_key: str) -> list:
+    """ Очки за flash и redpoint по каждой трассе для таблицы группы """
+    redpoint_k = 1 if event.score_type == Event.SCORE_GRADE else event.redpoint_points
+    points = []
+    for route in routes:
+        base = get_route_score(route=route, json_key=json_key) * redpoint_k
+        points.append(dict(flash=round(base * (1 + event.flash_points_pc / 100), 2), redpoint=round(base, 2)))
+    return points
+
+
+def _get_public_result_row(event: Event, participant: Participant, sets: list, grades: dict,
+                           is_view_full_results: bool) -> dict:
+    """ Строка таблицы результатов. Только то, что видно всем: без PIN, email и телефона """
+    entered = participant.is_entered_result
+    show_routes = entered and is_view_full_results
+    counted = set(participant.counted_routes or [])
+    return dict(
+        id=participant.id,
+        last_name=participant.last_name,
+        first_name=participant.first_name,
+        gender=participant.gender,
+        birth_year=participant.birth_year or None,
+        grade=grades.get(participant.grade, ''),
+        city=participant.city or '',
+        team=participant.team or '',
+        set_index=participant.set_index,
+        set=sets[participant.set_index] if participant.set_index < len(sets) else '',
+        place=participant.place if entered and participant.place > 0 else None,
+        score=participant.score,
+        score_view=_get_score_view(participant=participant, score_type=event.score_type),
+        results=get_participant_results(event=event, participant=participant) if show_routes else [],
+        counted=[i in counted for i in range(event.routes_num)] if show_routes else [],
+    )
+
+
+def get_results_payload(event: Event, can_edit: bool = False) -> dict:
+    """ Результаты события для экрана и API: по таблице на каждый пол и группу.
+    В таблице участники с результатом (ranked, по местам) и без него (waiting, без места).
+    {
+        'event': {...}, 'display': {...}, 'routes': [...], 'groups': ['Новички', ...],
+        'tables': [{'gender': 'MALE', 'group_index': 0, 'group': 'Новички', 'route_points': [...] or None,
+                    'ranked': [{...}], 'waiting': [{...}]}, ...]
+    }
+    """
+    routes = list(event.route.all().order_by('number'))
+    sets = get_set_list(event=event)
+    groups = get_group_list(event=event)
+    grades = dict(Participant.GRADES)
+    is_view_full_results = event.is_view_full_results
+    view_points = (is_view_full_results and event.is_view_route_score
+                   and event.score_type not in (Event.SCORE_NUM_ACCENTS, Event.SCORE_FRENCH))
+    participants = list(event.participant.all().order_by('last_name', 'first_name'))
+
+    tables = []
+    for gender in (Participant.GENDER_MALE, Participant.GENDER_FEMALE):
+        for group_index, group in enumerate(groups):
+            members = [p for p in participants if p.gender == gender and p.group_index == group_index]
+            rows = [_get_public_result_row(event, p, sets, grades, is_view_full_results) for p in members]
+            ranked = sorted((row for row in rows if row['place'] is not None),
+                            key=lambda row: (-row['score'], row['last_name'], row['first_name']))
+            tables.append(dict(
+                gender=gender,
+                group_index=group_index,
+                group=group,
+                route_points=_get_route_points(event, routes, _get_participant_json_key(gender, group_index))
+                if view_points else None,
+                ranked=ranked,
+                waiting=[row for row in rows if row['place'] is None],
+            ))
+
+    return dict(
+        event=dict(
+            id=event.id,
+            title=event.title,
+            date=event.date_display,
+            gym=event.gym,
+            score_type=event.score_type,
+            routes_num=event.routes_num,
+            is_live=is_event_live(event=event),
+            is_expired=event.is_expired,
+            can_edit=can_edit,
+        ),
+        display=dict(
+            is_view_full_results=is_view_full_results,
+            best_routes_num=int(event.count_routes_num or 0)
+            if event.score_type in (Event.SCORE_PROPORTIONAL, Event.SCORE_GRADE) else 0,
+        ),
+        routes=[dict(number=route.number,
+                     grade=route.grade if event.is_view_route_grade else None,
+                     color=route.color if event.is_view_route_color else None) for route in routes],
+        groups=groups if event.group_num > 1 else [],
+        tables=tables,
+    )
+
+
+# ================================================
+# ====== Bulk entry by organizer (matrix) ========
+# ================================================
+
+def get_matrix_payload(event: Event) -> dict:
+    """ Данные для массового ввода организатором: все участники события с PIN и результатами.
+    Только для организатора: PIN и результаты тех, кто ещё не вводил, не для всех """
+    participants = event.participant.order_by('last_name', 'first_name')
+    return dict(
+        event=dict(
+            id=event.id,
+            title=event.title,
+            date=event.date_display,
+            score_type=event.score_type,
+            routes_num=event.routes_num,
+            max_attempts=MAX_ATTEMPTS,
+            groups=get_group_list(event=event) if event.group_num > 1 else [],
+            sets=[dict(index=i, name=name) for i, name in enumerate(get_set_list(event=event))],
+        ),
+        participants=[dict(
+            id=p.id,
+            last_name=p.last_name,
+            first_name=p.first_name,
+            gender=p.gender,
+            pin=p.pin,
+            group_index=p.group_index,
+            set_index=p.set_index,
+            is_entered_result=p.is_entered_result,
+            results=get_participant_results(event=event, participant=p),
+            score=p.score,
+            score_view=_get_score_view(participant=p, score_type=event.score_type),
+            place=p.place if p.is_entered_result and p.place > 0 else None,
+        ) for p in participants],
+    )
+
+
+def _parse_matrix_changes(event: Event, changes) -> dict:
+    """ [{'participant': 5, 'results': {'3': {'top': 2}}}] -> {5: {3: {'top': 2, 'zone': 2}}}, ключи трасс с нуля """
+    if not isinstance(changes, list):
+        raise InvalidResultsError('Изменения в неверном формате.')
+    parsed = {}
+    for change in changes:
+        if not isinstance(change, dict) or not isinstance(change.get('results'), dict):
+            raise InvalidResultsError('Изменения в неверном формате.')
+        try:
+            participant_id = int(change.get('participant'))
+        except (TypeError, ValueError):
+            raise InvalidResultsError('Изменения в неверном формате.')
+        cells = parsed.setdefault(participant_id, {})
+        for key, raw in change['results'].items():
+            try:
+                index = int(key)
+            except (TypeError, ValueError):
+                raise InvalidResultsError('Изменения в неверном формате.')
+            if not 0 <= index < event.routes_num:
+                raise InvalidResultsError(f'В событии нет трассы {index + 1}.', participant_id=participant_id)
+            cells[index] = _parse_cell(event=event, raw=raw)
+    return parsed
+
+
+def save_matrix_changes(event: Event, changes) -> dict:
+    """ Сохраняет изменённые ячейки матрицы. У участника меняются только переданные трассы, остальное
+    (например, то, что он сам ввёл с телефона) остаётся как есть. Участник без результата после этого считается
+    внёсшим результат, даже если все изменённые трассы «нет».
+    Всё или ничего: при ошибке в любом участнике не записывается ничего. Баллы и места пересчитываются после записи """
+    parsed = _parse_matrix_changes(event=event, changes=changes)
+    participants = {p.id: p for p in event.participant.filter(id__in=list(parsed))}
+    if len(participants) != len(parsed):
+        raise ParticipantNotFoundError
+
+    for participant_id, cells in parsed.items():
+        # проверяем только то, что меняли: старые некорректные ячейки не должны мешать править остальное
+        check_results(event=event, results=cells, participant=participants[participant_id])
+
+    with transaction.atomic():
+        groups = set()
+        for participant_id, cells in parsed.items():
+            participant = participants[participant_id]
+            stored = participant.french_accents or {}
+            merged = {str(i): stored.get(str(i)) or {'top': 0, 'zone': 0} for i in range(event.routes_num)}
+            merged.update({str(i): cell for i, cell in cells.items()})
+            participant.french_accents = merged
+            participant.is_entered_result = True
+            participant.save(update_fields=['french_accents', 'is_entered_result'])
+            groups.add((participant.gender, participant.group_index))
+        for gender, group_index in sorted(groups):
+            _update_results(event=event, gender=gender, group_index=group_index)
+    return dict(cells=sum(len(cells) for cells in parsed.values()), participants=len(parsed))
 
 
 # ================================================

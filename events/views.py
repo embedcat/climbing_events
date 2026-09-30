@@ -17,10 +17,10 @@ from django.urls import reverse
 
 from config import settings
 from events.exceptions import DuplicateParticipantError, ParticipantTooYoungError
-from events.forms import AccentFrenchForm, EventPremiumSettingsForm, ParticipantRegistrationForm, AdminDescriptionForm, AccentForm, AccentParticipantForm, \
+from events.forms import EventPremiumSettingsForm, ParticipantRegistrationForm, AdminDescriptionForm, \
     EventSettingsForm, RouteEditForm, ParticipantForm, CreateEventForm, EventPaySettingsForm, \
     PromoCodeAddForm, WalletForm, ScoreTableForm
-from events.models import GRADES, Event, Participant, PayDetail, Route, ACCENT_NO, PromoCode, Wallet
+from events.models import GRADES, Event, Participant, PayDetail, Route, PromoCode, Wallet
 from events import services, xl_tools
 from braces import views as braces
 
@@ -344,206 +344,41 @@ class PaySettingsView(IsOwnerMixin, views.View):
 
 
 class EnterResultsView(views.View):
+    """ Ввод результатов участником. Экран целиком на Vue, данные он берёт из API """
     @staticmethod
     def get(request, event_id):
-        saved_accents = request.session.pop("accents", None)
-        pin = request.session.pop("pin", None)
         event = get_object_or_404(Event, id=event_id)
-        if event.is_without_registration:
-            return redirect('enter_wo_reg', event_id=event_id)
-        if pin and len(saved_accents) == event.routes_num:
-            # возврат со страницы подтверждения
-            initial = [{'label': i, 'accent': accent} for i, accent in saved_accents.items()]
-        else:
-            initial = [{'label': i, 'top': '0', 'zone': '0'} for i in range(event.routes_num)]
-        AccentFormSet = formset_factory(AccentFrenchForm if event.score_type ==
-                                        Event.SCORE_FRENCH else AccentForm, extra=0)
-        formset = AccentFormSet(initial=initial, prefix='accents')
         return render(
             request=request,
             template_name='events/event/enter.html',
             context={
                 'event': event,
-                'formset': formset,
-                'participant_form': AccentParticipantForm(prefix='participant'),
-                'routes': event.route.all().order_by('number'),
-                'pin': pin
+                'can_view': event.is_published or request.user == event.owner or request.user.is_superuser,
             }
         )
-
-    @staticmethod
-    def post(request, event_id):
-        event = get_object_or_404(Event, id=event_id)
-        participant_form = AccentParticipantForm(request.POST, prefix='participant')
-        AccentFormSet = formset_factory(AccentFrenchForm if event.score_type == Event.SCORE_FRENCH else AccentForm)
-        accent_formset = AccentFormSet(request.POST, prefix='accents')
-        if participant_form.is_valid() and accent_formset.is_valid():
-            entered_results = services.form_data_to_results(form_cleaned_data=accent_formset.cleaned_data)
-            pin = participant_form.cleaned_data['pin']
-            try:
-                participant = event.participant.get(pin=int(pin))
-            except (Participant.DoesNotExist, TypeError):
-                return redirect('enter_results', event_id=event_id)
-
-            if event.is_check_result_before_enter:
-                request.session['pin'] = pin
-                request.session['accents'] = entered_results
-                return redirect('enter_check', event_id=event_id)
-
-            services.enter_results(event=event,
-                                   participant=participant,
-                                   accents=entered_results)
-
-            return redirect('enter_results_ok', event_id=event_id)
-        return render(
-            request=request,
-            template_name='events/event/enter.html',
-            context={
-                'event': event,
-                'formset': accent_formset,
-                'participant_form': participant_form,
-                'routes': event.route.all().order_by('number'),
-            }
-        )
-
-
-class EnterCheckView(views.View):
-    @staticmethod
-    def get(request, event_id):
-        event = get_object_or_404(Event, id=event_id)
-        routes = event.route.all().order_by('number')
-        result = request.session.get("accents")
-        temp, items = [], []
-        for i, route in enumerate(routes):
-            temp.append({
-                'num': route.number,
-                'grade': route.grade,
-                'result': result.get(str(i), ACCENT_NO),
-            })
-        for i in range(0, event.routes_num, 5):
-            items.append(temp[i:i + 5])
-        return render(
-            request=request,
-            template_name='events/event/enter-check.html',
-            context={
-                'event': event,
-                'items': items,
-            }
-        )
-
-    @staticmethod
-    def post(request, event_id):
-        event = get_object_or_404(Event, id=event_id)
-        if 'cancel' in request.POST:
-            return redirect('enter_results', event_id=event_id)
-        if 'submit' in request.POST:
-            result = request.session.pop("accents", None)
-            pin = request.session.pop("pin", None)
-            try:
-                participant = event.participant.get(pin=int(pin))
-            except (Participant.DoesNotExist, TypeError):
-                return redirect('enter_results', event_id=event_id)
-
-            services.enter_results(event=event,
-                                   participant=participant,
-                                   accents=result)
-
-            return redirect('enter_results_ok', event_id=event_id)
-
-
-class EnterResultsOKView(views.View):
-    @staticmethod
-    def get(request, event_id):
-        event = get_object_or_404(Event, id=event_id)
-        return render(
-            request=request,
-            template_name='events/event/enter-ok.html',
-            context={
-                'event': event,
-            }
-        )
-
-
-class EnterWithoutReg(views.View):
-    @staticmethod
-    def get(request, event_id):
-        event = get_object_or_404(Event, id=event_id)
-        if not services.is_registration_open(event=event):
-            return redirect('event', event_id=event_id)
-        initial = [{'label': i, 'top': '0', 'zone': '0'} for i in range(event.routes_num)]
-        AccentFormSet = formset_factory(AccentFrenchForm if event.score_type ==
-                                        Event.SCORE_FRENCH else AccentForm, extra=0)
-        formset = AccentFormSet(initial=initial, prefix='accents')
-        routes = event.route.all().order_by('number')
-        group_list = services.get_group_list(event=event)
-        set_list = services.get_set_list_available(event=event)
-        return render(
-            request=request,
-            template_name='events/event/enter-wo-reg.html',
-            context={
-                'event': event,
-                'formset': formset,
-                'routes': routes,
-                'form': ParticipantRegistrationForm(group_list=group_list,
-                                                    set_list=set_list,
-                                                    registration_fields=services.get_registration_fields(event=event),
-                                                    required_fields=services.get_registration_required_fields(
-                                                        event=event),
-                                                    is_enter_form=True,
-                                                    reg_type_list=None)
-
-            }
-        )
-
-    @staticmethod
-    def post(request, event_id):
-        event = get_object_or_404(Event, id=event_id)
-        group_list = services.get_group_list(event=event)
-        set_list = services.get_set_list(event=event)
-        form = ParticipantRegistrationForm(request.POST,
-                                           request.FILES,
-                                           group_list=group_list,
-                                           set_list=set_list,
-                                           registration_fields=services.get_registration_fields(event=event),
-                                           required_fields=services.get_registration_required_fields(event=event),
-                                           is_enter_form=True,
-                                           reg_type_list=None)
-        AccentFormSet = formset_factory(AccentFrenchForm if event.score_type == Event.SCORE_FRENCH else AccentForm)
-        accent_formset = AccentFormSet(request.POST, prefix='accents')
-        if form.is_valid() and accent_formset.is_valid():
-            try:
-                participant = event.participant.get(first_name=form.cleaned_data['first_name'],
-                                                    last_name=form.cleaned_data['last_name'])
-                if not event.is_update_result_allowed:
-                    return redirect('results', event_id=event_id)
-            except Participant.DoesNotExist:
-                participant = services.register_participant(event=event, cd=form.cleaned_data)
-            services.enter_results(event=event,
-                                   participant=participant,
-                                   accents=services.form_data_to_results(form_cleaned_data=accent_formset.cleaned_data))
-            return redirect('enter_results_ok', event_id=event_id)
-        return redirect('enter_wo_reg', event_id=event_id)
 
 
 class ResultsView(views.View):
+    """ Результаты события. Экран целиком на Vue, данные он берёт из API """
     @staticmethod
     def get(request, event_id):
         event = get_object_or_404(Event, id=event_id)
-        results = services.get_results(event=event, full_results=True)
         return render(
             request=request,
             template_name='events/event/results.html',
             context={
                 'event': event,
-                'routes': event.route.all().order_by('number'),
-                'male': results[Participant.GENDER_MALE],
-                'female': results[Participant.GENDER_FEMALE],
-                'view_scores': event.is_view_full_results and event.is_view_route_score and event.score_type != Event.SCORE_NUM_ACCENTS and event.score_type != Event.SCORE_FRENCH,
-                'autorefresh': 'autorefresh' in request.GET,
-                'active_male': 'm' in request.GET or 'f' not in request.GET,
-                'active_female': 'f' in request.GET,
+                'can_view': event.is_published or request.user == event.owner or request.user.is_superuser,
             }
         )
+
+
+class MatrixView(IsOwnerMixin, views.View):
+    """ Массовый ввод результатов организатором. Экран целиком на Vue, данные он берёт из API """
+    @staticmethod
+    def get(request, event_id):
+        event = get_object_or_404(Event, id=event_id)
+        return render(request=request, template_name='events/event/matrix.html', context={'event': event})
 
 
 class ParticipantsView(views.View):
@@ -784,49 +619,10 @@ class ParticipantView(IsOwnerMixin, views.View):
 
 
 class ParticipantRoutesView(IsOwnerMixin, views.View):
+    """ Старая страница правки результатов участника: теперь это матрица, открытая на нём """
     @staticmethod
     def get(request, event_id, p_id):
-        event = get_object_or_404(Event, id=event_id)
-        participant = get_object_or_404(Participant, id=p_id)
-        initial = services.get_form_initial_results(event=event, participant=participant)
-        AccentFormSet = formset_factory(form=AccentFrenchForm if event.score_type ==
-                                        Event.SCORE_FRENCH else AccentForm, extra=0)
-        formset = AccentFormSet(initial=initial, prefix='accents')
-        return render(
-            request=request,
-            template_name='events/event/participant-routes.html',
-            context={
-                'title': f'{participant.last_name} {participant.first_name}',
-                'event': event,
-                'participant': participant,
-                'formset': formset,
-                'routes': event.route.all().order_by('number'),
-            }
-        )
-
-    @staticmethod
-    def post(request, event_id, p_id):
-        event = get_object_or_404(Event, id=event_id)
-        participant = get_object_or_404(Participant, id=p_id)
-        AccentFormSet = formset_factory(form=AccentFrenchForm if event.score_type ==
-                                        Event.SCORE_FRENCH else AccentForm, extra=0)
-        accent_formset = AccentFormSet(request.POST, request.FILES, prefix='accents')
-        if accent_formset.is_valid():
-            services.enter_results(event=event,
-                                   participant=participant,
-                                   accents=services.form_data_to_results(form_cleaned_data=accent_formset.cleaned_data))
-            return redirect('results', event_id=event_id)
-        return render(
-            request=request,
-            template_name='events/event/participant-routes.html',
-            context={
-                'title': f'{participant.last_name} {participant.first_name}',
-                'event': event,
-                'participant': participant,
-                'formset': accent_formset,
-                'routes': event.route.all().order_by('number'),
-            }
-        )
+        return redirect(f"{reverse('matrix', args=(event_id,))}#p={p_id}")
 
 
 class ParticipantRemoveView(IsOwnerMixin, views.View):
@@ -873,28 +669,6 @@ class MyEventsView(LoginRequiredMixin, views.View):
                           'events': events,
                           'all_events': Event.objects.exclude(owner=request.user.id).order_by('-date') if request.user.is_superuser else None,
                       })
-
-
-def check_pin_code(request):
-    pin = request.GET.get('pin')
-    event_id = request.GET.get('event_id')
-    event = Event.objects.get(id=event_id)
-    try:
-        participant = Participant.objects.get(pin=pin, event__id=event_id)
-        if participant.is_entered_result and not event.is_update_result_allowed:
-            response = {'result': False,
-                        'reason': f'Найден участник: {participant.last_name} {participant.first_name}, но повторный ввод результатов запрещён.'}
-        else:
-            response = {'result': True, 'participant': f'{participant.last_name} {participant.first_name}'}
-            if event.score_type == Event.SCORE_FRENCH:
-                response.update({'french_accents': participant.french_accents})
-            else:
-                response.update({'accents': participant.french_accents})
-
-    except Participant.DoesNotExist:
-        response = {'result': False,
-                    'reason': 'Участник не найден. Проверьте PIN-код, или <a href="{% url \'registration\' event.id %}">зарегистрируйтесь</a>!'}
-    return JsonResponse(response)
 
 
 def check_promo_code(request):

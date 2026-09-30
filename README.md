@@ -13,6 +13,18 @@
    ```
 3. Приложение будет доступно по адресу: [http://localhost:8000](http://localhost:8000)
 
+Вместе с приложением поднимается сервис `frontend`: dev-сервер Vite для Vue-экранов (каталог `frontend/`,
+порт 5173). Он сам ставит npm-зависимости при первом запуске, а правки в `frontend/src` подхватывает без
+перезагрузки страницы. Node на хосте не нужен. Тесты и проверка типов:
+
+```bash
+docker-compose exec frontend npm test
+docker-compose exec frontend npm run typecheck
+```
+
+В проде Vue-экраны собираются стадией `frontend` в `Dockerfile.prod` (вместе с тестами и проверкой типов),
+сервис `frontend` и dev-сервер там не нужны.
+
 ---
 
 ## Развертывание на сервере (Production)

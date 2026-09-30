@@ -7,12 +7,11 @@ from PIL import Image
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
-from django.test import TestCase, TransactionTestCase, Client
+from django.test import TestCase, TransactionTestCase, Client, override_settings
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.db.utils import IntegrityError
 from events.models import CustomUser, Event, Participant, Route, Wallet, PromoCode, PayDetail
-from events.models import ACCENT_NO, ACCENT_FLASH, ACCENT_REDPOINT
 from events import img_tools, services
 from events.forms import ParticipantRegistrationForm, CreateEventForm
 from events.exceptions import DuplicateParticipantError, ParticipantTooYoungError
@@ -404,40 +403,24 @@ class ViewsTestCase(ClimbingEventsBaseTestCase):
         # Check participant is registered
         self.assertEqual(Participant.objects.filter(event=self.event, last_name='Алексеев').count(), 1)
 
-    def test_enter_results_view_successful_post(self):
-        p = Participant.objects.create(
-            first_name='Николай',
-            last_name='Николаев',
-            gender=Participant.GENDER_MALE,
-            event=self.event,
-            pin=5555
-        )
-        url = reverse('enter_results', kwargs={'event_id': self.event.id})
-        
-        # Prepare formset POST data for 10 routes.
-        # Django formset requires management form data:
-        post_data = {
-            'participant-pin': '5555',
-            'accents-TOTAL_FORMS': '10',
-            'accents-INITIAL_FORMS': '10',
-            'accents-MIN_NUM_FORMS': '0',
-            'accents-MAX_NUM_FORMS': '1000',
-        }
-        for i in range(10):
-            post_data[f'accents-{i}-label'] = str(i)
-            # Route 0: Top = 1 (Flash)
-            # Others: Top = 0 (No Accent)
-            post_data[f'accents-{i}-top'] = '1' if i == 0 else '0'
-            post_data[f'accents-{i}-zone'] = '1' if i == 0 else '0'
+    @override_settings(VITE_DEV_SERVER='http://localhost:5173')
+    def test_enter_results_page_mounts_vue_app(self):
+        self.event.is_enter_result_allowed = True
+        self.event.save()
+        response = self.client.get(reverse('enter_results', kwargs={'event_id': self.event.id}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'id="entry-app" data-event-id="{self.event.id}"')
 
-        response = self.client.post(url, data=post_data)
-        # Should redirect to enter_results_ok view
-        self.assertEqual(response.status_code, 302)
+    def test_enter_results_page_hidden_for_unpublished_event(self):
+        self.event.is_published = False
+        self.event.save()
+        response = self.client.get(reverse('enter_results', kwargs={'event_id': self.event.id}))
+        self.assertNotContains(response, 'id="entry-app"')
+        self.assertContains(response, 'Событие не опубликовано')
 
-        # Check participant has results entered
-        p.refresh_from_db()
-        self.assertTrue(p.is_entered_result)
-        self.assertEqual(p.french_accents.get("0"), {"top": 1, "zone": 1})
+    def test_enter_wo_reg_old_link_redirects_to_enter_page(self):
+        response = self.client.get(reverse('enter_wo_reg', kwargs={'event_id': self.event.id}))
+        self.assertRedirects(response, reverse('enter_results', kwargs={'event_id': self.event.id}))
 
 
 class APITestCase(ClimbingEventsBaseTestCase):
@@ -615,106 +598,6 @@ class LegacyAccentsConversionTests(TestCase):
 
     def test_broken_values_are_skipped_not_raised(self):
         self.assertEqual(self._convert({'0': 'RP', '1': '2', '2': None}), {'1': {'top': 2, 'zone': 2}})
-
-
-class ParticipantResultsEditTests(ClimbingEventsBaseTestCase):
-    """Редактирование результатов участника администратором события."""
-
-    def setUp(self):
-        super().setUp()
-        self.event = services.create_event(owner=self.superuser, title="Edit Event", date=date(2026, 10, 1))
-        self.event.is_published = True
-        self.event.save()
-        self.participant = Participant.objects.create(
-            first_name='Иван',
-            last_name='Иванов',
-            gender=Participant.GENDER_MALE,
-            birth_year=1995,
-            event=self.event,
-            pin=1234,
-            set_index=0,
-        )
-        self.client.force_login(self.superuser)
-        self.url = reverse('participant_routes', args=[self.event.id, self.participant.id])
-
-    @staticmethod
-    def _checked_radios(html):
-        """Значения отмеченных радиокнопок по номеру трассы — то, что реально отправит браузер."""
-        checked = {}
-        for tag in re.findall(r'<input type="radio"[^>]*>', html):
-            if 'checked' not in tag:
-                continue
-            name = re.search(r'name="(accents-\d+-top)"', tag)
-            value = re.search(r'value="(\d+)"', tag)
-            if name and value:
-                checked[name.group(1)] = value.group(1)
-        return checked
-
-    def _management_form(self, html):
-        return dict(re.findall(r'name="(accents-(?:TOTAL|INITIAL|MIN_NUM|MAX_NUM)_FORMS)"[^>]*value="(\d+)"', html))
-
-    def test_every_route_is_preselected_after_results_cleared(self):
-        # clear_results вызывается при смене количества трасс в настройках
-        services.clear_results(event=self.event)
-        self.participant.refresh_from_db()
-        self.assertEqual(self.participant.french_accents, {})
-
-        html = self.client.get(self.url).content.decode()
-        self.assertEqual(len(self._checked_radios(html)), self.event.routes_num,
-                         'На форме редактирования отмечен результат не на каждой трассе')
-
-    def test_edit_results_saved_after_results_cleared(self):
-        services.clear_results(event=self.event)
-        html = self.client.get(self.url).content.decode()
-
-        # отправляем то же, что отправил бы браузер: все предвыбранные значения плюс правки админа
-        data = self._management_form(html)
-        data.update(self._checked_radios(html))
-        data['accents-0-top'] = ACCENT_REDPOINT
-        data['accents-1-top'] = ACCENT_FLASH
-
-        response = self.client.post(self.url, data=data)
-        self.assertEqual(response.status_code, 302)
-        self.participant.refresh_from_db()
-        self.assertTrue(self.participant.is_entered_result)
-        self.assertEqual(self.participant.french_accents['0'], {'top': 2, 'zone': 2})
-        self.assertEqual(self.participant.french_accents['1'], {'top': 1, 'zone': 1})
-        self.assertEqual(self.participant.french_accents['2'], {'top': 0, 'zone': 0})
-
-    def test_edit_results_with_blank_fields_in_french_system(self):
-        self.event.score_type = Event.SCORE_FRENCH
-        self.event.save()
-        html = self.client.get(self.url).content.decode()
-
-        data = self._management_form(html)
-        for i in range(self.event.routes_num):
-            # незаполненные поля приходят пустыми строками, а не нулями
-            data[f'accents-{i}-top'] = '1' if i == 0 else ''
-            data[f'accents-{i}-zone'] = '1' if i == 0 else ''
-
-        response = self.client.post(self.url, data=data)
-        self.assertEqual(response.status_code, 302)
-        self.participant.refresh_from_db()
-        self.assertEqual(self.participant.french_accents['0'], {'top': 1, 'zone': 1})
-        self.assertEqual(self.participant.french_accents['1'], {'top': 0, 'zone': 0})
-
-    def test_stored_results_reflected_in_form_initial(self):
-        services.enter_results(event=self.event, participant=self.participant,
-                               accents={'0': {'top': 2, 'zone': 2}, '1': {'top': 1, 'zone': 1}})
-        self.participant.refresh_from_db()
-        initial = services.get_form_initial_results(event=self.event, participant=self.participant)
-        self.assertEqual(initial[:3], [{'top': ACCENT_REDPOINT}, {'top': ACCENT_FLASH}, {'top': ACCENT_NO}])
-
-    def test_invalid_formset_reports_error_instead_of_silent_noop(self):
-        html = self.client.get(self.url).content.decode()
-        data = self._management_form(html)
-        data['accents-0-top'] = ACCENT_REDPOINT  # результат указан только на одной трассе
-
-        response = self.client.post(self.url, data=data)
-        self.assertEqual(response.status_code, 200)
-        self.participant.refresh_from_db()
-        self.assertFalse(self.participant.is_entered_result)
-        self.assertContains(response, 'Результат не сохранён')
 
 
 class XlTemplateTests(ClimbingEventsBaseTestCase):
@@ -1155,37 +1038,20 @@ class RoutesNumChangeTests(ClimbingEventsBaseTestCase):
             list(Route.objects.filter(event=self.event).order_by('number').values_list('number', flat=True)),
             [1, 2, 3, 4, 5])
 
-    def test_enter_results_form_shows_all_routes(self):
+    def test_entry_config_reports_all_routes(self):
         self._save_routes_num_via_settings_page(self.ROUTES_NUM)
         self.client.logout()
-        response = self.client.get(reverse('enter_results', args=[self.event.id]))
+        response = self.client.get(reverse('api_events-entry-config', args=[self.event.id]))
         self.assertEqual(response.status_code, 200)
-        html = response.content.decode()
-        self.assertEqual(response.context['formset'].total_form_count(), self.ROUTES_NUM)
-        rendered = {int(i) for i in re.findall(r'accents-(\d+)-', html)}
-        self.assertEqual(len(rendered), self.ROUTES_NUM,
-                         f'В форме ввода результатов отрисовано {len(rendered)} трасс вместо {self.ROUTES_NUM}')
+        self.assertEqual(response.json()['routes_num'], self.ROUTES_NUM)
 
-    def test_participant_routes_form_shows_all_routes(self):
+    def test_entry_results_cover_all_routes(self):
         self._save_routes_num_via_settings_page(self.ROUTES_NUM)
-        response = self.client.get(reverse('participant_routes', args=[self.event.id, self.participant.id]))
-        self.assertEqual(response.status_code, 200)
-        html = response.content.decode()
-        self.assertEqual(response.context['formset'].total_form_count(), self.ROUTES_NUM)
-        rendered = {int(i) for i in re.findall(r'accents-(\d+)-', html)}
-        self.assertEqual(len(rendered), self.ROUTES_NUM,
-                         f'В форме редактирования результатов отрисовано {len(rendered)} трасс '
-                         f'вместо {self.ROUTES_NUM}')
-
-    def test_enter_wo_reg_form_shows_all_routes(self):
-        self._save_routes_num_via_settings_page(self.ROUTES_NUM, is_without_registration=True)
         self.client.logout()
-        response = self.client.get(reverse('enter_wo_reg', args=[self.event.id]))
+        response = self.client.post(reverse('api_events-entry-identify', args=[self.event.id]),
+                                    data={'pin': 1234}, content_type='application/json')
         self.assertEqual(response.status_code, 200)
-        html = response.content.decode()
-        rendered = {int(i) for i in re.findall(r'accents-(\d+)-', html)}
-        self.assertEqual(len(rendered), self.ROUTES_NUM,
-                         f'В форме ввода без регистрации отрисовано {len(rendered)} трасс вместо {self.ROUTES_NUM}')
+        self.assertEqual(len(response.json()['results']), self.ROUTES_NUM)
 
     def test_score_type_change_via_settings_page_updates_results(self):
         # флэш на всех трассах: SUM даёт 1.0 * 1.25 * 80 = 100 за трассу, NUM даёт 100 + 1 = 101

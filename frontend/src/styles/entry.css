@@ -1,0 +1,137 @@
+/* Экран ввода результатов участником (docs/mockups/entry-phone.html).
+   Общее (цвета, кнопки, шторка) лежит в common.css. */
+
+.re-entry { max-width: 560px; }
+.re-entry .re-tight { margin-top: -4px; }
+
+.re-main { display: flex; flex-direction: column; gap: 14px; padding: 16px 16px 24px; }
+.re-main > * { flex-shrink: 0; }
+
+.re-entry :is(.re-tile, .re-stepper button, .re-choice button):focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* PIN */
+.re-ident { display: flex; flex-direction: column; gap: 12px; padding-top: 12px; }
+.re-pin-label { display: block; }
+.re-pin {
+  width: 100%; height: 68px; padding: 0 0 0 .45em; border: 2px solid var(--line-strong); border-radius: 14px;
+  background: var(--surface); color: var(--ink); font-family: var(--font-data); font-size: 34px; font-weight: 600;
+  letter-spacing: .45em; text-align: center;
+}
+.re-pin:focus { outline: none; border-color: var(--ink); }
+.re-pin::placeholder { color: var(--line-strong); }
+.re-pin-msg { min-height: 20px; font-size: 13.5px; }
+.re-pin-msg.is-error { color: var(--danger); }
+
+/* вводящий */
+.re-who {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px;
+  border: 1px solid var(--line); border-radius: 14px; background: var(--surface);
+}
+.re-who-name { font-size: 16px; font-weight: 600; }
+.re-who-meta { font-size: 13px; color: var(--muted); }
+.re-who .re-linkbtn { flex: none; }
+.re-list-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 10px; margin-top: 2px; }
+.re-draft-state { font-size: 12px; color: var(--muted); }
+.re-how { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: -6px !important; font-size: 13px; color: var(--muted); }
+.re-mini {
+  display: inline-grid; place-items: center; min-width: 26px; height: 20px; padding: 0 4px; border: 1px solid var(--line);
+  border-radius: 5px; background: var(--surface); font-family: var(--font-data); font-size: 10.5px; font-weight: 600;
+}
+.re-mini.is-fl { border-color: var(--fl); background: var(--fl-soft); color: var(--fl); }
+.re-mini.is-rp { border-color: var(--rp); background: var(--rp-soft); color: var(--rp); }
+
+/* плитки трасс: по 5 в ряд, как на бумажной карточке */
+.re-tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.re-tile {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; max-width: 100%;
+  aspect-ratio: 1 / 1.08; padding: 0; border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface);
+  cursor: pointer; touch-action: manipulation; transition: transform .08s;
+}
+.re-tile:active { transform: scale(.94); }
+.re-tn { font-family: var(--font-data); font-size: 19px; font-weight: 600; line-height: 1; }
+.re-tl { font-size: 10px; line-height: 1; color: var(--faint); }
+.re-tile.is-fl { border-color: var(--fl); background: var(--fl-soft); color: var(--fl); }
+.re-tile.is-rp { border-color: var(--rp); background: var(--rp-soft); color: var(--rp); }
+.re-tile.is-fl .re-tl, .re-tile.is-rp .re-tl { color: inherit; font-weight: 600; }
+
+/* французская система: два счётчика попыток на трассу */
+.re-rn { flex: none; width: 30px; font-family: var(--font-data); font-size: 15px; font-weight: 600; text-align: center; }
+.re-fhead, .re-frow { display: grid; grid-template-columns: 30px 1fr 1fr; gap: 10px; align-items: center; }
+.re-fhead { font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.re-fhead span:first-child { text-align: center; }
+.re-flist { display: flex; flex-direction: column; }
+.re-frow { padding: 6px 0; border-bottom: 1px solid var(--line); }
+.re-stepper {
+  display: grid; grid-template-columns: 40px 1fr 40px; align-items: center; height: 44px; overflow: hidden;
+  border: 1.5px solid var(--line); border-radius: 10px; background: var(--surface);
+}
+.re-stepper button { height: 100%; border: 0; background: none; color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer; touch-action: manipulation; }
+.re-stepper output { font-family: var(--font-data); font-size: 16px; font-weight: 600; text-align: center; }
+.re-stepper.is-top.is-on { border-color: var(--fl); background: var(--fl-soft); color: var(--fl); }
+.re-stepper.is-zone.is-on { border-color: var(--rp); background: var(--rp-soft); color: var(--rp); }
+.re-frow.is-bad .re-stepper.is-zone { border-color: var(--danger); background: var(--danger-soft); color: var(--danger); }
+.re-frow .re-err { grid-column: 2 / -1; }
+
+/* анкета (ввод без регистрации) */
+.re-form { display: flex; flex-direction: column; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.re-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.re-fld { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.re-fld > span { font-size: 12.5px; font-weight: 500; color: var(--muted); }
+.re-fld input, .re-fld select {
+  width: 100%; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--app-bg);
+  color: var(--ink); font: inherit; font-size: 16px;
+}
+.re-fld input:focus, .re-fld select:focus { outline: none; border-color: var(--ink); }
+.re-choice { display: flex; flex-wrap: wrap; gap: 6px; }
+.re-choice button {
+  padding: 8px 12px; border: 1.5px solid var(--line); border-radius: 999px; background: var(--app-bg);
+  font-size: 14px; cursor: pointer; touch-action: manipulation;
+}
+.re-choice button[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--surface); }
+.re-fld.is-invalid > span { color: var(--danger); }
+.re-fld.is-invalid input, .re-fld.is-invalid select, .re-fld.is-invalid .re-choice button { border-color: var(--danger); }
+.re-fld.is-invalid .re-choice button[aria-pressed="true"] { background: var(--ink); }
+
+/* нижняя панель: счёт и кнопка, всегда под рукой */
+.re-action {
+  position: sticky; bottom: 0; z-index: 5; display: flex; flex-direction: column; gap: 8px;
+  padding: 10px 16px calc(14px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line);
+  border-radius: 0 0 16px 16px; background: var(--surface);
+}
+.re-act-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.re-act-row.is-two { display: grid; grid-template-columns: 1fr 1.5fr; }
+.re-sum { display: flex; flex-wrap: wrap; align-items: baseline; gap: 1px 12px; min-width: 0; font-size: 14px; }
+.re-s b { font-family: var(--font-data); font-size: 16px; }
+.re-s.is-fl b { color: var(--fl); }
+.re-s.is-rp b { color: var(--rp); }
+.re-of { width: 100%; font-size: 12.5px; color: var(--muted); }
+.re-send-err { padding: 9px 12px; border: 1px solid var(--danger); border-radius: 10px; background: var(--danger-soft); font-size: 13px; }
+
+/* после отправки */
+.re-done { display: flex; flex-direction: column; align-items: center; gap: 10px; padding-top: 14px; text-align: center; }
+.re-done-mark { width: 56px; height: 56px; }
+.re-done-mark circle { fill: var(--fl-soft); stroke: var(--fl); stroke-width: 2; }
+.re-done-mark path { fill: none; stroke: var(--fl); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.re-place-card { width: 100%; margin-top: 6px; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.re-pc-label { font-size: 12.5px; color: var(--muted); }
+.re-pc-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 6px; }
+.re-pc-place { font-family: var(--font-display); font-size: 54px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+.re-pc-of { font-size: 13px; line-height: 1.25; text-align: left; color: var(--muted); }
+.re-remember { padding: 10px 12px; border-radius: 12px; background: var(--surface-2); font-size: 13px; }
+
+/* проверка перед отправкой */
+.re-ck { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 8px; align-items: start; }
+.re-ck-k { padding-top: 4px; font-size: 13px; font-weight: 600; }
+.re-ck-k.is-fl { color: var(--fl); }
+.re-ck-k.is-rp { color: var(--rp); }
+.re-ck-v { display: flex; flex-wrap: wrap; gap: 6px; }
+.re-num { min-width: 32px; padding: 4px 6px; border-radius: 8px; background: var(--surface-2); font-family: var(--font-data); font-weight: 600; text-align: center; }
+.re-ck-table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.re-ck-table th { padding: 4px 6px; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; text-align: left; color: var(--muted); }
+.re-ck-table td { padding: 6px; border-top: 1px solid var(--line); }
+.re-ck-table td:first-child { font-family: var(--font-data); font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+  .re-tile { transition: none; }
+  .re-tile:active { transform: none; }
+}

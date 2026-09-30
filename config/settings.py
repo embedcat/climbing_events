@@ -228,6 +228,10 @@ if USE_DJDT:
 
 PROTOCOLS_PATH = 'events/protocols'
 
+# Vue-экраны (frontend/): dev-сервер Vite для разработки, а в проде манифест собранных файлов
+VITE_DEV_SERVER = env('VITE_DEV_SERVER', default='')
+VITE_MANIFEST = BASE_DIR / 'events' / 'static' / 'events' / 'vue' / '.vite' / 'manifest.json'
+
 DEFAULT_EVENT_ID = env('DEFAULT_EVENT_ID')
 
 LOGIN_REDIRECT_URL = '/'

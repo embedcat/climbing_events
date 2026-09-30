@@ -1,17 +1,63 @@
+import hashlib
+import json
+
 from rest_framework import viewsets, permissions, status
 from rest_framework.views import APIView
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from django.utils.http import parse_etags, quote_etag
 from datetime import datetime
 
+from events.exceptions import (
+    EntryClosedError, InvalidResultsError, ParticipantNotFoundError, ParticipantTooYoungError,
+    RegistrationClosedError, ResultsUpdateNotAllowedError, SetFullError, WithoutRegistrationDisabledError,
+)
 from events.models import Event, Participant, Route, Wallet, PromoCode
 from events import services
 from events.serializers import (
-    EventSerializer, ParticipantSerializer, RouteSerializer, 
+    EntryRegistrationSerializer, EventSerializer, ParticipantSerializer, RouteSerializer,
     WalletSerializer, PromoCodeSerializer
 )
+
+# ошибки ввода результатов участником: исключение -> (HTTP-статус, код для клиента)
+ENTRY_ERRORS = {
+    ParticipantNotFoundError: (status.HTTP_404_NOT_FOUND, 'pin_not_found'),
+    EntryClosedError: (status.HTTP_403_FORBIDDEN, 'entry_closed'),
+    ResultsUpdateNotAllowedError: (status.HTTP_403_FORBIDDEN, 'update_not_allowed'),
+    RegistrationClosedError: (status.HTTP_403_FORBIDDEN, 'registration_closed'),
+    WithoutRegistrationDisabledError: (status.HTTP_403_FORBIDDEN, 'without_registration_disabled'),
+    SetFullError: (status.HTTP_400_BAD_REQUEST, 'set_full'),
+    ParticipantTooYoungError: (status.HTTP_400_BAD_REQUEST, 'too_young'),
+    InvalidResultsError: (status.HTTP_400_BAD_REQUEST, 'invalid_results'),
+}
+
+
+def _entry_error_response(exc: Exception) -> Response:
+    http_status, code = ENTRY_ERRORS[type(exc)]
+    body = {'error': str(exc), 'code': code}
+    if isinstance(exc, InvalidResultsError):
+        body['routes'] = exc.routes
+    return Response(body, status=http_status)
+
+
+def _ensure_event_editor(request, event: Event) -> None:
+    """Массовый ввод и правка результатов: только организатор события и суперпользователь"""
+    user = request.user
+    if not (user and user.is_authenticated and (user.is_superuser or event.owner_id == user.id)):
+        raise PermissionDenied('Доступно только организатору события.')
+
+
+def _entry_payload(event: Event, participant: Participant, with_standing: bool = False) -> dict:
+    payload = {
+        'participant': services.get_participant_public(event=event, participant=participant),
+        'results': services.get_participant_results(event=event, participant=participant),
+    }
+    if with_standing:
+        payload['standing'] = services.get_participant_standing(event=event, participant=participant)
+    return payload
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
     """
@@ -62,6 +108,85 @@ class EventViewSet(viewsets.ModelViewSet):
             if field not in ['owner', 'title', 'date']:
                 setattr(event, field, value)
         event.save()
+
+    @action(detail=True, methods=['get'], url_path='entry/config', permission_classes=[permissions.AllowAny])
+    def entry_config(self, request, pk=None):
+        return Response(services.get_entry_config(event=self.get_object()))
+
+    @action(detail=True, methods=['post'], url_path='entry/identify', permission_classes=[permissions.AllowAny])
+    def entry_identify(self, request, pk=None):
+        event = self.get_object()
+        try:
+            participant = services.identify_participant(event=event, pin=request.data.get('pin'))
+        except tuple(ENTRY_ERRORS) as e:
+            return _entry_error_response(e)
+        return Response(_entry_payload(event=event, participant=participant))
+
+    @action(detail=True, methods=['post'], url_path='entry/submit', permission_classes=[permissions.AllowAny])
+    def entry_submit(self, request, pk=None):
+        event = self.get_object()
+        try:
+            participant = services.submit_results_by_pin(event=event, pin=request.data.get('pin'),
+                                                         raw_results=request.data.get('results'))
+        except tuple(ENTRY_ERRORS) as e:
+            return _entry_error_response(e)
+        return Response(_entry_payload(event=event, participant=participant, with_standing=True))
+
+    @action(detail=True, methods=['post'], url_path='entry/submit-without-registration',
+            permission_classes=[permissions.AllowAny])
+    def entry_submit_without_registration(self, request, pk=None):
+        event = self.get_object()
+        serializer = EntryRegistrationSerializer(data=request.data, event=event)
+        if not serializer.is_valid():
+            return Response({'error': 'Проверьте заполнение анкеты.', 'code': 'invalid_fields',
+                             'fields': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            participant = services.submit_results_without_registration(
+                event=event, cd=serializer.validated_data, raw_results=request.data.get('results'))
+        except tuple(ENTRY_ERRORS) as e:
+            return _entry_error_response(e)
+        return Response(_entry_payload(event=event, participant=participant, with_standing=True))
+
+    @action(detail=True, methods=['get'], url_path='results', permission_classes=[permissions.AllowAny])
+    def results(self, request, pk=None):
+        """Результаты события по таблице на каждый пол и группу. Экран опрашивает его раз в 30 секунд,
+        поэтому ответ отдаётся с ETag и на неизменившиеся данные отвечает 304 без тела."""
+        event = self.get_object()
+        if not event.is_results_allowed:
+            return Response({'error': 'Просмотр результатов закрыт.', 'code': 'results_closed'},
+                            status=status.HTTP_403_FORBIDDEN)
+        user = request.user
+        can_edit = bool(user and user.is_authenticated and (user.is_superuser or event.owner_id == user.id))
+        payload = services.get_results_payload(event=event, can_edit=can_edit)
+        etag = quote_etag(hashlib.sha1(json.dumps(payload, sort_keys=True, default=str).encode()).hexdigest())
+        if etag in parse_etags(request.META.get('HTTP_IF_NONE_MATCH', '')):
+            response = Response(status=status.HTTP_304_NOT_MODIFIED)
+        else:
+            response = Response(payload)
+        response['ETag'] = etag
+        response['Cache-Control'] = 'private, no-cache'
+        return response
+
+    @action(detail=True, methods=['get'], url_path='matrix', permission_classes=[permissions.IsAuthenticated])
+    def matrix(self, request, pk=None):
+        """Участники события с PIN и результатами для массового ввода организатором"""
+        event = self.get_object()
+        _ensure_event_editor(request, event)
+        return Response(services.get_matrix_payload(event=event))
+
+    @action(detail=True, methods=['post'], url_path='matrix/save', permission_classes=[permissions.IsAuthenticated])
+    def matrix_save(self, request, pk=None):
+        """Сохраняет изменённые ячейки матрицы и отдаёт свежие данные с пересчитанными местами"""
+        event = self.get_object()
+        _ensure_event_editor(request, event)
+        try:
+            saved = services.save_matrix_changes(event=event, changes=request.data.get('changes'))
+        except ParticipantNotFoundError as e:
+            return Response({'error': str(e), 'code': 'participant_not_found'}, status=status.HTTP_404_NOT_FOUND)
+        except InvalidResultsError as e:
+            return Response({'error': str(e), 'code': 'invalid_results', 'routes': e.routes,
+                             'participant': e.participant_id}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({**services.get_matrix_payload(event=event), 'saved': saved})
 
 
 class ParticipantViewSet(viewsets.ModelViewSet):

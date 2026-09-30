@@ -13,3 +13,5 @@ media
 static
 debug.log
 EventLogger.log
+frontend/node_modules
+events/static/events/vue

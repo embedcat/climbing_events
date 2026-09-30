@@ -12,7 +12,7 @@
        role="tab" aria-selected="false">Участник</a>
   </li>
   <li class="nav-item" role="presentation">
-    <a class="nav-link" id="tab2" data-toggle="tab" href="{% url 'participant_routes' event.id participant.id %}"
+    <a class="nav-link" id="tab2" data-toggle="tab" href="{% url 'matrix' event.id %}#p={{ participant.id }}"
        role="tab" aria-selected="true">Результаты</a>
   </li>
   <li class="nav-item" role="presentation">
