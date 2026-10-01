@@ -16,6 +16,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.prod
+      args:
+        # тесты и проверка типов в сборке образа не гоняем: они уже пройдены до пуша, а на сервере долгие
+        RUN_CHECKS: "0"
     image: climbing_events:staging
     command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2
     # Боевой сайт занимает 8000, поэтому тестовый на 8001, и тоже только для localhost

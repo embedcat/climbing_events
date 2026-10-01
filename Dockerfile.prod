@@ -7,9 +7,11 @@ COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
 COPY frontend/ ./
-# тесты и проверка типов идут в сборке: сломанный экран в образ не попадёт.
+# Тесты и проверка типов идут в сборке: сломанный экран в образ не попадёт. На слабом тестовом сервере они занимают
+# большую часть времени, поэтому для него их отключают (--build-arg RUN_CHECKS=0, см. docker-compose.staging.yml).
 # Результат сборки (outDir в vite.config.ts) лежит в /events/static/events/vue
-RUN npm test && npm run build
+ARG RUN_CHECKS=1
+RUN if [ "$RUN_CHECKS" = "1" ]; then npm test && npm run build; else npx vite build; fi
 
 
 # --- Build Stage ---
