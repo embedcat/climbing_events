@@ -179,10 +179,45 @@ button{font:inherit;color:inherit}
 
 .toast{position:absolute;left:16px;right:16px;bottom:88px;z-index:20;padding:10px 14px;border-radius:12px;background:var(--ink);color:var(--surface);
   font-size:13.5px;text-align:center;box-shadow:0 8px 24px var(--shadow)}
+/* окно браузера вместо телефона */
+.browser-bar{display:none}
+.page.desk{grid-template-columns:minmax(0,300px) minmax(0,1120px)}
+@media (max-width:1100px){.page.desk{grid-template-columns:minmax(0,1fr)}}
+.device.desk{display:flex;flex-direction:column;width:100%;padding:0;border-radius:12px;background:var(--surface-2);box-shadow:0 24px 60px var(--shadow),0 0 0 1px var(--line)}
+.device.desk .browser-bar{flex:none;display:flex;align-items:center;gap:12px;height:38px;padding:0 14px;border-bottom:1px solid var(--line)}
+.bb-dots{display:flex;gap:6px}
+.bb-dots i{width:10px;height:10px;border-radius:50%;background:var(--line-strong)}
+.bb-url{flex:0 1 420px;margin-inline:auto;padding:4px 12px;border-radius:999px;background:var(--surface);font-family:var(--font-data);font-size:12px;color:var(--muted);text-align:center}
+.device.desk .screen{flex:1 1 auto;height:auto;min-height:0;border-radius:0 0 12px 12px}
+.screen{container:app / inline-size}
+
+/* компьютер: шапка в колонке 1040 px, как на странице события. Таблица крупнее, имя полностью;
+   рамка таблицы по её ширине, поэтому 15 трасс помещаются без прокрутки вбок. Карточка участника — окно по центру */
+@container app (min-width:760px){
+  .app{--gut:max(28px,calc((100% - 1040px) / 2))}
+  .ev-head{padding:22px var(--gut) 0}
+  .ev-title{font-size:22px}
+  .ev-date{font-size:14px}
+  .tabs{gap:6px;margin-top:12px}
+  .tabs button{flex:none;padding:10px 14px 12px;font-size:14.5px}
+  .main{gap:12px;padding:20px var(--gut) 16px}
+  .chips{flex-wrap:wrap;overflow:visible}
+  .main>.tbl-wrap{align-self:flex-start;max-width:100%}
+  .rt{font-size:14px}
+  .rt td.c,.rt th.c{width:34px;min-width:34px}
+  .rt td.c{font-size:12px}
+  .rt.fr td.c,.rt.fr th.c{width:46px;min-width:46px}
+  .rt .s2{width:220px;min-width:220px;max-width:220px;padding-left:6px}
+  .nbtn .n{font-size:15px}
+  .me-bar{padding:10px var(--gut) 12px}
+  .sheet{top:50%;right:auto;bottom:auto;left:50%;width:min(520px,calc(100% - 48px));max-height:84%;padding:20px 22px;border-radius:16px;transform:translate(-50%,-50%)}
+  .grabber{display:none}
+  .toast{right:auto;left:50%;width:min(440px,calc(100% - 32px));bottom:88px;transform:translateX(-50%)}
+}
 @media (prefers-reduced-motion:reduce){.rt tr.changed td.s1,.rt tr.changed td.s2{animation:none}}
 </style>
 
-<div class="page">
+<div class="page" id="page">
   <aside class="panel" aria-label="Настройки макета">
     <div>
       <div class="eyebrow">Макет · RockEvents</div>
@@ -190,6 +225,13 @@ button{font:inherit;color:inherit}
     </div>
     <p>Одна таблица на группу. Место, имя и баллы всегда видны слева, трассы прокручиваются вбок. Нажмите на строку, чтобы открыть карточку участника.</p>
 
+    <div class="opt">
+      <span class="label" id="o-device">Устройство</span>
+      <div class="seg" data-opt="device" role="group" aria-labelledby="o-device">
+        <button type="button" data-v="phone">Телефон</button>
+        <button type="button" data-v="desk">Компьютер</button>
+      </div>
+    </div>
     <div class="opt">
       <span class="label" id="o-mode">Система подсчёта</span>
       <div class="seg" data-opt="mode" role="group" aria-labelledby="o-mode">
@@ -224,7 +266,8 @@ button{font:inherit;color:inherit}
     <button type="button" class="linkbtn" data-act="reset">Сбросить демо</button>
   </aside>
 
-  <div class="device">
+  <div class="device" id="device">
+    <div class="browser-bar" aria-hidden="true"><span class="bb-dots"><i></i><i></i><i></i></span><span class="bb-url">rockevents.ru/e/128/results/</span></div>
     <div class="screen">
       <div class="app">
         <header class="ev-head">
@@ -282,7 +325,7 @@ const store = {
 };
 
 const state = {
-  mode: 'PROP', N: 15, best: 0, live: 'live',
+  device: 'phone', mode: 'PROP', N: 15, best: 0, live: 'live',
   gender: 'F', group: 1,
   people: [], byId: new Map(), meId: null, julia: null, sheetId: null,
   deltas: new Map(), changed: new Set(), lastUpdate: Date.now(),
@@ -311,7 +354,7 @@ function plural(n, one, few, many) {
 }
 const isFR = () => state.mode === 'FR';
 const num = (x, d = 2) => x.toFixed(d).replace('.', ',');
-const short = (p) => `${p.last} ${p.first[0]}.`;
+const short = (p) => (state.device === 'desk' ? `${p.last} ${p.first}` : `${p.last} ${p.first[0]}.`);
 
 /* ---------- demo data ---------- */
 function results(rnd, skill, N) {
@@ -431,7 +474,7 @@ function ago() {
 }
 function renderTop() {
   $('#live').innerHTML = state.live === 'live'
-    ? `<span class="live-dot" aria-hidden="true"></span><span>Идёт сет 3 · <span id="ago">${ago()}</span></span>` +
+    ? `<span class="live-dot" aria-hidden="true"></span><span>Идёт · <span id="ago">${ago()}</span></span>` +
       '<button type="button" class="refresh" data-act="simulate">Обновить</button>'
     : '<span>Итоговые результаты. Соревнование завершено.</span>';
   const female = state.gender === 'F', m = me();
@@ -553,6 +596,9 @@ function renderSheet() {
 /* ---------- render ---------- */
 function render(keepScroll) {
   const top = wrap.scrollTop, left = wrap.scrollLeft;
+  const desk = state.device === 'desk';
+  $('#page').classList.toggle('desk', desk);
+  $('#device').classList.toggle('desk', desk);
   renderTop();
   renderTable();
   if (keepScroll) { wrap.scrollTop = top; wrap.scrollLeft = left; } else { wrap.scrollTop = 0; wrap.scrollLeft = 0; }
@@ -632,7 +678,7 @@ document.addEventListener('click', (e) => {
     case 'tab': toast('В этом макете показаны только результаты.'); break;
     case 'reset': {
       store.del(ME_KEY);
-      Object.assign(state, { mode: 'PROP', N: 15, best: 0, live: 'live', sheetId: null });
+      Object.assign(state, { mode: 'PROP', N: 15, best: 0, live: 'live', sheetId: null }); // устройство не сбрасываем
       boot();
       break;
     }
@@ -656,6 +702,7 @@ document.querySelectorAll('.seg[data-opt]').forEach((seg) => seg.addEventListene
   const v = opt === 'N' || opt === 'best' ? +b.dataset.v : b.dataset.v;
   if (state[opt] === v) return;
   state[opt] = v;
+  if (opt === 'device') { render(true); return; }
   if (opt === 'N') { boot(true); return; }
   if (opt === 'mode' || opt === 'best') { computeScores(); state.deltas.clear(); state.changed.clear(); }
   if (opt === 'live') state.lastUpdate = Date.now();

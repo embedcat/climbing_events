@@ -1,0 +1,1299 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Страница события на телефоне</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=Unbounded:wght@600&display=swap">
+<style>
+/* Layout: mockup settings column beside a phone frame. Inside: the participant's event mini-app with the same header
+   and tabs as the entry and results mockups. "Инфо" and "Участники" are tabs; registration, the PIN screen and
+   payment open from them. The primary action of each screen sits in the bar pinned to the bottom. */
+:root{
+  --bg:#e9edf1; --app-bg:#f3f5f8; --surface:#fbfcfd; --surface-2:#e6eaef; --line:#d5dbe2; --line-strong:#b6bfca;
+  --ink:#17212c; --muted:#56626f; --faint:#a1abb6; --shadow:rgba(23,33,44,.16); --scrim:rgba(8,12,16,.45);
+  --fl:#157443; --fl-soft:#d6efdf; --rp:#1d52bb; --rp-soft:#dbe5fa;
+  --accent:#cf4812; --accent-soft:#fde5d6; --on-accent:#ffffff;
+  --danger:#bf262c; --danger-soft:#fadede;
+  --frame:#1a2129; --frame-line:#2e3844;
+  /* афиша и QR — картинки, в обеих темах одинаковые */
+  --pa-bg:#22303f; --pa-wall:#2e4358; --pa-h1:#ff8f55; --pa-h2:#5bcb8c; --pa-h3:#f4c95d; --pa-ink:#f3f5f8;
+  --qr-bg:#ffffff; --qr-ink:#111418;
+  --font-display:"Unbounded","IBM Plex Sans",system-ui,sans-serif;
+  --font-ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-data:"IBM Plex Mono",ui-monospace,Consolas,"Liberation Mono",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b1015; --app-bg:#0f141a; --surface:#161d25; --surface-2:#1d2631; --line:#29333f; --line-strong:#3b4756;
+    --ink:#e4e9ef; --muted:#98a4b1; --faint:#56626f; --shadow:rgba(0,0,0,.55); --scrim:rgba(0,0,0,.6);
+    --fl:#5bcb8c; --fl-soft:#15321f; --rp:#89aaf6; --rp-soft:#1a2746;
+    --accent:#ff8f55; --accent-soft:#3b2317; --on-accent:#1a0d05;
+    --danger:#ff7b7b; --danger-soft:#3a1a1c;
+    --frame:#05070a; --frame-line:#27303b;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b1015; --app-bg:#0f141a; --surface:#161d25; --surface-2:#1d2631; --line:#29333f; --line-strong:#3b4756;
+  --ink:#e4e9ef; --muted:#98a4b1; --faint:#56626f; --shadow:rgba(0,0,0,.55); --scrim:rgba(0,0,0,.6);
+  --fl:#5bcb8c; --fl-soft:#15321f; --rp:#89aaf6; --rp-soft:#1a2746;
+  --accent:#ff8f55; --accent-soft:#3b2317; --on-accent:#1a0d05;
+  --danger:#ff7b7b; --danger-soft:#3a1a1c;
+  --frame:#05070a; --frame-line:#27303b;
+  color-scheme:dark;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:14px;line-height:1.4}
+button,input,select{font:inherit;color:inherit}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.muted{color:var(--muted)}
+.small{font-size:12.5px}
+:is(button,input,select):focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+/* page: settings + device */
+.page{display:grid;grid-template-columns:minmax(0,330px) auto;justify-content:center;align-items:start;gap:40px;padding-inline:16px;padding-block:24px}
+@media (max-width:800px){.page{grid-template-columns:minmax(0,1fr);gap:24px}}
+.panel{display:flex;flex-direction:column;gap:16px;padding-top:8px;min-width:0}
+.eyebrow{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.panel h1{margin:4px 0 0;font-family:var(--font-display);font-weight:600;font-size:22px;letter-spacing:-.01em;text-wrap:balance}
+.panel p{margin:0;max-width:44ch;color:var(--muted)}
+.opt{display:flex;flex-direction:column;gap:6px}
+.label{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.seg{display:inline-flex;flex-wrap:wrap;align-self:flex-start;gap:2px;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)}
+.seg button{border:0;background:transparent;padding:5px 10px;border-radius:6px;color:var(--muted);font-size:13px;white-space:nowrap;cursor:pointer}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:0 1px 2px var(--shadow)}
+.seg[aria-disabled="true"]{opacity:.45;pointer-events:none}
+.check{display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:13.5px}
+.check input{margin-top:3px}
+.pins ul{margin:4px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(--muted)}
+.pins b{display:inline-block;min-width:44px;font-family:var(--font-data);color:var(--ink)}
+.linkbtn{align-self:flex-start;padding:0;border:0;background:none;color:var(--muted);font-size:13px;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+
+.device{width:390px;height:clamp(620px,calc(100vh - 48px),820px);padding:11px;border-radius:46px;background:var(--frame);
+  box-shadow:0 24px 60px var(--shadow),inset 0 0 0 1px var(--frame-line)}
+@media (max-width:800px){.device{margin-inline:auto}}
+@media (max-width:460px){.device{width:100%;height:min(760px,calc(100svh - 32px));padding:0;border-radius:20px;box-shadow:0 0 0 1px var(--line)}}
+.screen{position:relative;width:100%;height:100%;overflow:hidden;border-radius:36px;background:var(--app-bg)}
+@media (max-width:460px){.screen{border-radius:19px}}
+
+/* app shell — как в макетах ввода и результатов */
+.app{position:absolute;inset:0;display:flex;flex-direction:column;color:var(--ink);font-size:15px}
+.ev-head{flex:none;padding:16px 18px 0;background:var(--surface);border-bottom:1px solid var(--line)}
+.ev-title{font-family:var(--font-display);font-weight:600;font-size:15px;line-height:1.25;text-wrap:balance}
+.ev-date{margin-top:2px;font-size:12.5px;color:var(--muted)}
+.tabs{display:flex;margin-top:8px}
+.tabs button{flex:1;padding:10px 0 11px;border:0;border-bottom:2px solid transparent;background:none;color:var(--muted);font-size:13px;cursor:pointer}
+.tabs button[aria-current="page"]{border-bottom-color:var(--accent);color:var(--ink);font-weight:600}
+.main{flex:1 1 auto;display:flex;flex-direction:column;gap:14px;padding:16px 16px 24px;overflow-y:auto;overscroll-behavior:contain}
+.main>*{flex-shrink:0}
+.main h2{margin:0;font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-.01em}
+.action{flex:none;display:flex;flex-direction:column;gap:8px;padding:10px 16px calc(16px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line)}
+.act-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.act-row.two{display:grid;grid-template-columns:1fr 1.5fr}
+.sum{display:flex;flex-wrap:wrap;align-items:baseline;gap:1px 12px;min-width:0;font-size:14px}
+.sum .s b{font-family:var(--font-data);font-size:16px}
+.sum .of{width:100%;font-size:12.5px;color:var(--muted)}
+.btn{padding:12px 18px;border:1.5px solid var(--line-strong);border-radius:12px;background:var(--surface);color:var(--ink);font-size:15px;font-weight:600;cursor:pointer;touch-action:manipulation}
+.btn.primary{border-color:var(--accent);background:var(--accent);color:var(--on-accent)}
+.btn.wide{width:100%}
+.btn:disabled{opacity:.45;cursor:default}
+.back{align-self:flex-start;margin:-4px 0 -6px;padding:4px 0;border:0;background:none;color:var(--muted);font-size:13.5px;cursor:pointer}
+.lead{margin:4px 0 0;font-size:13.5px;color:var(--muted)}
+.banner{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:13.5px}
+.banner.info{border-color:var(--accent);background:var(--accent-soft)}
+.banner.err{border-color:var(--danger);background:var(--danger-soft)}
+.pill{display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.pill.due{background:var(--accent);color:var(--on-accent)}
+.pill.ok{background:var(--fl-soft);color:var(--fl)}
+.pill.wait{background:var(--surface-2);color:var(--muted)}
+
+/* «Инфо» */
+.intro{display:grid;grid-template-columns:92px minmax(0,1fr);gap:14px;align-items:start}
+.poster{display:block;width:92px;max-width:100%;aspect-ratio:3/4;padding:0;border:0;border-radius:10px;overflow:hidden;background:var(--pa-bg);cursor:zoom-in;box-shadow:0 2px 10px var(--shadow)}
+.poster svg,.lb-inner svg{display:block;width:100%;height:100%}
+.pa-bg{fill:var(--pa-bg)} .pa-wall{fill:var(--pa-wall)} .pa-h1{fill:var(--pa-h1)} .pa-h2{fill:var(--pa-h2)} .pa-h3{fill:var(--pa-h3)}
+.pa-t{fill:var(--pa-ink);font-family:var(--font-display);font-weight:600;font-size:10.5px;letter-spacing:.02em}
+.pa-s{fill:var(--pa-ink);font-family:var(--font-data);font-size:7px;font-weight:600;letter-spacing:.06em;opacity:.85}
+.facts{display:flex;flex-direction:column;gap:7px;margin:0}
+.facts div{display:flex;flex-direction:column;gap:1px;min-width:0}
+.facts dt{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.facts dd{margin:0;font-size:14.5px;line-height:1.3}
+.facts dd small{display:block;font-size:12px;color:var(--muted)}
+
+.status{display:flex;flex-direction:column;gap:4px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.status.open,.status.live{border-color:var(--fl)}
+.st-h{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600}
+.status p{margin:0;font-size:13.5px;color:var(--muted)}
+.dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--fl);box-shadow:0 0 0 3px var(--fl-soft)}
+.status.live .dot{animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 6px var(--fl-soft)}}
+
+.me-card{display:flex;flex-direction:column;gap:6px;padding:12px 14px;border:1.5px solid var(--accent);border-radius:14px;background:var(--accent-soft)}
+.mc-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.mc-k{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--accent)}
+.mc-name{font-size:17px;font-weight:600;line-height:1.25}
+.mc-meta{font-size:13px;color:var(--muted)}
+.mc-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 10px;margin-top:4px;padding-top:8px;border-top:1px solid var(--line);font-size:13.5px}
+.mc-row p{margin:0;width:100%;font-size:12.5px;color:var(--muted)}
+.mc-place{display:flex;align-items:center;gap:10px}
+.mc-place b{font-family:var(--font-display);font-size:34px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.mc-place span{font-size:13px;line-height:1.3;color:var(--muted)}
+
+.block{display:flex;flex-direction:column;gap:8px}
+.bh{margin:0;font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.hint{margin:0;font-size:12.5px;color:var(--muted)}
+.sets{margin:0;padding:0 14px;list-style:none;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.sets li{display:grid;grid-template-columns:50px 46px minmax(0,1fr) auto;align-items:center;gap:10px;min-height:42px;border-top:1px solid var(--line);font-size:14px}
+.sets li:first-child{border-top:0}
+.sets .sn{font-weight:600}
+.sets .st{font-family:var(--font-data);color:var(--muted)}
+.sets .sc{font-size:12.5px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.sets li.full .sc{color:var(--faint)}
+.bar{display:block;height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:3px;background:var(--muted)}
+.sets li.full .bar i{background:var(--faint)}
+
+.pod-list{display:flex;flex-direction:column;gap:6px}
+.pod{padding:10px 14px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.pod-g{margin-bottom:6px;font-size:14px;font-weight:600}
+.pod-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.pod-h{margin-bottom:3px;font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.pod ol{display:flex;flex-direction:column;gap:2px;margin:0;padding:0;list-style:none;font-size:13.5px}
+.pod li{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.pod li b{display:inline-block;width:14px;font-family:var(--font-data);font-weight:600}
+.pod li.me{color:var(--accent);font-weight:600}
+
+.prose{padding:2px 14px 6px;border:1px solid var(--line);border-radius:14px;background:var(--surface);font-size:14.5px;line-height:1.55}
+.prose h3{margin:12px 0 2px;font-size:15px;font-weight:600}
+.prose p{margin:0 0 6px}
+.prose ul{margin:0 0 6px;padding-left:20px}
+
+/* «Участники» */
+.search{display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface)}
+.search:focus-within{border-color:var(--ink)}
+.search svg{flex:none;width:18px;height:18px;fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round}
+.search input{flex:1;min-width:0;border:0;background:none;font-size:16px;outline:none}
+.search input::placeholder{color:var(--faint)}
+.gsel{display:flex;align-items:center;gap:8px;min-width:0}
+.app .seg{flex:none}
+.app .seg button{padding:7px 11px;font-size:14px}
+.chips{display:flex;gap:6px;min-width:0;padding:2px;overflow-x:auto;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chips button{flex:none;display:inline-flex;align-items:center;gap:5px;padding:7px 12px;border:1.5px solid var(--line);border-radius:999px;background:var(--surface);font-size:13.5px;white-space:nowrap;cursor:pointer}
+.chips button[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--surface)}
+.chips .cnt{font-family:var(--font-data);font-size:11.5px;opacity:.65}
+.setcards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.setcard{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0;padding:8px 10px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);text-align:left;cursor:pointer}
+.setcard b{font-size:13.5px;font-weight:600;white-space:nowrap}
+.setcard em{font-family:var(--font-data);font-size:12px;font-style:normal;font-weight:400;color:var(--muted)}
+.setcard span{font-family:var(--font-data);font-size:11.5px;color:var(--muted)}
+.setcard[aria-pressed="true"] em{color:inherit;opacity:.75}
+.setcard[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--surface)}
+.setcard[aria-pressed="true"] span{color:inherit;opacity:.75}
+.list-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 10px;margin-top:2px}
+.list-head span{font-size:12.5px;color:var(--muted)}
+.plist{margin:0;padding:0;list-style:none;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.prow{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;width:100%;padding:9px 14px;border:0;border-top:1px solid var(--line);background:none;text-align:left;cursor:pointer}
+.plist li:first-child .prow{border-top:0}
+.prow.me{background:var(--accent-soft)}
+.pr-main{display:flex;flex-direction:column;gap:1px;min-width:0}
+.pr-name{display:flex;align-items:center;gap:6px;font-size:15px;font-weight:500}
+.prow.me .pr-name{font-weight:600}
+.pr-meta{overflow:hidden;font-size:12.5px;color:var(--muted);white-space:nowrap;text-overflow:ellipsis}
+.pr-side{display:flex;flex-direction:column;align-items:flex-end;gap:1px;font-size:12.5px;color:var(--muted);white-space:nowrap}
+.pr-side b{font-weight:500;color:var(--ink)}
+.tag{padding:0 6px;border-radius:999px;background:var(--accent);color:var(--on-accent);font-size:11px;font-weight:600;line-height:17px}
+.empty{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:14px;border:1px dashed var(--line-strong);border-radius:14px;font-size:14px;color:var(--muted)}
+.empty p{margin:0}
+
+/* анкета */
+.form{display:flex;flex-direction:column;gap:12px;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.form h3{margin:0;font-size:15px;font-weight:600}
+.row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.fld{display:flex;flex-direction:column;gap:5px;min-width:0}
+.fld>span{font-size:12.5px;font-weight:500;color:var(--muted)}
+.fld>span i{font-style:normal;font-weight:400;color:var(--faint)}
+.fld input,.fld select{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--app-bg);color:var(--ink);font-size:16px}
+.fld select{appearance:none;padding-right:34px;cursor:pointer}
+.fld input:focus,.fld select:focus{outline:none;border-color:var(--ink)}
+.fld input::placeholder{color:var(--faint)}
+.selwrap{position:relative;display:block}
+.selwrap::after{content:"";position:absolute;top:50%;right:14px;width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:translateY(-70%) rotate(45deg);pointer-events:none}
+.choice{display:flex;flex-wrap:wrap;gap:6px}
+.choice button{padding:8px 12px;border:1.5px solid var(--line);border-radius:999px;background:var(--app-bg);font-size:14px;cursor:pointer;touch-action:manipulation}
+.choice button[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--surface)}
+.setpick{display:flex;flex-direction:column;gap:6px}
+.setpick button{display:grid;grid-template-columns:52px 1fr auto;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--app-bg);font-size:14px;text-align:left;cursor:pointer;touch-action:manipulation}
+.setpick .sp-n{font-weight:600}
+.setpick .sp-t{font-family:var(--font-data)}
+.setpick .sp-free{font-size:12.5px;color:var(--muted)}
+.setpick button[aria-checked="true"]{border-color:var(--ink);background:var(--ink);color:var(--surface)}
+.setpick button[aria-checked="true"] .sp-free{color:inherit;opacity:.75}
+.setpick button:disabled{opacity:.5;cursor:default}
+.fld.invalid>span{color:var(--danger)}
+.fld.invalid input,.fld.invalid .choice button,.fld.invalid .setpick button:not(:disabled){border-color:var(--danger)}
+
+/* готово, PIN, оплата */
+.done{display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:10px;text-align:center}
+.done p{margin:0}
+.done-mark{width:56px;height:56px}
+.done-mark circle{fill:var(--fl-soft);stroke:var(--fl);stroke-width:2}
+.done-mark path{fill:none;stroke:var(--fl);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.card{display:flex;flex-direction:column;gap:6px;width:100%;padding:14px 16px;border:1px solid var(--line);border-radius:16px;background:var(--surface);text-align:left}
+.card p{font-size:13px;color:var(--muted)}
+.card.center{align-items:center;text-align:center}
+.pc-label{font-size:12.5px;color:var(--muted)}
+.pin-big{padding-left:.28em;font-family:var(--font-data);font-size:44px;font-weight:600;line-height:1.1;letter-spacing:.28em}
+.kv{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px}
+.kv>span:first-child{color:var(--muted)}
+.kv b{font-family:var(--font-data);font-size:16px}
+.remember{padding:10px 12px;border-radius:12px;background:var(--surface-2);font-size:13px}
+.amount{font-family:var(--font-display);font-size:38px;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums}
+.amount s{margin-right:8px;font-size:20px;color:var(--faint)}
+.promo{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.promo .btn{padding:10px 14px;font-size:14px}
+.fld .hint.err{color:var(--danger)}
+.fld .hint.ok{color:var(--fl)}
+.divider{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+.divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--line)}
+.qr{display:block;width:172px;height:172px;margin-inline:auto;border-radius:10px;shape-rendering:crispEdges}
+.qr-bg{fill:var(--qr-bg)}
+.qr-ink{fill:var(--qr-ink)}
+
+/* шторка участника, афиша, тост */
+.sheet-host{position:absolute;inset:0;z-index:10;pointer-events:none}
+.sheet-host.open{pointer-events:auto}
+.sheet-bg{position:absolute;inset:0;background:var(--scrim)}
+.sheet{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:10px;max-height:82%;overflow-y:auto;
+  padding:10px 16px calc(18px + env(safe-area-inset-bottom,0px));border-radius:20px 20px 0 0;background:var(--surface);box-shadow:0 -8px 30px var(--shadow)}
+.grabber{align-self:center;width:40px;height:4px;border-radius:2px;background:var(--line-strong)}
+.sheet h3{margin:0;font-size:18px;font-weight:600}
+.sheet p{margin:0}
+.facts-line{font-size:13px;color:var(--muted)}
+.sheet .kv{padding-top:9px;border-top:1px solid var(--line)}
+.sheet .kv b{font-family:var(--font-ui);font-size:14px;font-weight:600}
+.sheet-actions{display:grid;grid-template-columns:1fr 1.6fr;gap:8px;margin-top:4px}
+.sheet-actions.one{grid-template-columns:1fr}
+.is-me{padding:10px 12px;border-radius:12px;background:var(--accent-soft);font-size:13.5px}
+.lightbox{position:absolute;inset:0;z-index:15;display:grid;place-items:center;padding:28px;background:var(--scrim);cursor:zoom-out}
+.lb-inner{display:flex;flex-direction:column;gap:12px;width:100%;max-width:300px}
+.lb-inner svg{height:auto;aspect-ratio:3/4;border-radius:12px;box-shadow:0 12px 40px var(--shadow)}
+.toast{position:absolute;left:16px;right:16px;bottom:100px;z-index:20;padding:10px 14px;border-radius:12px;background:var(--ink);color:var(--surface);
+  font-size:13.5px;text-align:center;box-shadow:0 8px 24px var(--shadow)}
+
+/* «Ввод» и «Результаты», пока они закрыты */
+.closed{display:flex;flex-direction:column;align-items:center;gap:10px;padding:28px 8px 8px;text-align:center}
+.closed h2{text-wrap:balance}
+.closed p{margin:0;max-width:40ch;font-size:14px;color:var(--muted)}
+.closed-mark{width:52px;height:52px}
+.closed-mark circle,.closed-mark rect{fill:var(--surface-2);stroke:var(--line-strong);stroke-width:2}
+.closed-mark path{fill:none;stroke:var(--muted);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.pointer{display:flex;flex-direction:column;gap:6px;padding:16px;border:1.5px dashed var(--line-strong);border-radius:14px;font-size:13.5px;color:var(--muted)}
+.pointer b{font-size:15px;color:var(--ink)}
+
+/* раскладка «Инфо» и «Участников»: на телефоне одна колонка */
+.info,.info-side,.info-body,.ptools{display:flex;flex-direction:column;gap:14px;min-width:0}
+.plist-cols{display:none}
+.pc{display:none;overflow:hidden;font-size:13.5px;color:var(--muted);white-space:nowrap;text-overflow:ellipsis}
+.pc.num{font-family:var(--font-data);font-size:13px}
+
+/* окно браузера вместо телефона */
+.browser-bar{display:none}
+.page.desk{grid-template-columns:minmax(0,300px) minmax(0,1120px)}
+@media (max-width:1100px){.page.desk{grid-template-columns:minmax(0,1fr)}}
+.device.desk{display:flex;flex-direction:column;width:100%;padding:0;border-radius:12px;background:var(--surface-2);box-shadow:0 24px 60px var(--shadow),0 0 0 1px var(--line)}
+.device.desk .browser-bar{flex:none;display:flex;align-items:center;gap:12px;height:38px;padding:0 14px;border-bottom:1px solid var(--line)}
+.bb-dots{display:flex;gap:6px}
+.bb-dots i{width:10px;height:10px;border-radius:50%;background:var(--line-strong)}
+.bb-url{flex:0 1 420px;margin-inline:auto;padding:4px 12px;border-radius:999px;background:var(--surface);font-family:var(--font-data);font-size:12px;color:var(--muted);text-align:center}
+.device.desk .screen{flex:1 1 auto;height:auto;min-height:0;border-radius:0 0 12px 12px}
+.screen{container:app / inline-size}
+
+/* компьютер: та же разметка, раскладка по ширине окна. Шапка и контент — в одной колонке 1040 px по центру,
+   анкета, оплата и закрытые экраны занимают её левые 640 px, чтобы шапка не прыгала между экранами */
+@container app (min-width:760px){
+  .app{--col:1040px;--gut:max(28px,calc((100% - var(--col)) / 2));--pcols:minmax(0,1.7fr) 52px 74px minmax(0,1fr) minmax(0,1fr) minmax(0,1.1fr) 40px}
+  .app.narrow .main>*{max-width:640px}
+  .app.narrow .action{justify-content:flex-start}
+  .app.narrow .action>*{flex:0 1 640px}
+  .app.narrow .action>.btn.wide{flex:0 0 auto}
+  .ev-head{padding:22px var(--gut) 0}
+  .ev-title{font-size:22px}
+  .ev-date{font-size:14px}
+  .tabs{gap:6px;margin-top:12px}
+  .tabs button{flex:none;padding:10px 14px 12px;font-size:14.5px}
+  .main{gap:18px;padding:28px var(--gut) 40px}
+  .action{flex-direction:row;align-items:center;justify-content:flex-end;padding:12px var(--gut) 14px}
+  .act-row{flex:1}
+  .act-row.two{display:flex;justify-content:flex-end;gap:10px}
+  .btn.wide{width:auto;min-width:260px}
+  .info{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:32px;align-items:start}
+  .info-side{position:sticky;top:0;grid-column:2;grid-row:1}
+  .info-body{grid-column:1;grid-row:1;gap:18px}
+  .intro{grid-template-columns:1fr;gap:16px}
+  .poster{width:100%;border-radius:12px}
+  .prose p,.prose ul{max-width:68ch}
+  .ptools{flex-direction:row;align-items:center}
+  .ptools .search{flex:0 0 320px}
+  .ptools .chips{flex-wrap:wrap;overflow:visible}
+  .setcards{grid-template-columns:repeat(3,minmax(0,190px))}
+  .plist-cols{display:grid;grid-template-columns:var(--pcols);gap:12px;padding:0 15px;font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .prow{grid-template-columns:var(--pcols);padding-block:11px}
+  .prow .pr-meta,.prow .pr-side{display:none}
+  .prow .pc{display:block}
+  .closed{padding-top:48px}
+  .sheet{top:50%;right:auto;bottom:auto;left:50%;width:min(460px,calc(100% - 48px));max-height:84%;padding:20px 22px;border-radius:16px;transform:translate(-50%,-50%)}
+  .grabber{display:none}
+  .toast{right:auto;left:50%;width:min(440px,calc(100% - 32px));bottom:96px;transform:translateX(-50%)}
+  .lb-inner{max-width:420px}
+}
+@media (prefers-reduced-motion:reduce){.status.live .dot{animation:none}}
+</style>
+
+<div class="page" id="page">
+  <aside class="panel" aria-label="Настройки макета">
+    <div>
+      <div class="eyebrow">Макет · RockEvents</div>
+      <h1>Страница события на телефоне</h1>
+    </div>
+    <p>Вкладки «Инфо» и «Участники», регистрация, PIN и оплата взноса, а также «Ввод» и «Результаты», пока они закрыты. Так событие видит участник, который пришёл по ссылке из чата, по QR-коду в зале или с главной страницы.</p>
+
+    <div class="opt">
+      <span class="label" id="o-device">Устройство</span>
+      <div class="seg" data-opt="device" role="group" aria-labelledby="o-device">
+        <button type="button" data-v="phone">Телефон</button>
+        <button type="button" data-v="desk">Компьютер</button>
+      </div>
+    </div>
+    <div class="opt">
+      <span class="label" id="o-phase">Что с событием</span>
+      <div class="seg" data-opt="phase" role="group" aria-labelledby="o-phase">
+        <button type="button" data-v="reg">Регистрация</button>
+        <button type="button" data-v="closed">Рег. закрыта</button>
+        <button type="button" data-v="live">Идёт</button>
+        <button type="button" data-v="over">Ввод закрыт</button>
+        <button type="button" data-v="done">Завершено</button>
+      </div>
+    </div>
+    <div class="opt">
+      <span class="label" id="o-wo">Регистрация</span>
+      <div class="seg" data-opt="wo" role="group" aria-labelledby="o-wo">
+        <button type="button" data-v="0">Заранее</button>
+        <button type="button" data-v="1">Без регистрации</button>
+      </div>
+    </div>
+    <div class="opt">
+      <span class="label" id="o-pay">Онлайн-оплата взноса</span>
+      <div class="seg" data-opt="pay" role="group" aria-labelledby="o-pay">
+        <button type="button" data-v="none">Нет</button>
+        <button type="button" data-v="ym">ЮMoney</button>
+        <button type="button" data-v="sbp">СБП</button>
+      </div>
+    </div>
+    <label class="check" for="o-pin"><input type="checkbox" id="o-pin" checked><span>Показывать PIN после регистрации <span class="muted">(опция организатора)</span></span></label>
+    <label class="check" for="o-limit"><input type="checkbox" id="o-limit" checked><span>Не больше 16 участников в сете</span></label>
+    <label class="check" for="o-res"><input type="checkbox" id="o-res" checked><span>Результаты открыты <span class="muted">(опция организатора)</span></span></label>
+    <label class="check" for="o-me"><input type="checkbox" id="o-me"><span>Телефон помнит участника <span class="muted" id="o-me-name">(Зайцева Юлия)</span></span></label>
+
+    <div class="pins">
+      <span class="label">Проверить анкету</span>
+      <ul>
+        <li><b>Зайцева Юлия</b> уже в списке участников</li>
+        <li><b>2013</b> год рождения: младше 14 лет</li>
+        <li><b>LESNAYA</b> промокод при оплате через ЮMoney</li>
+      </ul>
+    </div>
+    <p class="small">«Ввод» и «Результаты», когда они открыты, — отдельные макеты: entry-phone.html и results-phone.html. «Ввод закрыт» — день соревнований после того, как организатор закрыл ввод; «Завершено» наступает на следующий день (<code>check_expired</code>).</p>
+    <button type="button" class="linkbtn" data-act="reset">Сбросить демо</button>
+  </aside>
+
+  <div class="device" id="device">
+    <div class="browser-bar" aria-hidden="true"><span class="bb-dots"><i></i><i></i><i></i></span><span class="bb-url">rockevents.ru/e/128/</span></div>
+    <div class="screen">
+      <div class="app" id="app">
+        <header class="ev-head">
+          <div class="ev-title">Осенний фестиваль боулдеринга</div>
+          <div class="ev-date">4 октября 2026 · Скалодром на Лесной</div>
+          <nav class="tabs" id="tabs" aria-label="Разделы события">
+            <button type="button" data-act="tab" data-tab="info">Инфо</button>
+            <button type="button" data-act="tab" data-tab="enter">Ввод</button>
+            <button type="button" data-act="tab" data-tab="people">Участники</button>
+            <button type="button" data-act="tab" data-tab="results">Результаты</button>
+          </nav>
+        </header>
+        <main class="main" id="main"></main>
+        <footer class="action" id="action"></footer>
+      </div>
+      <div class="sheet-host" id="sheet"></div>
+      <div class="lightbox" id="lightbox" data-act="poster-close" hidden></div>
+      <div class="toast" id="toast" role="status" hidden></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+const EVENT = {
+  title: 'Осенний фестиваль боулдеринга', dateLong: 'воскресенье, 4 октября 2026', dateShort: '4 октября',
+  gym: 'Скалодром на Лесной', price: 1500, regUntil: '3 октября, 23:59', minAge: 14, thisYear: 2026,
+};
+const GROUPS = ['Новички', 'Любители', 'Спорт'];
+const SETS = ['10:00', '13:00', '16:00'];
+const CAP = 16; // set_max_participants
+const SET_FILL = [14, 16, 12]; // сет 2 уже заполнен
+const PROMO = { code: 'LESNAYA', price: 1200 }; // PromoCode.price — новая цена, а не скидка
+const GRADES = ['б/р', '3 ю.р.', '2 ю.р.', '1 ю.р.', '3 сп.р.', '2 сп.р.', '1 сп.р.', 'КМС', 'МС', 'МСМК'];
+const GROUP_GRADES = [['б/р', 'б/р', 'б/р', '3 сп.р.'], ['б/р', '3 сп.р.', '2 сп.р.', '2 сп.р.'], ['2 сп.р.', '1 сп.р.', '1 сп.р.', 'КМС']];
+const MALE_FIRST = ['Алексей', 'Дмитрий', 'Иван', 'Никита', 'Сергей', 'Павел', 'Артём', 'Михаил', 'Егор', 'Роман', 'Андрей', 'Глеб'];
+const FEMALE_FIRST = ['Анна', 'Мария', 'Екатерина', 'Ольга', 'Дарья', 'Полина', 'Ксения', 'Алина', 'Вера', 'Софья', 'Юлия', 'Ева'];
+const SURNAMES = [
+  ['Кузнецов', 'Кузнецова'], ['Орлов', 'Орлова'], ['Соколов', 'Соколова'], ['Лебедев', 'Лебедева'],
+  ['Волков', 'Волкова'], ['Морозов', 'Морозова'], ['Белов', 'Белова'], ['Карпов', 'Карпова'],
+  ['Громов', 'Громова'], ['Ершов', 'Ершова'], ['Тихонов', 'Тихонова'], ['Сомов', 'Сомова'],
+  ['Жуков', 'Жукова'], ['Панов', 'Панова'], ['Фролов', 'Фролова'], ['Гусев', 'Гусева'],
+  ['Титов', 'Титова'], ['Беляев', 'Беляева'], ['Мельников', 'Мельникова'], ['Щукин', 'Щукина'],
+  ['Архипов', 'Архипова'], ['Рябов', 'Рябова'], ['Никитин', 'Никитина'],
+];
+const CITIES = ['Москва', 'Москва', 'Москва', 'Санкт-Петербург', 'Тверь', 'Казань', 'Ярославль'];
+const TEAMS = ['Магнезия', 'Северный склон', 'Кампус', '', '', ''];
+
+// описание события пишет организатор в редакторе (Event.description, HTML)
+const DESCRIPTION = `
+  <h3>Формат</h3>
+  <p>Фестиваль для всех уровней: 15 трасс, три сета по 2,5 часа. Лазаете в своём сете, отмечаете пролазы на карточке,
+  а после сета вносите результаты с телефона.</p>
+  <h3>Подсчёт</h3>
+  <p>Стоимость трассы делится между всеми, кто её пролез: чем меньше пролазов, тем дороже трасса. Flash даёт +25%.
+  Зачёт в каждой группе отдельно у мужчин и женщин.</p>
+  <h3>Призы</h3>
+  <p>Первые три места в каждой группе получают призы от магазина «Вертикаль».</p>
+  <h3>Что взять</h3>
+  <ul><li>скальные туфли и магнезию (есть прокат);</li><li>паспорт или другой документ для регистрации на стойке.</li></ul>
+  <h3>Контакты организатора</h3>
+  <p>Анна, Telegram @lesnaya_boulder<br>+7 900 123-45-67</p>`;
+
+const POSTER = `<svg viewBox="0 0 120 160" aria-hidden="true">
+  <rect class="pa-bg" width="120" height="160"/>
+  <path class="pa-wall" d="M0 78 L120 50 L120 160 L0 160Z"/>
+  <path class="pa-h1" d="M20 104c4-3 10-2 11 2s-3 8-8 8-7-6-3-10z"/>
+  <circle class="pa-h2" cx="52" cy="92" r="4.5"/>
+  <path class="pa-h3" d="M74 112c3-5 11-5 13 0 1 4-4 6-8 6s-7-2-5-6z"/>
+  <circle class="pa-h1" cx="96" cy="78" r="3.5"/>
+  <path class="pa-h2" d="M38 128c2-4 9-4 10 0s-2 6-5 6-6-2-5-6z"/>
+  <circle class="pa-h3" cx="104" cy="122" r="5"/>
+  <circle class="pa-h2" cx="80" cy="140" r="3"/>
+  <text class="pa-t" x="10" y="24">ОСЕННИЙ</text>
+  <text class="pa-t" x="10" y="37">ФЕСТИВАЛЬ</text>
+  <text class="pa-t" x="10" y="50">БОУЛДЕРИНГА</text>
+  <text class="pa-s" x="10" y="152">4.10 · ЛЕСНАЯ</text>
+</svg>`;
+
+const $ = (s) => document.querySelector(s);
+const main = $('#main'), action = $('#action'), sheetHost = $('#sheet'), lightbox = $('#lightbox'), toastEl = $('#toast');
+
+const emptyForm = () => ({ last: '', first: '', gender: '', birth: '', grade: 'б/р', city: '', team: '', group: -1, set: -1, email: '', phone: '' });
+const state = {
+  device: 'phone', phase: 'reg', wo: '0', pay: 'none', showPin: true, limit: true, resOpen: true,
+  screen: 'info', people: [], meId: null, julia: null, lastReg: null, payFor: null,
+  form: emptyForm(), showErr: false, formErr: '', sending: false,
+  f: { gender: 'all', group: -1, set: -1, q: '' },
+  sheetId: null, poster: false, promo: '', promoOk: false, promoMsg: '', promoBad: false,
+};
+
+/* ---------- helpers ---------- */
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function shuffle(arr, rnd) {
+  for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+  return arr;
+}
+function plural(n, one, few, many) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return one;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+  return many;
+}
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const money = (n) => n.toLocaleString('ru-RU');
+const people = (n) => `${n} ${plural(n, 'участник', 'участника', 'участников')}`;
+const isWo = () => state.wo === '1';
+const byId = (id) => state.people.find((p) => p.id === id) || null;
+const fullName = (p) => esc(`${p.last} ${p.first}`);
+const short = (p) => esc(`${p.last} ${p.first[0]}.`);
+const metaOf = (p) => `${GROUPS[p.group]} · ${p.female ? 'Ж' : 'М'} · сет ${p.set + 1}, ${SETS[p.set]}`;
+const byName = (a, b) => (a.last + ' ' + a.first).localeCompare(b.last + ' ' + b.first, 'ru');
+const wait = (ms) => new Promise((res) => setTimeout(res, ms));
+
+/* ---------- demo data ---------- */
+function gen() {
+  const rnd = mulberry32(41026);
+  const males = shuffle(SURNAMES.map((s) => s[0]), rnd), females = shuffle(SURNAMES.map((s) => s[1]), rnd);
+  let mi = 0, fi = 0, id = 1;
+  const out = [];
+  SET_FILL.forEach((n, set) => {
+    for (let i = 0; i < n; i++) {
+      const julia = set === 2 && i === 0;
+      let female = julia || rnd() < 0.5;
+      if (!julia && female && fi >= females.length) female = false;
+      if (!julia && !female && mi >= males.length) female = true;
+      const r = rnd();
+      const group = julia ? 1 : r < 0.35 ? 0 : r < 0.75 ? 1 : 2;
+      const p = {
+        id: id++, female, group, set,
+        last: julia ? 'Зайцева' : female ? females[fi++] : males[mi++],
+        first: julia ? 'Юлия' : (female ? FEMALE_FIRST : MALE_FIRST)[Math.floor(rnd() * 12)],
+        birth: julia ? 1996 : 1978 + Math.floor(rnd() * 30),
+        grade: julia ? '2 сп.р.' : GROUP_GRADES[group][Math.floor(rnd() * 4)],
+        city: julia ? 'Москва' : CITIES[Math.floor(rnd() * CITIES.length)],
+        team: julia ? 'Магнезия' : TEAMS[Math.floor(rnd() * TEAMS.length)],
+        paid: julia ? false : rnd() < 0.85, pending: false,
+        // сет 3 ещё идёт: часть его участников пока не внесла результат
+        entered: julia || set < 2 || rnd() < 0.45,
+        score: julia ? 0.62 : rnd(),
+        pin: julia ? 8335 : 1000 + Math.floor(rnd() * 9000),
+      };
+      if (julia) state.julia = p.id;
+      out.push(p);
+    }
+  });
+  return out;
+}
+
+/* ---------- selectors ---------- */
+// при «вводе без регистрации» участники появляются, только когда вносят результат
+function roster() {
+  if (!isWo()) return state.people;
+  if (state.phase === 'live' || state.phase === 'over') return state.people.filter((p) => p.entered);
+  if (state.phase === 'done') return state.people;
+  return [];
+}
+const isEntered = (p) => state.phase === 'done' || ((state.phase === 'live' || state.phase === 'over') && p.entered);
+const started = () => state.phase === 'live' || state.phase === 'over' || state.phase === 'done';
+function me() { const p = byId(state.meId); return p && roster().includes(p) ? p : null; }
+const setCount = (i) => state.people.filter((p) => p.set === i).length;
+const setFull = (i) => state.limit && setCount(i) >= CAP;
+const totalFree = () => SETS.reduce((s, _, i) => s + Math.max(0, CAP - setCount(i)), 0);
+const regOpen = () => state.phase === 'reg' && !isWo();
+const freeText = () => (state.limit ? `свободно ${totalFree()} ${plural(totalFree(), 'место', 'места', 'мест')}` : `до ${EVENT.regUntil}`);
+function ranked(female, group) {
+  return roster().filter((p) => p.female === female && p.group === group && isEntered(p))
+    .sort((a, b) => b.score - a.score || byName(a, b));
+}
+function placeOf(p) {
+  const list = ranked(p.female, p.group);
+  return { place: list.indexOf(p) + 1, of: list.length };
+}
+const amount = () => (state.promoOk ? PROMO.price : EVENT.price);
+const needsPay = (p) => state.pay !== 'none' && p && !p.paid && !p.pending;
+function payPill(p) {
+  if (p.paid) return '<span class="pill ok">оплачен</span>';
+  if (p.pending) return '<span class="pill wait">проверяем платёж</span>';
+  return '<span class="pill due">не оплачен</span>';
+}
+
+/* ---------- «Инфо» ---------- */
+function infoHTML() {
+  const m = me();
+  let side = `<section class="intro">
+    <button type="button" class="poster" data-act="poster" aria-label="Открыть афишу">${POSTER}</button>
+    <dl class="facts">
+      <div><dt>Когда</dt><dd>${EVENT.dateLong}</dd></div>
+      <div><dt>Где</dt><dd>${EVENT.gym}</dd></div>
+      <div><dt>Взнос</dt><dd>${money(EVENT.price)} ₽</dd></div>
+      <div><dt>Группы</dt><dd>${GROUPS.join(', ')}<small>зачёт отдельно у мужчин и женщин</small></dd></div>
+    </dl>
+  </section>`;
+  // на компьютере афиша с фактами уходит в правую колонку, а карточка «Вы» и этап события остаются первыми слева
+  let body = m ? meCardHTML(m) : '';
+  if (!m || started()) body += statusHTML();
+  body += state.phase === 'done' ? (state.resOpen ? podiumHTML() : '') : setsHTML();
+  body += `<section class="block"><h3 class="bh">Описание</h3><div class="prose">${DESCRIPTION}</div></section>`;
+  return `<div class="info"><div class="info-side">${side}</div><div class="info-body">${body}</div></div>`;
+}
+
+function meCardHTML(p) {
+  const k = { live: 'Вы участвуете', over: 'Ваш результат', done: 'Ваш итог' }[state.phase] || 'Вы зарегистрированы';
+  let row = '';
+  if (started()) {
+    if (isEntered(p) && state.resOpen) {
+      const r = placeOf(p);
+      row = `<div class="mc-row"><div class="mc-place"><b>${r.place}</b><span>место из ${r.of}<br>${GROUPS[p.group]}, ${p.female ? 'женщины' : 'мужчины'}</span></div>` +
+        (state.phase === 'live' ? '<p>Места меняются, пока другие вносят результаты.</p>' : '') + '</div>';
+    } else if (isEntered(p)) {
+      row = '<div class="mc-row"><span>Результат внесён.</span><p>Место появится, когда организатор откроет результаты.</p></div>';
+    } else if (state.phase === 'live') {
+      row = '<div class="mc-row"><span>Вы ещё не внесли результат.</span><p>PIN для ввода напечатан на вашей карточке участника.</p></div>';
+    } else {
+      row = '<div class="mc-row"><span>Вы не внесли результат.</span><p>Ввод закрыт. Подойдите к организатору: он внесёт результат по вашей карточке.</p></div>';
+    }
+  } else if (state.pay !== 'none') {
+    row = `<div class="mc-row"><span>Взнос ${money(EVENT.price)} ₽</span>${payPill(p)}` +
+      (state.pay === 'sbp' && !p.paid ? '<p>Оплату по СБП организатор отмечает вручную, это может занять время.</p>' : '') +
+      (p.pending ? '<p>ЮMoney обычно подтверждает платёж за несколько минут.</p>' : '') + '</div>';
+  } else {
+    row = '<div class="mc-row"><p>Результаты вносите по PIN с карточки участника. Карточку выдаст организатор.</p></div>';
+  }
+  return `<section class="me-card" aria-label="Вы">
+    <div class="mc-top"><span class="mc-k">${k}</span><button type="button" class="linkbtn" data-act="forget">Не вы?</button></div>
+    <div class="mc-name">${fullName(p)}</div>
+    <div class="mc-meta">${metaOf(p)}</div>${row}
+  </section>`;
+}
+
+function statusHTML() {
+  const n = roster().length;
+  switch (state.phase) {
+    case 'reg':
+      if (isWo()) {
+        return '<section class="status"><div class="st-h">Регистрация не нужна</div>' +
+          '<p>Приходите к началу своего сета. После сета внесите результаты: имя, группу и сет укажете в той же форме.</p></section>';
+      }
+      return `<section class="status open"><div class="st-h"><span class="dot" aria-hidden="true"></span>Регистрация открыта</div>` +
+        `<p>До ${EVENT.regUntil} · ${people(n)}` +
+        (state.limit ? ` · свободно ${totalFree()} ${plural(totalFree(), 'место', 'места', 'мест')}` : '') + '</p></section>';
+    case 'closed':
+      return '<section class="status"><div class="st-h">Регистрация закрыта</div>' +
+        '<p>Хотите участвовать — напишите организатору, контакты в описании ниже.</p></section>';
+    case 'live': {
+      const e = roster().filter(isEntered).length;
+      return `<section class="status live"><div class="st-h"><span class="dot" aria-hidden="true"></span>Идёт</div>` +
+        `<p>Ввод результатов открыт · внесли ${e} из ${n}.</p>` +
+        (isWo() ? '<p>Внесите результаты после своего сета: имя, группу и сет укажете в той же форме.</p>'
+          : '<p>PIN для ввода напечатан на вашей карточке участника.</p>') + '</section>';
+    }
+    case 'over': {
+      const e = roster().filter(isEntered).length;
+      return `<section class="status"><div class="st-h">Ввод результатов закрыт</div><p>Внесли результат ${e} из ${n}.</p>` +
+        '<p>Не успели внести результат или нашли ошибку — подойдите к организатору, он исправит.</p></section>';
+    }
+    default:
+      return `<section class="status"><div class="st-h">Соревнование завершено</div>` +
+        `<p>${EVENT.dateShort} · ${people(n)}. ${state.resOpen ? 'Итоговые результаты открыты и останутся на сайте.'
+          : 'Итоговые результаты появятся, когда организатор их откроет.'}</p></section>`;
+  }
+}
+
+function setsHTML() {
+  const cap = state.limit && regOpen();
+  const counts = !(isWo() && (state.phase === 'reg' || state.phase === 'closed'));
+  const rows = SETS.map((t, i) => {
+    const c = setCount(i);
+    let bar = '<span></span>', right = '';
+    if (cap) {
+      bar = `<span class="bar" aria-hidden="true"><i style="width:${Math.min(100, Math.round(c / CAP * 100))}%"></i></span>`;
+      right = c >= CAP ? 'мест нет' : `свободно ${CAP - c}`;
+    } else if (counts) {
+      const k = roster().filter((p) => p.set === i).length;
+      right = people(k);
+    }
+    return `<li class="${cap && c >= CAP ? 'full' : ''}"><span class="sn">Сет ${i + 1}</span><span class="st">${t}</span>${bar}<span class="sc">${right}</span></li>`;
+  }).join('');
+  let hint = '';
+  if (regOpen()) hint = '<p class="hint">Сет выбираете при регистрации. Перенести в другой сет может только организатор.</p>';
+  else if (isWo() && (state.phase === 'reg' || state.phase === 'closed' || state.phase === 'live')) hint = '<p class="hint">Сет укажете вместе с результатами.</p>';
+  return `<section class="block"><h3 class="bh">Сеты</h3><ul class="sets">${rows}</ul>${hint}</section>`;
+}
+
+function podiumHTML() {
+  const blocks = GROUPS.map((g, gi) => {
+    const cols = [true, false].map((female) => {
+      const top = ranked(female, gi).slice(0, 3);
+      const items = top.length ? top.map((p, k) => `<li class="${p.id === state.meId ? 'me' : ''}"><b>${k + 1}</b>${short(p)}</li>`).join('') : '<li class="muted">—</li>';
+      return `<div><div class="pod-h">${female ? 'Женщины' : 'Мужчины'}</div><ol>${items}</ol></div>`;
+    }).join('');
+    return `<div class="pod"><div class="pod-g">${g}</div><div class="pod-cols">${cols}</div></div>`;
+  }).join('');
+  return `<section class="block"><h3 class="bh">Призёры</h3><div class="pod-list">${blocks}</div></section>`;
+}
+
+function infoActionHTML() {
+  const m = me();
+  if (state.phase === 'live') {
+    if (!state.resOpen) return '<button type="button" class="btn primary wide" data-act="enter">Внести результат</button>';
+    return '<div class="act-row two"><button type="button" class="btn" data-act="results">Результаты</button>' +
+      '<button type="button" class="btn primary" data-act="enter">Внести результат</button></div>';
+  }
+  if (state.phase === 'over' || state.phase === 'done') {
+    if (!state.resOpen) return '';
+    return `<button type="button" class="btn primary wide" data-act="results">${state.phase === 'done' ? 'Итоговые результаты' : 'Результаты'}</button>`;
+  }
+  if (m && needsPay(m)) return payBarHTML();
+  if (regOpen() && !m) return regBarHTML(freeText());
+  return '';
+}
+function regBarHTML(sub) {
+  return `<div class="act-row"><div class="sum"><span class="s"><b>${money(EVENT.price)} ₽</b></span><span class="of">${sub}</span></div>` +
+    '<button type="button" class="btn primary" data-act="go-reg">Зарегистрироваться</button></div>';
+}
+function payBarHTML() {
+  return `<div class="act-row"><div class="sum"><span class="s"><b>${money(EVENT.price)} ₽</b></span><span class="of">взнос не оплачен</span></div>` +
+    '<button type="button" class="btn primary" data-act="go-pay">Оплатить</button></div>';
+}
+
+/* ---------- «Участники» ---------- */
+function peopleHTML() {
+  const list = roster();
+  if (!list.length) {
+    return `<section class="empty"><p>${isWo() ? 'Регистрация на это событие не нужна, поэтому список пока пуст. Участники появятся здесь, когда начнут вносить результаты.'
+      : 'Пока никто не зарегистрировался.'}</p></section>`;
+  }
+  const f = state.f;
+  const gender = [['all', 'Все'], ['M', 'М'], ['F', 'Ж']].map(([v, l]) =>
+    `<button type="button" data-act="pf" data-k="gender" data-v="${v}" aria-pressed="${f.gender === v}">${l}</button>`).join('');
+  const inGender = list.filter((p) => f.gender === 'all' || p.female === (f.gender === 'F'));
+  const chips = [[-1, 'Все группы', inGender.length]].concat(GROUPS.map((g, i) => [i, g, inGender.filter((p) => p.group === i).length]))
+    .map(([v, l, c]) => `<button type="button" data-act="pf" data-k="group" data-v="${v}" aria-pressed="${f.group === v}">${l}<span class="cnt">${c}</span></button>`).join('');
+  const cards = SETS.map((t, i) => {
+    const c = list.filter((p) => p.set === i).length;
+    const cnt = state.limit && !isWo() ? `${c} из ${CAP}` : `${c} чел.`;
+    return `<button type="button" class="setcard" data-act="pf" data-k="set" data-v="${i}" aria-pressed="${f.set === i}"><b>Сет ${i + 1} <em>${t}</em></b><span>${cnt}</span></button>`;
+  }).join('');
+  return `<div class="ptools"><label class="search" for="q"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>` +
+    `<span class="sr-only">Поиск по фамилии</span><input id="q" type="search" placeholder="Найти себя по фамилии" value="${esc(f.q)}" autocomplete="off" enterkeyhint="search"></label>` +
+    `<div class="gsel"><div class="seg" role="group" aria-label="Пол">${gender}</div><div class="chips" role="group" aria-label="Группа">${chips}</div></div></div>` +
+    `<div class="setcards" role="group" aria-label="Сет">${cards}</div><div id="plist" class="block"></div>`;
+}
+
+function filtered() {
+  const f = state.f, q = f.q.trim().toLowerCase();
+  return roster().filter((p) => (f.gender === 'all' || p.female === (f.gender === 'F'))
+    && (f.group < 0 || p.group === f.group) && (f.set < 0 || p.set === f.set)
+    && (!q || `${p.last} ${p.first}`.toLowerCase().includes(q) || `${p.first} ${p.last}`.toLowerCase().includes(q)))
+    .sort(byName);
+}
+function listHTML() {
+  const all = roster(), list = filtered(), f = state.f;
+  const active = f.gender !== 'all' || f.group >= 0 || f.set >= 0 || f.q.trim();
+  const males = all.filter((p) => !p.female).length;
+  let h = `<div class="list-head"><h2>${active ? `Найдено ${list.length}` : people(all.length)}</h2>` +
+    `<span>${active ? `из ${all.length}` : `М ${males} · Ж ${all.length - males}`}</span></div>`;
+  if (!list.length) {
+    const hint = f.q.trim() ? 'Проверьте фамилию или снимите фильтры.' : 'Снимите фильтры.';
+    h += `<div class="empty"><p>Никого не нашли. ${hint}</p><button type="button" class="linkbtn" data-act="pf-clear">Показать всех</button>` +
+      (regOpen() && !me() ? '<p>Нет в списке — значит, вы ещё не зарегистрированы.</p>' : '') + '</div>';
+    return h;
+  }
+  // на компьютере та же строка раскладывается в колонки таблицы (.pc), на телефоне — имя, строка данных и группа справа
+  h += '<div class="plist-cols" aria-hidden="true"><span>Участник</span><span>Год</span><span>Разряд</span><span>Город</span><span>Команда</span><span>Группа</span><span>Сет</span></div>';
+  h += '<ul class="plist">' + list.map((p) => {
+    const isMe = p.id === state.meId;
+    const meta = [p.birth, p.grade, p.city, p.team ? `«${p.team}»` : ''].filter(Boolean).map(esc).join(' · ');
+    return `<li><button type="button" class="prow${isMe ? ' me' : ''}" data-act="person" data-id="${p.id}">` +
+      `<span class="pr-main"><span class="pr-name">${fullName(p)}${isMe ? '<span class="tag">вы</span>' : ''}</span><span class="pr-meta">${meta}</span></span>` +
+      `<span class="pr-side"><b>${GROUPS[p.group]} · ${p.female ? 'Ж' : 'М'}</b><span>сет ${p.set + 1}</span></span>` +
+      `<span class="pc num">${p.birth}</span><span class="pc">${esc(p.grade)}</span><span class="pc">${esc(p.city) || '—'}</span>` +
+      `<span class="pc">${esc(p.team) || '—'}</span><span class="pc">${GROUPS[p.group]} · ${p.female ? 'Ж' : 'М'}</span><span class="pc num">${p.set + 1}</span></button></li>`;
+  }).join('') + '</ul>';
+  if (!active) {
+    const cities = new Map();
+    all.forEach((p) => cities.set(p.city, (cities.get(p.city) || 0) + 1));
+    const top = [...cities.entries()].sort((a, b) => b[1] - a[1]);
+    const shown = top.slice(0, 3).map(([c, n]) => `${esc(c)} ${n}`).join(' · ');
+    const rest = top.length - 3;
+    h += `<p class="hint">Города: ${shown}${rest > 0 ? ` · ещё ${rest} ${plural(rest, 'город', 'города', 'городов')}` : ''}</p>`;
+  }
+  return h;
+}
+function peopleActionHTML() {
+  if (regOpen() && !me()) return regBarHTML('нет вас в списке? зарегистрируйтесь');
+  return '';
+}
+
+function personSheetHTML(p) {
+  const isMe = p.id === state.meId;
+  const facts = [`${p.birth} г. р.`, p.grade, p.city, p.team ? `«${p.team}»` : ''].filter(Boolean).map(esc).join(' · ');
+  let rows = `<div class="kv"><span>Группа</span><b>${GROUPS[p.group]}, ${p.female ? 'женщины' : 'мужчины'}</b></div>` +
+    `<div class="kv"><span>Сет</span><b>${p.set + 1}, ${SETS[p.set]}</b></div>`;
+  if (isEntered(p) && state.resOpen) { const r = placeOf(p); rows += `<div class="kv"><span>Место</span><b>${r.place} из ${r.of}</b></div>`; }
+  if (isMe && state.pay !== 'none') rows += `<div class="kv"><span>Взнос</span>${payPill(p)}</div>`;
+  const actions = isMe
+    ? `<p class="is-me">Это вы. ${state.device === 'desk' ? 'Браузер' : 'Телефон'} помнит вас для этого события, карточка «Вы» — на вкладке «Инфо».</p>` +
+      '<div class="sheet-actions one"><button type="button" class="btn" data-act="sheet-close">Закрыть</button></div>'
+    : `<div class="sheet-actions"><button type="button" class="btn" data-act="sheet-close">Закрыть</button>` +
+      `<button type="button" class="btn primary" data-act="its-me" data-id="${p.id}">Это я, запомнить</button></div>`;
+  return '<div class="sheet-bg" data-act="sheet-close"></div>' +
+    `<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-t"><div class="grabber"></div>` +
+    `<h3 id="sh-t">${fullName(p)}</h3><p class="facts-line">${facts}</p>${rows}${actions}</div>`;
+}
+
+/* ---------- «Ввод» и «Результаты», пока закрыты ---------- */
+const CLOCK = '<svg class="closed-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21"/><path d="M24 13v11l7 5"/></svg>';
+const LOCK = '<svg class="closed-mark" viewBox="0 0 48 48" aria-hidden="true"><rect x="11" y="21" width="26" height="19" rx="4"/><path d="M17 21v-5a7 7 0 0 1 14 0v5"/></svg>';
+const closedHTML = (icon, title, text) => `<section class="closed">${icon}<h2>${title}</h2>${text.map((t) => `<p>${t}</p>`).join('')}</section>`;
+const pointerHTML = (title, file, text) =>
+  `<section class="pointer"><span class="mc-k">Отдельный макет</span><b>${title} — ${file}</b><p>${text}</p></section>`;
+
+// «Ввод»: в день события до открытия ввода, если кто-то уже внёс результат, — «закрыт», иначе — «ещё не открыт»
+function enterTabHTML() {
+  switch (state.phase) {
+    case 'live':
+      return pointerHTML('Ввод результатов', 'entry-phone.html', 'Ввод открыт: здесь участник вводит PIN с карточки и отмечает трассы.');
+    case 'over':
+      return closedHTML(LOCK, 'Ввод результатов закрыт', ['Организатор закрыл ввод.',
+        'Не успели внести результат или нашли ошибку — подойдите к организатору: он внесёт результат по вашей карточке.']);
+    case 'done':
+      return closedHTML(LOCK, 'Соревнование завершено', ['Ввод результатов закрыт. Исправить результат может только организатор.']);
+    default:
+      return closedHTML(CLOCK, 'Ввод откроется в день соревнований', isWo()
+        ? [`${EVENT.dateShort}, после своего сета, откройте эту вкладку: имя, группу и сет укажете вместе с результатами. Регистрироваться заранее не нужно.`]
+        : [`${EVENT.dateShort} организатор откроет ввод. После своего сета откройте эту вкладку и введите PIN с карточки участника.`]);
+  }
+}
+function enterTabActionHTML() {
+  if ((state.phase === 'over' || state.phase === 'done') && state.resOpen) {
+    return `<button type="button" class="btn primary wide" data-act="results">${state.phase === 'done' ? 'Итоговые результаты' : 'Результаты'}</button>`;
+  }
+  if (regOpen() && !me()) return regBarHTML(freeText());
+  return '';
+}
+
+// «Результаты»: скрыты оргом (is_results_allowed) или ещё никто не внёс результат — вместо пустой таблицы объясняем
+function resultsTabHTML() {
+  if (!state.resOpen) {
+    return closedHTML(LOCK, 'Результаты пока скрыты', ['Организатор ещё не открыл результаты. Они появятся на этой вкладке, как только он их откроет.']);
+  }
+  if (!started() || !roster().some(isEntered)) {
+    return closedHTML(CLOCK, 'Результатов пока нет', [`Они появятся ${EVENT.dateShort}, как только участники начнут вносить результаты. Пока событие идёт, таблица обновляется сама.`]);
+  }
+  return pointerHTML('Результаты', 'results-phone.html', 'Таблица группы: место, имя и баллы закреплены слева, трассы прокручиваются вбок.');
+}
+function resultsTabActionHTML() {
+  if (state.phase === 'live' && !state.resOpen) return '<button type="button" class="btn primary wide" data-act="enter">Внести результат</button>';
+  if (regOpen() && !me()) return regBarHTML(freeText());
+  return '';
+}
+
+/* ---------- регистрация ---------- */
+function birthState(b) {
+  if (!/^\d{4}$/.test(b.trim())) return 'bad';
+  const y = +b;
+  if (y < 1930 || y > EVENT.thisYear) return 'bad';
+  return EVENT.thisYear - y < EVENT.minAge ? 'young' : 'ok';
+}
+const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
+function missing() {
+  const f = state.form, m = [];
+  if (!f.last.trim()) m.push('фамилию');
+  if (!f.first.trim()) m.push('имя');
+  if (!f.gender) m.push('пол');
+  if (birthState(f.birth) === 'bad') m.push('год рождения');
+  if (f.group < 0) m.push('группу');
+  if (f.set < 0) m.push('сет');
+  if (state.pay !== 'none' && !emailOk(f.email)) m.push('email');
+  return m;
+}
+function choice(key, opts, cur) {
+  return opts.map(([v, label]) =>
+    `<button type="button" data-act="field" data-f="${key}" data-v="${v}" aria-pressed="${String(v) === String(cur)}">${label}</button>`).join('');
+}
+function regHTML() {
+  const f = state.form, e = state.showErr, paid = state.pay !== 'none';
+  const bad = (ok) => (e && !ok ? ' invalid' : '');
+  const opt = ' <i>необязательно</i>';
+  const sets = SETS.map((t, i) => {
+    const full = setFull(i), free = CAP - setCount(i);
+    const right = !state.limit ? '' : full ? 'мест нет' : `свободно ${free} ${plural(free, 'место', 'места', 'мест')}`;
+    return `<button type="button" role="radio" data-act="field" data-f="set" data-v="${i}" aria-checked="${f.set === i}"${full ? ' disabled' : ''}>` +
+      `<span class="sp-n">Сет ${i + 1}</span><span class="sp-t">${t}</span><span class="sp-free">${right}</span></button>`;
+  }).join('');
+  return `<button type="button" class="back" data-act="to-info">← К событию</button>
+    <div><h2>Регистрация</h2><p class="lead">Проверьте анкету перед отправкой: поправить её или отменить регистрацию потом сможет только организатор.</p></div>
+    ${state.formErr ? `<div class="banner err" role="alert">${state.formErr}</div>` : ''}
+    <section class="form">
+      <h3>О себе</h3>
+      <div class="row2">
+        <label class="fld${bad(f.last.trim())}" for="f-last"><span>Фамилия</span><input id="f-last" data-f="last" value="${esc(f.last)}" autocomplete="family-name" autocapitalize="words"></label>
+        <label class="fld${bad(f.first.trim())}" for="f-first"><span>Имя</span><input id="f-first" data-f="first" value="${esc(f.first)}" autocomplete="given-name" autocapitalize="words"></label>
+      </div>
+      <div class="fld${bad(f.gender)}"><span id="l-g">Пол</span><div class="choice" role="group" aria-labelledby="l-g">${choice('gender', [['M', 'Мужчины'], ['F', 'Женщины']], f.gender)}</div></div>
+      <div class="row2">
+        <label class="fld${bad(birthState(f.birth) !== 'bad')}" for="f-birth"><span>Год рождения</span><input id="f-birth" data-f="birth" value="${esc(f.birth)}" inputmode="numeric" maxlength="4" placeholder="1996" autocomplete="bday-year"></label>
+        <label class="fld" for="f-grade"><span>Разряд</span><span class="selwrap"><select id="f-grade" data-f="grade">${GRADES.map((g) => `<option${g === f.grade ? ' selected' : ''}>${g}</option>`).join('')}</select></span></label>
+      </div>
+      <div class="row2">
+        <label class="fld" for="f-city"><span>Город${opt}</span><input id="f-city" data-f="city" value="${esc(f.city)}" autocomplete="address-level2" autocapitalize="words"></label>
+        <label class="fld" for="f-team"><span>Команда${opt}</span><input id="f-team" data-f="team" value="${esc(f.team)}" autocomplete="organization"></label>
+      </div>
+    </section>
+    <section class="form">
+      <h3>Группа и сет</h3>
+      <div class="fld${bad(f.group >= 0)}"><span id="l-gr">Группа</span><div class="choice" role="group" aria-labelledby="l-gr">${choice('group', GROUPS.map((g, i) => [i, g]), f.group)}</div></div>
+      <div class="fld${bad(f.set >= 0)}"><span id="l-s">Сет</span><div class="setpick" role="radiogroup" aria-labelledby="l-s">${sets}</div></div>
+    </section>
+    <section class="form">
+      <h3>Связь</h3>
+      <label class="fld${paid ? bad(emailOk(f.email)) : ''}" for="f-email"><span>Email${paid ? '' : opt}</span><input id="f-email" data-f="email" value="${esc(f.email)}" type="email" inputmode="email" autocomplete="email" placeholder="name@mail.ru"></label>
+      ${paid ? '<p class="hint" style="margin-top:-6px">Пришлём PIN и ссылку на оплату взноса.</p>' : ''}
+      <label class="fld" for="f-phone"><span>Телефон${opt}</span><input id="f-phone" data-f="phone" value="${esc(f.phone)}" type="tel" inputmode="tel" autocomplete="tel" placeholder="+7"></label>
+      <p class="hint">Email и телефон видит только организатор. В списке участников видны год рождения, разряд, город и команда.</p>
+    </section>`;
+}
+function regActionHTML() {
+  return `<div class="act-row"><div class="sum"><span class="s"><b>${money(EVENT.price)} ₽</b></span>` +
+    `<span class="of">${state.pay !== 'none' ? 'оплата после регистрации' : 'взнос'}</span></div>` +
+    `<button type="button" class="btn primary" data-act="submit-reg"${state.sending ? ' disabled' : ''}>${state.sending ? 'Регистрирую…' : 'Зарегистрироваться'}</button></div>`;
+}
+
+async function submitReg() {
+  if (state.sending) return;
+  const m = missing();
+  if (m.length) {
+    state.showErr = true; state.formErr = '';
+    rerenderKeepScroll();
+    toast('Заполните ' + m.join(', ') + '.');
+    return;
+  }
+  state.sending = true; renderAction();
+  await wait(700);
+  state.sending = false;
+  const f = state.form, last = f.last.trim(), first = f.first.trim();
+  let err = '';
+  // те же проверки, что в services.register_participant
+  if (state.people.some((p) => p.last.toLowerCase() === last.toLowerCase() && p.first.toLowerCase() === first.toLowerCase())) {
+    err = `<span><b>${esc(last)} ${esc(first)}</b> уже есть в списке участников. Если это вы, регистрироваться второй раз не нужно: PIN подскажет организатор.</span>` +
+      `<button type="button" class="linkbtn" data-act="find-me" data-q="${esc(last)}">Найти в списке</button>`;
+  } else if (birthState(f.birth) === 'young') {
+    err = `Участвовать можно с ${EVENT.minAge} лет: год рождения ${EVENT.thisYear - EVENT.minAge} или раньше.`;
+  } else if (setFull(f.set)) {
+    err = `Сет ${f.set + 1} заполнился, пока вы заполняли анкету. Выберите другой.`;
+    f.set = -1;
+  }
+  if (err) {
+    state.formErr = err;
+    renderMain(); renderAction();
+    main.scrollTop = 0;
+    return;
+  }
+  const p = {
+    id: Math.max(...state.people.map((x) => x.id)) + 1, female: f.gender === 'F', group: f.group, set: f.set,
+    last, first, birth: +f.birth, grade: f.grade, city: f.city.trim(), team: f.team.trim(), email: f.email.trim(),
+    paid: false, pending: false, entered: false, score: Math.random(), pin: 1000 + Math.floor(Math.random() * 9000),
+  };
+  state.people.push(p);
+  state.meId = p.id; state.lastReg = p.id;
+  paintMeOpt();
+  go('regdone');
+}
+
+function regDoneHTML() {
+  const p = byId(state.lastReg);
+  if (!p) return '';
+  let h = `<section class="done">
+    <svg class="done-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22"/><path d="M14 24.5l7 7 13-14"/></svg>
+    <h2>Вы зарегистрированы</h2>
+    <p class="muted">${fullName(p)} · ${metaOf(p)}</p>`;
+  h += state.showPin
+    ? `<div class="card center"><span class="pc-label">Ваш PIN</span><span class="pin-big">${p.pin}</span>` +
+      '<p>Нужен, чтобы вносить результаты. Его же напечатают на карточке участника, которую выдаст организатор.</p></div>'
+    : '<div class="card center"><p>PIN для ввода результатов будет на карточке участника. Карточку выдаст организатор в день соревнований.</p></div>';
+  if (state.pay !== 'none') {
+    h += `<div class="card"><div class="kv"><span>Стартовый взнос</span><b>${money(EVENT.price)} ₽</b></div>` +
+      `<div class="kv"><span>Оплата</span>${payPill(p)}</div>` +
+      '<p>Регистрация завершится после оплаты. Оплатить можно сейчас или позже со страницы события.</p>' +
+      (p.email ? `<p>PIN и ссылку на оплату отправили на ${esc(p.email)}.</p>` : '') + '</div>';
+  }
+  h += `<p class="remember">Мы запомнили вас ${state.device === 'desk' ? 'в этом браузере' : 'на этом телефоне'}: на странице события будет ваша карточка, в результатах сразу откроется ваша группа.</p>` +
+    '<button type="button" class="linkbtn" style="align-self:center" data-act="another">Зарегистрировать ещё одного участника</button></section>';
+  return h;
+}
+function regDoneActionHTML() {
+  const p = byId(state.lastReg);
+  if (needsPay(p)) {
+    return `<div class="act-row two"><button type="button" class="btn" data-act="to-info">Позже</button>` +
+      `<button type="button" class="btn primary" data-act="go-pay">Оплатить ${money(EVENT.price)} ₽</button></div>`;
+  }
+  return '<div class="act-row two"><button type="button" class="btn" data-act="tab" data-tab="people">Участники</button>' +
+    '<button type="button" class="btn primary" data-act="to-info">К событию</button></div>';
+}
+
+/* ---------- оплата ---------- */
+function qrSVG() {
+  const n = 29, rnd = mulberry32(2026), cells = [];
+  const fixed = (r, c) => (r < 8 && c < 8) || (r < 8 && c >= n - 8) || (r >= n - 8 && c < 8) || r === 6 || c === 6;
+  const finder = (r, c) => {
+    const fr = r < 8 ? r : r - (n - 7), fc = c < 8 ? c : c - (n - 7);
+    if (fr < 0 || fc < 0 || fr > 6 || fc > 6) return false;
+    return fr === 0 || fr === 6 || fc === 0 || fc === 6 || (fr >= 2 && fr <= 4 && fc >= 2 && fc <= 4);
+  };
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      let on;
+      if ((r < 8 && c < 8) || (r < 8 && c >= n - 8) || (r >= n - 8 && c < 8)) on = finder(r, c);
+      else if (r === 6 || c === 6) on = (r + c) % 2 === 0;
+      else on = !fixed(r, c) && rnd() < 0.5;
+      if (on) cells.push(`M${c} ${r}h1v1h-1z`);
+    }
+  }
+  return `<svg class="qr" viewBox="-2 -2 ${n + 4} ${n + 4}" role="img" aria-label="QR-код для оплаты по СБП, демо">` +
+    `<rect class="qr-bg" x="-2" y="-2" width="${n + 4}" height="${n + 4}"/><path class="qr-ink" d="${cells.join('')}"/></svg>`;
+}
+function payHTML() {
+  const p = byId(state.payFor);
+  if (!p) return '';
+  const head = `<button type="button" class="back" data-act="to-info">← К событию</button>
+    <div><h2>${state.pay === 'sbp' ? 'Оплата по СБП' : 'Оплата взноса'}</h2><p class="lead">${fullName(p)} · ${EVENT.title}</p></div>`;
+  if (state.pay === 'sbp') {
+    return head + `<div class="card center"><span class="pc-label">К оплате</span><span class="amount">${money(EVENT.price)} ₽</span>` +
+      '<p>Кнопка внизу откроет приложение вашего банка, сумма и получатель уже заполнены.</p></div>' +
+      `<div class="divider">или с другого устройства</div>${qrSVG()}` +
+      '<div class="banner info">Оплату по СБП организатор отмечает вручную. После оплаты напишите ему: контакты на вкладке «Инфо».</div>';
+  }
+  const msgCls = state.promoBad ? ' err' : state.promoOk ? ' ok' : '';
+  return head + `<div class="card center"><span class="pc-label">К оплате</span>` +
+    `<span class="amount">${state.promoOk ? `<s>${money(EVENT.price)}</s>` : ''}${money(amount())} ₽</span></div>` +
+    `<div class="fld"><span>Промокод <i>если есть</i></span><div class="promo">` +
+    `<input id="promo" value="${esc(state.promo)}" autocapitalize="characters" autocomplete="off" aria-describedby="promo-msg">` +
+    `<button type="button" class="btn" data-act="promo">Применить</button></div>` +
+    `<p class="hint${msgCls}" id="promo-msg" aria-live="polite">${state.promoMsg}</p></div>` +
+    '<p class="hint">Оплата картой на странице ЮMoney. После оплаты вы вернётесь сюда.</p>';
+}
+function payActionHTML() {
+  if (state.pay === 'sbp') {
+    return '<div class="act-row two"><button type="button" class="btn" data-act="to-info">Готово</button>' +
+      '<button type="button" class="btn primary" data-act="sbp-open">Открыть банк</button></div>';
+  }
+  return `<button type="button" class="btn primary wide" data-act="pay-go"${state.sending ? ' disabled' : ''}>` +
+    `${state.sending ? 'Открываю ЮMoney…' : `Перейти к оплате · ${money(amount())} ₽`}</button>`;
+}
+function payDoneHTML() {
+  return `<section class="done">
+    <svg class="done-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22"/><path d="M14 24.5l7 7 13-14"/></svg>
+    <h2>Платёж отправлен</h2>
+    <p class="muted">ЮMoney подтвердит оплату в течение нескольких минут. Статус виден на вкладке «Инфо», в карточке «Вы зарегистрированы».</p>
+  </section>`;
+}
+async function payGo() {
+  if (state.sending) return;
+  const p = byId(state.payFor);
+  state.sending = true; renderAction();
+  await wait(800);
+  state.sending = false;
+  p.pending = true;
+  go('paydone');
+  // подтверждение приходит вебхуком (pay_views.NotifyView), здесь — через несколько секунд
+  setTimeout(() => {
+    p.pending = false; p.paid = true;
+    if (state.screen === 'info' || state.screen === 'paydone' || state.screen === 'people') { renderMain(); renderAction(); }
+    toast('ЮMoney подтвердил оплату взноса.');
+  }, 5000);
+}
+
+/* ---------- rendering ---------- */
+const TAB_OF = { info: 'info', people: 'people', enter: 'enter', results: 'results', reg: 'info', regdone: 'info', pay: 'info', paydone: 'info' };
+function renderTabs() {
+  document.querySelectorAll('#tabs button').forEach((b) => {
+    if (b.dataset.tab === TAB_OF[state.screen]) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+  });
+}
+function renderFrame() {
+  const desk = state.device === 'desk';
+  $('#page').classList.toggle('desk', desk);
+  $('#device').classList.toggle('desk', desk);
+  // на компьютере анкета, оплата и закрытые экраны — узкая колонка, «Инфо» и «Участники» — широкая
+  $('#app').classList.toggle('narrow', !['info', 'people'].includes(state.screen));
+  const url = { info: '', people: 'participants/', enter: 'enter/', results: 'results/', reg: 'registration/', regdone: 'registration/', pay: 'pay/', paydone: 'pay/' }[state.screen];
+  $('.bb-url').textContent = `rockevents.ru/e/128/${url}`;
+}
+function renderMain() {
+  const s = state.screen;
+  renderFrame();
+  main.innerHTML = s === 'people' ? peopleHTML() : s === 'reg' ? regHTML() : s === 'regdone' ? regDoneHTML()
+    : s === 'pay' ? payHTML() : s === 'paydone' ? payDoneHTML() : s === 'enter' ? enterTabHTML() : s === 'results' ? resultsTabHTML()
+      : infoHTML();
+  if (s === 'people') {
+    const list = $('#plist');
+    if (list) list.innerHTML = listHTML();
+    const q = $('#q');
+    if (q) q.addEventListener('input', () => { state.f.q = q.value; $('#plist').innerHTML = listHTML(); });
+  }
+  if (s === 'reg') bindFields();
+  if (s === 'pay') { const pr = $('#promo'); if (pr) pr.addEventListener('input', () => { state.promo = pr.value; }); }
+}
+function renderAction() {
+  const s = state.screen;
+  const html = s === 'people' ? peopleActionHTML() : s === 'reg' ? regActionHTML() : s === 'regdone' ? regDoneActionHTML()
+    : s === 'pay' ? payActionHTML() : s === 'paydone' ? '<button type="button" class="btn primary wide" data-act="to-info">К событию</button>'
+      : s === 'enter' ? enterTabActionHTML() : s === 'results' ? resultsTabActionHTML() : infoActionHTML();
+  action.innerHTML = html;
+  action.hidden = !html;
+}
+function renderSheet() {
+  const p = state.sheetId ? byId(state.sheetId) : null;
+  sheetHost.innerHTML = p ? personSheetHTML(p) : '';
+  sheetHost.classList.toggle('open', !!p);
+  if (p) { const b = sheetHost.querySelector('.btn.primary, .btn'); if (b) b.focus({ preventScroll: true }); }
+}
+function renderLightbox() {
+  lightbox.hidden = !state.poster;
+  lightbox.innerHTML = state.poster ? `<div class="lb-inner">${POSTER}<button type="button" class="btn" data-act="poster-close">Закрыть</button></div>` : '';
+}
+function renderAll() { renderTabs(); renderMain(); renderAction(); renderSheet(); renderLightbox(); paintOpts(); }
+function go(screen) {
+  state.screen = screen; state.sheetId = null; state.poster = false;
+  renderAll();
+  main.scrollTop = 0;
+}
+function rerenderKeepScroll() { const top = main.scrollTop; renderMain(); renderAction(); main.scrollTop = top; }
+
+let toastTimer;
+function toast(msg) {
+  toastEl.textContent = msg;
+  toastEl.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toastEl.hidden = true; }, 3000);
+}
+
+function bindFields() {
+  main.querySelectorAll('input[data-f], select[data-f]').forEach((el) => {
+    el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => {
+      const k = el.dataset.f;
+      if (k === 'birth') el.value = el.value.replace(/\D/g, '').slice(0, 4);
+      state.form[k] = el.value;
+      if (!state.showErr) return;
+      const ok = k === 'last' || k === 'first' ? !!el.value.trim() : k === 'birth' ? birthState(el.value) !== 'bad'
+        : k === 'email' && state.pay !== 'none' ? emailOk(el.value) : true;
+      el.closest('.fld').classList.toggle('invalid', !ok);
+    });
+  });
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const act = el.dataset.act;
+  switch (act) {
+    case 'tab': go(el.dataset.tab); break;
+    case 'to-info': go('info'); break;
+    case 'enter': go('enter'); break;
+    case 'results': go('results'); break;
+    case 'go-reg': state.showErr = false; state.formErr = ''; go('reg'); break;
+    case 'another': {
+      const prev = state.form;
+      state.form = { ...emptyForm(), city: prev.city, team: prev.team };
+      state.showErr = false; state.formErr = '';
+      go('reg');
+      break;
+    }
+    case 'field': {
+      const f = el.dataset.f;
+      state.form[f] = f === 'gender' ? el.dataset.v : +el.dataset.v;
+      if (f === 'set' && state.formErr.startsWith('Сет')) state.formErr = '';
+      rerenderKeepScroll();
+      const b = main.querySelector(`[data-act="field"][data-f="${f}"][data-v="${el.dataset.v}"]`);
+      if (b) b.focus({ preventScroll: true });
+      break;
+    }
+    case 'submit-reg': submitReg(); break;
+    case 'find-me': state.f = { gender: 'all', group: -1, set: -1, q: el.dataset.q }; go('people'); break;
+    case 'go-pay': {
+      const p = state.screen === 'regdone' ? byId(state.lastReg) : me();
+      if (!p) break;
+      state.payFor = p.id; state.promo = ''; state.promoOk = false; state.promoMsg = ''; state.promoBad = false;
+      go('pay');
+      break;
+    }
+    case 'promo': {
+      const code = state.promo.trim().toUpperCase();
+      if (!code) { state.promoOk = false; state.promoBad = true; state.promoMsg = 'Введите промокод.'; }
+      else if (code === PROMO.code) { state.promoOk = true; state.promoBad = false; state.promoMsg = `Промокод применён: ${money(PROMO.price)} ₽ вместо ${money(EVENT.price)} ₽.`; }
+      else { state.promoOk = false; state.promoBad = true; state.promoMsg = 'Такого промокода нет. Проверьте, как он написан.'; }
+      rerenderKeepScroll();
+      break;
+    }
+    case 'pay-go': payGo(); break;
+    case 'sbp-open': toast('Здесь откроется приложение банка по ссылке СБП (qr.nspk.ru).'); break;
+    case 'forget': {
+      state.meId = null; paintMeOpt();
+      renderMain(); renderAction();
+      toast(`${state.device === 'desk' ? 'Браузер' : 'Телефон'} забыл участника. Запомнить себя можно в списке участников.`);
+      break;
+    }
+    case 'pf': {
+      const k = el.dataset.k, v = k === 'gender' ? el.dataset.v : +el.dataset.v;
+      state.f[k] = k === 'set' && state.f.set === v ? -1 : v;
+      const top = main.scrollTop; renderMain(); main.scrollTop = top;
+      break;
+    }
+    case 'pf-clear': state.f = { gender: 'all', group: -1, set: -1, q: '' }; renderMain(); break;
+    case 'person': state.sheetId = +el.dataset.id; renderSheet(); break;
+    case 'sheet-close': state.sheetId = null; renderSheet(); break;
+    case 'its-me': {
+      state.meId = +el.dataset.id; state.sheetId = null; paintMeOpt();
+      renderSheet(); rerenderKeepScroll();
+      toast('Запомнили. На вкладке «Инфо» будет ваша карточка.');
+      break;
+    }
+    case 'poster': state.poster = true; renderLightbox(); break;
+    case 'poster-close': state.poster = false; renderLightbox(); break;
+    case 'reset': reset(); break;
+    default: break;
+  }
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (state.poster) { state.poster = false; renderLightbox(); } else if (state.sheetId) { state.sheetId = null; renderSheet(); }
+});
+
+/* ---------- mockup settings ---------- */
+function paintOpts() {
+  document.querySelectorAll('.panel .seg[data-opt]').forEach((seg) => {
+    const v = String(state[seg.dataset.opt]);
+    seg.querySelectorAll('button[data-v]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+  });
+}
+function paintMeOpt() {
+  const p = byId(state.meId);
+  $('#o-me').checked = !!p;
+  $('#o-me-name').textContent = `(${p ? `${p.last} ${p.first}` : 'Зайцева Юлия'})`;
+}
+document.querySelectorAll('.panel .seg[data-opt]').forEach((seg) => seg.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-v]');
+  if (!b) return;
+  const opt = seg.dataset.opt;
+  if (state[opt] === b.dataset.v) return;
+  state[opt] = b.dataset.v;
+  if (opt === 'device') { renderAll(); return; }
+  // регистрация и оплата доступны не во всех состояниях: возвращаемся на «Инфо»
+  if ((state.screen === 'reg' && !regOpen()) || ((state.screen === 'pay' || state.screen === 'paydone') && state.pay === 'none')
+    || (state.screen === 'regdone' && opt !== 'pay')) state.screen = 'info';
+  if (opt === 'pay') { state.promoOk = false; state.promoMsg = ''; state.promoBad = false; }
+  state.sheetId = null;
+  renderAll();
+}));
+$('#o-pin').addEventListener('change', (e) => { state.showPin = e.target.checked; if (state.screen === 'regdone') renderMain(); });
+$('#o-limit').addEventListener('change', (e) => { state.limit = e.target.checked; renderMain(); renderAction(); });
+$('#o-res').addEventListener('change', (e) => { state.resOpen = e.target.checked; state.sheetId = null; renderAll(); });
+$('#o-me').addEventListener('change', (e) => {
+  state.meId = e.target.checked ? state.julia : null;
+  paintMeOpt();
+  if (state.screen === 'info' || state.screen === 'people') { renderMain(); renderAction(); } else go('info');
+});
+
+function reset() {
+  Object.assign(state, {
+    phase: 'reg', wo: '0', pay: 'none', showPin: true, limit: true, resOpen: true, screen: 'info', meId: null, lastReg: null, payFor: null,
+    form: emptyForm(), showErr: false, formErr: '', sending: false, f: { gender: 'all', group: -1, set: -1, q: '' },
+    sheetId: null, poster: false, promo: '', promoOk: false, promoMsg: '', promoBad: false,
+  });
+  state.people = gen();
+  $('#o-pin').checked = true; $('#o-limit').checked = true; $('#o-res').checked = true;
+  paintMeOpt();
+  go('info');
+}
+
+reset();
+})();
+</script>

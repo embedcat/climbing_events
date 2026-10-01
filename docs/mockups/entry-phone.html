@@ -202,10 +202,46 @@ button{font:inherit;color:inherit}
 
 .toast{position:absolute;left:16px;right:16px;bottom:100px;z-index:20;padding:10px 14px;border-radius:12px;background:var(--ink);color:var(--surface);
   font-size:13.5px;text-align:center;box-shadow:0 8px 24px var(--shadow)}
+/* повторный ввод запрещён: свои отметки только для просмотра */
+.btn.wide{width:100%}
+.tile.ro{cursor:default}
+.tile.ro:active{transform:none}
+.locked-note{padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:13.5px}
+
+/* окно браузера вместо телефона */
+.browser-bar{display:none}
+.page.desk{grid-template-columns:minmax(0,300px) minmax(0,1120px)}
+@media (max-width:1100px){.page.desk{grid-template-columns:minmax(0,1fr)}}
+.device.desk{display:flex;flex-direction:column;width:100%;padding:0;border-radius:12px;background:var(--surface-2);box-shadow:0 24px 60px var(--shadow),0 0 0 1px var(--line)}
+.device.desk .browser-bar{flex:none;display:flex;align-items:center;gap:12px;height:38px;padding:0 14px;border-bottom:1px solid var(--line)}
+.bb-dots{display:flex;gap:6px}
+.bb-dots i{width:10px;height:10px;border-radius:50%;background:var(--line-strong)}
+.bb-url{flex:0 1 420px;margin-inline:auto;padding:4px 12px;border-radius:999px;background:var(--surface);font-family:var(--font-data);font-size:12px;color:var(--muted);text-align:center}
+.device.desk .screen{flex:1 1 auto;height:auto;min-height:0;border-radius:0 0 12px 12px}
+.screen{container:app / inline-size}
+
+/* компьютер: шапка в колонке 1040 px по центру, как на странице события; форма ввода — в её левых 560 px.
+   Плитки остаются по 5 в ряд, как на бумажной карточке, но ниже, чтобы 15 трасс помещались на экран */
+@container app (min-width:760px){
+  .app{--gut:max(28px,calc((100% - 1040px) / 2))}
+  .ev-head{padding:22px var(--gut) 0}
+  .ev-title{font-size:22px}
+  .ev-date{font-size:14px}
+  .tabs{gap:6px;margin-top:12px}
+  .tabs button{flex:none;padding:10px 14px 12px;font-size:14.5px}
+  .main{gap:16px;padding:28px var(--gut) 40px}
+  .main>*{max-width:560px}
+  .action{padding:12px var(--gut) 14px}
+  .action>*{max-width:560px}
+  .tile{aspect-ratio:auto;height:72px}
+  .sheet{top:50%;right:auto;bottom:auto;left:50%;width:min(480px,calc(100% - 48px));max-height:84%;padding:20px 22px;border-radius:16px;transform:translate(-50%,-50%)}
+  .grabber{display:none}
+  .toast{right:auto;left:50%;width:min(440px,calc(100% - 32px));bottom:96px;transform:translateX(-50%)}
+}
 @media (prefers-reduced-motion:reduce){.tile{transition:none}.tile:active{transform:none}}
 </style>
 
-<div class="page">
+<div class="page" id="page">
   <aside class="panel" aria-label="Настройки макета">
     <div>
       <div class="eyebrow">Макет · RockEvents</div>
@@ -213,6 +249,13 @@ button{font:inherit;color:inherit}
     </div>
     <p>Экран, где участник в конце сета отмечает свои трассы. Всё кликается, настройки ниже меняют сценарий.</p>
 
+    <div class="opt">
+      <span class="label" id="o-device">Устройство</span>
+      <div class="seg" data-opt="device" role="group" aria-labelledby="o-device">
+        <button type="button" data-v="phone">Телефон</button>
+        <button type="button" data-v="desk">Компьютер</button>
+      </div>
+    </div>
     <div class="opt">
       <span class="label" id="o-path">Как участник попал на экран</span>
       <div class="seg" data-opt="path" role="group" aria-labelledby="o-path">
@@ -236,13 +279,14 @@ button{font:inherit;color:inherit}
       </div>
     </div>
     <label class="check" for="o-check"><input type="checkbox" id="o-check" checked><span>Проверка перед отправкой <span class="muted">(опция организатора)</span></span></label>
+    <label class="check" for="o-update"><input type="checkbox" id="o-update" checked><span>Повторный ввод разрешён <span class="muted">(опция организатора)</span></span></label>
     <label class="check" for="o-offline"><input type="checkbox" id="o-offline"><span>Нет связи при отправке</span></label>
 
     <div class="pins">
       <span class="label">PIN для демо</span>
       <ul>
         <li><b>8335</b> Зайцева Юлия, ещё не вводила</li>
-        <li><b>7358</b> Зайцев Егор, уже вводил</li>
+        <li><b>7358</b> Зайцев Егор, уже вводил (снимите «Повторный ввод разрешён»)</li>
         <li><b>1111</b> такого участника нет</li>
       </ul>
     </div>
@@ -250,12 +294,13 @@ button{font:inherit;color:inherit}
     <button type="button" class="linkbtn" data-act="reset">Сбросить демо</button>
   </aside>
 
-  <div class="device">
+  <div class="device" id="device">
+    <div class="browser-bar" aria-hidden="true"><span class="bb-dots"><i></i><i></i><i></i></span><span class="bb-url">rockevents.ru/e/128/enter/</span></div>
     <div class="screen">
       <div class="app">
         <header class="ev-head">
           <div class="ev-title">Осенний фестиваль боулдеринга</div>
-          <div class="ev-date">4 октября · идёт сет 3, 16:00</div>
+          <div class="ev-date">4 октября 2026 · Скалодром на Лесной</div>
           <nav class="tabs" aria-label="Разделы события">
             <button type="button" data-act="tab">Инфо</button>
             <button type="button" aria-current="page">Ввод</button>
@@ -297,7 +342,7 @@ const store = {
 
 const emptyFields = () => ({ last: '', first: '', gender: '', group: -1, set: -1 });
 const state = {
-  path: 'pin', mode: 'PROP', N: 15, check: true, offline: false,
+  device: 'phone', path: 'pin', mode: 'PROP', N: 15, check: true, offline: false, update: true, sendMsg: '',
   step: 'identify', who: null, values: [], fields: emptyFields(), woSaved: {},
   showFieldErr: false, restoredAt: null, draftSavedAt: null, storageOk: true,
   sending: false, sendError: false, sheet: false, result: null, pinMsg: '', pinErr: false,
@@ -323,6 +368,7 @@ function plural(n, one, few, many) {
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmtTime = (ts) => new Date(ts).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 const isFR = () => state.mode === 'FR';
+const onDevice = () => (state.device === 'desk' ? 'в этом браузере' : 'на телефоне');
 const clone = (a) => JSON.parse(JSON.stringify(a));
 const modeKey = () => state.mode + ':' + state.N;
 
@@ -401,7 +447,7 @@ function paintDraftState() {
   const el = $('#draft-state');
   if (!el) return;
   el.textContent = !state.storageOk ? 'Браузер не даёт сохранить черновик'
-    : state.draftSavedAt ? `Черновик на телефоне · ${fmtTime(state.draftSavedAt)}` : 'Черновик сохраняется на телефоне';
+    : state.draftSavedAt ? `Черновик ${onDevice()} · ${fmtTime(state.draftSavedAt)}` : `Черновик сохраняется ${onDevice()}`;
 }
 
 /* ---------- validation ---------- */
@@ -503,7 +549,7 @@ function entryHTML() {
       `<div class="who-meta">${GROUPS[w.group]} · ${w.female ? 'Ж' : 'М'} · сет ${w.set + 1}, ${SET_TIMES[w.set]}</div></div>` +
       '<button type="button" class="linkbtn" data-act="not-me">Не вы?</button></section>';
     if (state.path === 'qr') h += `<p class="note">PIN ${w.pin} подставлен из QR-кода на карточке.</p>`;
-    if (w.entered && !state.restoredAt) h += '<div class="banner">Вы уже вводили результаты. Их можно исправить и отправить заново.</div>';
+    if (w.entered && !state.restoredAt && state.update) h += '<div class="banner">Вы уже вводили результаты. Их можно исправить и отправить заново.</div>';
   }
   if (state.restoredAt) {
     h += `<div class="banner info"><span>Восстановлен черновик от ${fmtTime(state.restoredAt)}. Ничего не потерялось.</span>` +
@@ -511,7 +557,35 @@ function entryHTML() {
   }
   h += '<div class="list-head"><h2>Трассы</h2><span class="draft-state" id="draft-state"></span></div>';
   h += routesHTML();
+  if (!state.update) h += '<p class="note" style="margin:0">Отправить можно один раз: исправить результаты потом сможет только организатор.</p>';
   return h;
+}
+
+// повторный ввод запрещён (is_update_result_allowed = false), а участник уже вносил результат:
+// вместо ошибки на шаге PIN показываем его результат и говорим, кто может исправить
+function lockedHTML() {
+  const w = state.who, v = serverValues(w), r = placeFor(v, w.female, w.group);
+  let marks;
+  if (isFR()) {
+    const rows = v.map((x, i) => ({ i, t: x.t, z: x.z })).filter((x) => x.t > 0 || x.z > 0);
+    marks = rows.length
+      ? '<table class="ck-table"><thead><tr><th>Трасса</th><th>Топ</th><th>Зона</th></tr></thead><tbody>' +
+        rows.map((x) => `<tr><td>${x.i + 1}</td><td>${x.t ? x.t + '-я попытка' : '—'}</td><td>${x.z ? x.z + '-я попытка' : '—'}</td></tr>`).join('') + '</tbody></table>'
+      : '<p class="muted">Ни одной отметки.</p>';
+  } else {
+    marks = '<div class="tiles">' + v.map((x, i) => {
+      const cls = x === 1 ? ' fl' : x === 2 ? ' rp' : '', lbl = x === 1 ? 'flash' : x === 2 ? 'redpoint' : '—';
+      return `<span class="tile ro${cls}"><span class="tn">${i + 1}</span><span class="tl">${lbl}</span></span>`;
+    }).join('') + '</div>';
+  }
+  return `<section class="who"><div><div class="who-name">${w.last} ${w.first}</div>` +
+    `<div class="who-meta">${GROUPS[w.group]} · ${w.female ? 'Ж' : 'М'} · сет ${w.set + 1}, ${SET_TIMES[w.set]}</div></div>` +
+    '<button type="button" class="linkbtn" data-act="not-me">Не вы?</button></section>' +
+    '<section class="done" style="padding-top:0"><h2>Вы уже внесли результаты</h2>' +
+    `<div class="place-card"><div class="pc-label">Сейчас в группе «${GROUPS[w.group]}», ${w.female ? 'женщины' : 'мужчины'}</div>` +
+    `<div class="pc-row"><span class="pc-place">${r.place}</span><span class="pc-of">место<br>из ${r.of}</span></div></div></section>` +
+    '<p class="locked-note">Повторный ввод на этом событии закрыт. Нашли ошибку — подойдите к организатору с карточкой участника: он исправит.</p>' +
+    `<div class="list-head"><h2>Ваши отметки</h2></div>${marks}`;
 }
 
 function doneHTML() {
@@ -525,7 +599,7 @@ function doneHTML() {
       <div class="pc-row"><span class="pc-place">${r.place}</span><span class="pc-of">место<br>из ${r.of}</span></div>
     </div>
     <p class="muted small">Места будут меняться, пока другие участники вводят результаты.</p>
-    <p class="remember">Мы запомнили вас на этом телефоне: в результатах сразу откроется ваша группа.</p>
+    <p class="remember">Мы запомнили вас ${state.device === 'desk' ? 'в этом браузере' : 'на этом телефоне'}: в результатах сразу откроется ваша группа.</p>
   </section>`;
 }
 
@@ -542,7 +616,8 @@ function actionEntryHTML() {
     sum = `<span class="s fl">FL <b>${fl}</b></span><span class="s rp">RP <b>${rp}</b></span><span class="of">отмечено ${fl + rp} из ${N}</span>`;
   }
   const label = state.sending ? 'Отправляю…' : state.sendError ? 'Отправить ещё раз' : 'Отправить';
-  return (state.sendError ? '<div class="send-err" role="alert">Нет связи с сервером. Результаты сохранены на телефоне, ничего не потеряется.</div>' : '') +
+  return (state.sendMsg ? `<div class="send-err" role="alert">${state.sendMsg}</div>` : '') +
+    (state.sendError ? '<div class="send-err" role="alert">Нет связи с сервером. Результаты сохранены ' + onDevice() + ', ничего не потеряется.</div>' : '') +
     `<div class="act-row"><div class="sum" aria-live="polite">${sum}</div>` +
     `<button type="button" class="btn primary" data-act="submit"${bad.length || state.sending ? ' disabled' : ''}>${label}</button></div>`;
 }
@@ -575,8 +650,15 @@ function sheetHTML() {
 }
 
 /* ---------- rendering ---------- */
+function renderFrame() {
+  const desk = state.device === 'desk';
+  $('#page').classList.toggle('desk', desk);
+  $('#device').classList.toggle('desk', desk);
+}
 function renderMain() {
-  main.innerHTML = state.step === 'identify' ? identifyHTML() : state.step === 'done' ? doneHTML() : entryHTML();
+  renderFrame();
+  main.innerHTML = state.step === 'identify' ? identifyHTML() : state.step === 'done' ? doneHTML()
+    : state.step === 'locked' ? lockedHTML() : entryHTML();
   if (state.step === 'entry') { paintDraftState(); if (state.path === 'wo') bindFields(); }
   if (state.step === 'identify') {
     const inp = $('#pin');
@@ -587,9 +669,12 @@ function renderMain() {
 function renderAction() {
   if (state.step === 'identify') { action.hidden = true; action.innerHTML = ''; return; }
   action.hidden = false;
-  action.innerHTML = state.step === 'done'
-    ? '<div class="act-row two"><button type="button" class="btn" data-act="edit">Исправить</button><button type="button" class="btn primary" data-act="results">Смотреть результаты</button></div>'
-    : actionEntryHTML();
+  const onlyResults = '<button type="button" class="btn primary wide" data-act="results">Смотреть результаты</button>';
+  action.innerHTML = state.step === 'locked' ? onlyResults
+    : state.step === 'done' ? (state.update
+      ? '<div class="act-row two"><button type="button" class="btn" data-act="edit">Исправить</button><button type="button" class="btn primary" data-act="results">Смотреть результаты</button></div>'
+      : onlyResults)
+      : actionEntryHTML();
 }
 function renderSheet() {
   sheetHost.innerHTML = sheetHTML();
@@ -629,6 +714,7 @@ function start() {
   state.sheet = false; state.sendError = false; state.sending = false;
   state.fields = emptyFields();
   state.woSaved = {};
+  state.sendMsg = '';
   if (state.path === 'qr') openEntry(DB[8335]);
   else if (state.path === 'wo') openEntry(null);
   else { state.who = null; state.step = 'identify'; renderAll(); }
@@ -651,6 +737,7 @@ function onPinInput(inp) {
   setTimeout(() => {
     if (state.step !== 'identify') return;
     const who = DB[pin];
+    if (who && who.entered && !state.update) { state.who = who; state.step = 'locked'; renderAll(); main.scrollTop = 0; return; }
     if (who) { openEntry(who); return; }
     state.pinMsg = `Участник с PIN ${pin} не найден. Проверьте карточку или спросите организатора.`;
     state.pinErr = true;
@@ -659,6 +746,7 @@ function onPinInput(inp) {
 }
 
 function changed() {
+  state.sendMsg = '';
   saveDraft();
   renderAction();
 }
@@ -689,6 +777,13 @@ function submit() {
       toast('Заполните ' + m.join(', ') + '.');
       return;
     }
+  }
+  if (state.path === 'wo' && !state.update && state.woSaved[modeKey()]) {
+    // сервер находит участника по имени и фамилии и отвечает update_not_allowed
+    state.sendMsg = `${esc(state.fields.last.trim())} ${esc(state.fields.first.trim())} уже ${state.fields.gender === 'F' ? 'вносила' : 'вносил'} результаты. ` +
+      'Повторный ввод на этом событии закрыт: исправить может только организатор.';
+    renderAction();
+    return;
   }
   if (state.check) { state.sheet = true; renderSheet(); return; }
   send();
@@ -770,7 +865,7 @@ document.addEventListener('click', (e) => {
       break;
     }
     case 'edit': openEntry(state.path === 'wo' ? null : state.who, true); break;
-    case 'results': toast('Экран результатов будет следующим макетом.'); break;
+    case 'results': toast('Результаты — отдельный макет, results-phone.html.'); break;
     case 'tab': toast('В этом макете показан только ввод результатов.'); break;
     case 'demo-pin': { const inp = $('#pin'); if (inp) { inp.value = el.dataset.pin; onPinInput(inp); } break; }
     case 'reset': {
@@ -803,12 +898,20 @@ document.querySelectorAll('.seg[data-opt]').forEach((seg) => seg.addEventListene
   const v = opt === 'N' ? +b.dataset.v : b.dataset.v;
   if (state[opt] === v) return;
   state[opt] = v;
+  if (opt === 'device') { renderAll(); return; }
   if (opt === 'path') { start(); if (v === 'pin') refocusPin(); }
   else if (state.step === 'identify') renderAll();
   else openEntry(state.path === 'wo' ? null : state.who, true);
 }));
 $('#o-check').addEventListener('change', (e) => { state.check = e.target.checked; });
 $('#o-offline').addEventListener('change', (e) => { state.offline = e.target.checked; });
+$('#o-update').addEventListener('change', (e) => {
+  state.update = e.target.checked;
+  state.sendMsg = '';
+  if (state.step === 'locked' && state.update) openEntry(state.who, true);
+  else if (state.step === 'entry' && !state.update && state.who && state.who.entered) { state.step = 'locked'; renderAll(); }
+  else renderAll();
+});
 
 /* ---------- boot ---------- */
 // первый заход: Юлия уже отметила несколько трасс, черновик лежит на телефоне
