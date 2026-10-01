@@ -1,0 +1,34 @@
+# Тестовый сайт (dev.rockevents.ru): образ собирается на сервере из ветки, база своя, медиа скопированы один раз.
+# Живёт рядом с боевым docker-compose.prod.yml и ничего из него не трогает: свой проект, порт, база и каталоги.
+# Подготовка и обновление: do_staging_setup.sh и do_staging_upgrade.sh (см. README).
+name: climbing_events_staging
+
+services:
+  db:
+    image: postgres:18-alpine
+    volumes:
+      - postgres_data_staging:/var/lib/postgresql/
+    env_file:
+      - .env.staging
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    image: climbing_events:staging
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2
+    # Боевой сайт занимает 8000, поэтому тестовый на 8001, и тоже только для localhost
+    ports:
+      - "127.0.0.1:8001:8000"
+    volumes:
+      - /var/www/climbing_events_dev/static:/app/static
+      - /var/www/climbing_events_dev/media:/app/media
+    env_file:
+      - .env.staging
+    depends_on:
+      - db
+    restart: unless-stopped
+
+volumes:
+  postgres_data_staging:

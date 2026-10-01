@@ -118,6 +118,61 @@ tar -xzf backups/media_<время>.tar.gz -C /var/www/climbing_events
 
 ---
 
+## Тестовый сайт (dev.rockevents.ru)
+
+Новый фронтенд можно смотреть на настоящих данных рядом с боевым сайтом. Тестовый сайт — отдельный набор
+контейнеров из ветки репозитория: свой проект Docker (`climbing_events_staging`), порт 8001, своя база и свои
+каталоги; боевой `docker-compose.prod.yml` он не трогает. Базу один раз восстанавливают из бэкапа боевого сайта и
+дальше она живёт сама: что делают на тестовом сайте, в боевую базу не попадает, а свежие данные боевого сайта сюда
+не приходят. Образ собирается на самом сервере (стадия `frontend` в `Dockerfile.prod` гоняет тесты и сборку Vue,
+первая сборка идёт несколько минут).
+
+Что учитывать:
+- письма (регистрация, PIN, сброс пароля) уходят настоящие, поэтому на тестовом сайте регистрируйте только свои адреса;
+- оплата ведёт на настоящий кошелёк ЮMoney, а уведомление об оплате приходит на боевой сайт, поэтому платить на
+  тестовом сайте нельзя;
+- счётчик Метрики выключен (`METRIKA_ID=` в `.env.staging`), в поисковую выдачу сайт не попадает (`noindex`);
+- крон-задачи (`check_expired`, `check_close_registration`) настраиваются только для боевого сайта.
+
+### Первый запуск
+
+Тестовый сайт живёт в отдельном клоне. Нельзя переключать ветку в боевом каталоге `~/climbing_events`: его
+`do_upgrade.sh` делает `git pull` той ветки, что там выбрана.
+```bash
+git clone -b feat/frontend <адрес репозитория> ~/climbing_events_dev
+cd ~/climbing_events_dev
+cp .env.staging.example .env.staging   # заполните: SECRET_KEY, пароли базы и почты
+bash do_staging_setup.sh               # каталоги, копия медиа, база из свежего бэкапа, сборка и запуск
+```
+Скрипт берёт самый свежий `~/climbing_events/backups/backup_*.backup` (или путь первым аргументом), копирует афиши
+из `/var/www/climbing_events/media` в `/var/www/climbing_events_dev/media`, восстанавливает базу, собирает образ и
+запускает `web`. Потом nginx и сертификат (DNS-запись `dev.rockevents.ru` должна указывать на сервер):
+```bash
+sudo cp nginx.staging.conf /etc/nginx/sites-available/dev.rockevents.ru
+sudo ln -s /etc/nginx/sites-available/dev.rockevents.ru /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot --nginx -d dev.rockevents.ru
+```
+
+### Обновление
+
+После новых коммитов в ветке:
+```bash
+cd ~/climbing_events_dev && bash do_staging_upgrade.sh
+```
+База и медиа при этом остаются как есть.
+
+### Начать заново (свежая копия боевых данных)
+
+```bash
+cd ~/climbing_events_dev
+docker compose -f docker-compose.staging.yml down -v    # -v удаляет и тестовую базу
+sudo rm -rf /var/www/climbing_events_dev/media
+bash do_staging_setup.sh
+```
+
+---
+
 ### Архитектурные заметки:
 - Проект использует **Gunicorn** в качестве сервера приложений.
 - **Nginx** на хосте работает как Reverse Proxy и раздает статику/медиа.

@@ -92,6 +92,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'maintenance_mode.context_processors.maintenance_mode',
+                'events.context_processors.analytics',
             ],
         },
     },
@@ -233,6 +234,9 @@ VITE_DEV_SERVER = env('VITE_DEV_SERVER', default='')
 VITE_MANIFEST = BASE_DIR / 'events' / 'static' / 'events' / 'vue' / '.vite' / 'manifest.json'
 
 DEFAULT_EVENT_ID = env('DEFAULT_EVENT_ID')
+
+# Счётчик Яндекс.Метрики. На тестовом сайте задайте пустое значение (METRIKA_ID=), чтобы не портить статистику
+METRIKA_ID = env('METRIKA_ID', default='100864845')
 
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'

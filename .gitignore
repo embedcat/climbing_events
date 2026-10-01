@@ -143,6 +143,7 @@ test.py
 events/static/events/xl_templates/card_template.xlsx
 do_backup
 .env.prod
+.env.staging
 
 # сборка Vue-экранов (frontend/)
 /events/static/events/vue/

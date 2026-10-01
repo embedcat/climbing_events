@@ -269,3 +269,33 @@ class BrandTests(ClimbingEventsBaseTestCase):
             self.assertEqual(image.width * 4, image.height * 3)
             alpha = image.convert('RGBA').getchannel('A')
             self.assertEqual(alpha.getextrema(), (255, 255))
+
+
+@override_settings(VITE_DEV_SERVER='http://localhost:5173')
+class AnalyticsTests(ClimbingEventsBaseTestCase):
+    """Счётчик Метрики включается номером из настроек; пустой номер выключает его (тестовый сайт)"""
+
+    def setUp(self):
+        super().setUp()
+        self.event = services.create_event(owner=self.user, title='Фестиваль', date=date(2026, 10, 4))
+        self.event.is_published = True
+        self.event.save()
+        self.urls = [reverse('main'), reverse('event', args=[self.event.id]), reverse('account_login')]
+
+    def test_counter_is_on_every_kind_of_page_by_default(self):
+        for url in self.urls:
+            html = self.client.get(url).content.decode()
+            self.assertIn('mc.yandex.ru/metrika/tag.js', html, url)
+            self.assertIn('ym(100864845, "init"', html, url)
+
+    def test_empty_id_turns_the_counter_off(self):
+        with override_settings(METRIKA_ID=''):
+            for url in self.urls:
+                self.assertNotIn('mc.yandex.ru', self.client.get(url).content.decode(), url)
+
+    def test_another_id_is_used_as_given(self):
+        with override_settings(METRIKA_ID='12345'):
+            html = self.client.get(reverse('main')).content.decode()
+        self.assertIn('ym(12345, "init"', html)
+        self.assertIn('mc.yandex.ru/watch/12345', html)
+        self.assertNotIn('100864845', html)

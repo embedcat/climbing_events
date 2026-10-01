@@ -76,6 +76,11 @@ Periodic state transitions are cron-driven, not in-process: `manage.py check_exp
 `manage.py check_close_registration` (see README for the crontab entries) flip `Event.is_expired`
 / registration-closed state.
 
+Тестовый сайт рядом с боевым (`dev.rockevents.ru`): `docker-compose.staging.yml`, `.env.staging`,
+`nginx.staging.conf`, `do_staging_setup.sh` (разово: база из бэкапа боевой, копия медиа) и `do_staging_upgrade.sh`
+(пересборка образа на сервере из ветки); устройство и оговорки — в README. Счётчик Метрики на нём выключают пустым
+`METRIKA_ID`.
+
 ## Product direction
 
 `docs/PRODUCT.md` is the product source of truth: roles, priorities, agreed UX decisions, roadmap and what
