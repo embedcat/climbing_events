@@ -1,20 +1,46 @@
 {% extends 'events/base.html' %}
+{% load events_tags %}
 
-{% block nav-event %} {% include 'events/snippets/sn-nav-event.html' %}{% endblock %}
-{% block nav-actions %} {% include 'events/snippets/sn-nav-actions.html' %}{% endblock %}
-{% block nav-staff %} {% include 'events/snippets/sn-nav-staff.html' %}{% endblock %}
-
+{# Панель события организатора (docs/mockups/site.html): на компьютере разделы слева, с телефона — «назад» над заголовком #}
 {% block container %}
-<div>
-  <h2 class="">{{ event.title }}</h2>
-  {% if not event.is_published %}
-    {% if user == event.owner or user.is_superuser %}
-      <span class="badge rounded-pill bg-warning text-dark">Ждёт публикации</span>
+{% panel_sections as sections %}
+{% panel_current as current %}
+{% event_stage_pill event as stage %}
+<div class="site-panel">
+  <aside class="site-side" aria-label="Разделы панели">
+    <div class="ev-box">
+      <a class="site-back-link" href="{% url 'my_events' %}">← Мои события</a>
+      <b>{% if event.is_premium %}<i class="fa-solid fa-star text-warning" title="Полный доступ"></i> {% endif %}{{ event.title }}</b>
+      <span><span class="site-pill {{ stage.kind }}">{{ stage.label }}</span></span>
+      <a class="small" href="{% url 'event' event.id %}">Страница события ↗</a>
+    </div>
+    {% for group in sections %}
+    {% if group.title %}<div class="grp">{{ group.title }}</div>{% endif %}
+    {% for item in group.items %}
+    <a class="it" href="{{ item.url }}"{% if item.current %} aria-current="page"{% endif %}>{{ item.title }}{% if item.external %}<span class="ext">↗</span>{% endif %}</a>
+    {% endfor %}
+    {% endfor %}
+  </aside>
+
+  <div class="site-panel-main">
+    <nav class="site-crumbs" aria-label="Путь">
+      <a href="{% url 'my_events' %}">Мои события</a><i>›</i>
+      {% if current and current.url_name != 'admin_actions' %}
+      <a href="{% url 'admin_actions' event.id %}">{{ event.title }}</a><i>›</i><span>{{ current.title }}</span>
+      {% else %}
+      <span>{{ event.title }}</span>
+      {% endif %}
+    </nav>
+    {% if current.url_name == 'admin_actions' %}
+    <a class="site-back" href="{% url 'my_events' %}">← Мои события</a>
+    {% else %}
+    <a class="site-back" href="{% url 'admin_actions' event.id %}">← {{ event.title }}</a>
     {% endif %}
-  {% endif %}
+    <div class="site-panel-title">
+      <h2>{% block title %}{% endblock title %}</h2>
+      <span class="site-pill {{ stage.kind }} site-phone-only">{{ stage.label }}</span>
+    </div>
+    {% block body %}{% endblock body %}
+  </div>
 </div>
-<div class="alert alert-secondary" class="my-4">
-  <h4>{% block title %} {% endblock title %}</h4>
-</div>
-{% block body %} {% endblock body %}
 {% endblock %}

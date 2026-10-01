@@ -94,7 +94,7 @@ onUnmounted(() => {
       </div>
       <nav class="re-mx-links" aria-label="Связанные страницы">
         <a :href="resultsUrl">Результаты</a>
-        <a :href="manageUrl">Управление событием</a>
+        <a :href="manageUrl">‹ Панель события</a>
       </nav>
     </header>
 

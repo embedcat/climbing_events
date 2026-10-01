@@ -16,6 +16,10 @@ export default defineConfig({
     rollupOptions: {
       // по одной точке входа на экран, которые Django встраивает в свои шаблоны
       input: {
+        site: 'src/entries/site.ts',
+        home: 'src/entries/home.ts',
+        mine: 'src/entries/mine.ts',
+        panel: 'src/entries/panel.ts',
         event: 'src/entries/event.ts',
         matrix: 'src/entries/matrix.ts',
       },

@@ -34,6 +34,14 @@ export function matchesQuery(p: Person, query: string): boolean {
   return `${p.last_name} ${p.first_name}`.toLowerCase().includes(q) || `${p.first_name} ${p.last_name}`.toLowerCase().includes(q)
 }
 
+/** Поиск организатора: по фамилии и имени, а цифры ищут ещё и по началу PIN (карточку с PIN держат в руках). */
+export function matchesPanelQuery(p: Person, query: string): boolean {
+  const q = query.trim()
+  if (!q) return true
+  if (/^\d+$/.test(q)) return String(p.pin ?? '').startsWith(q) || matchesQuery(p, q)
+  return matchesQuery(p, q)
+}
+
 export function filterPeople(people: Person[], f: PeopleFilters): Person[] {
   return people
     .filter((p) => (f.gender === 'all' || p.gender === f.gender)

@@ -4,6 +4,9 @@
 {% block title %}
 Ввод результатов
 {% endblock %}
+{# matrix.ts сам подключает каркас сайта #}
+{% block site_entry %}{% endblock %}
+{% block main_class %}site-page is-full{% endblock main_class %}
 {% block scripts %}{% vite_entry 'src/entries/matrix.ts' %}{% endblock %}
 
 {# Экран сам занимает высоту окна, поэтому общий заголовок события здесь не нужен #}

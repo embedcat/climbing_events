@@ -3,7 +3,7 @@
 
 .re-matrix {
   --cross: #e1e8f1;
-  --re-top: 140px;
+  --re-top: 58px;
   display: flex;
   flex-direction: column;
   gap: 10px;

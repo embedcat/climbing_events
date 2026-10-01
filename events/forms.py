@@ -1,5 +1,5 @@
 from bootstrap_datepicker_plus.widgets import DatePickerInput, DateTimePickerInput
-from crispy_forms.bootstrap import InlineRadios
+from crispy_forms.bootstrap import Accordion, AccordionGroup, InlineRadios
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit, Layout, Field
 from django import forms
@@ -77,6 +77,20 @@ class AdminDescriptionForm(PosterFormMixin, forms.ModelForm):
 
 
 class EventSettingsForm(forms.ModelForm):
+    # настройки по темам (docs/mockups/site.html): каждое поле формы ровно в одной группе
+    GROUPS = [
+        ('Публикация и доступ', ['is_published', 'is_registration_open', 'registration_close_datetime',
+                                 'is_enter_result_allowed', 'is_results_allowed']),
+        ('Регистрация', ['registration_fields', 'required_fields', 'participant_min_age',
+                         'is_view_pin_after_registration', 'is_without_registration', 'reg_type_list']),
+        ('Группы и сеты', ['group_num', 'group_list', 'set_num', 'set_list', 'set_max_participants']),
+        ('Подсчёт', ['score_type', 'routes_num', 'redpoint_points', 'flash_points_pc', 'count_routes_num',
+                     'is_separate_score_by_groups']),
+        ('Что видят участники', ['is_view_full_results', 'is_view_route_color', 'is_view_route_grade',
+                                 'is_view_route_score', 'is_count_only_entered_results']),
+        ('Ввод результатов участником', ['is_check_result_before_enter', 'is_update_result_allowed']),
+    ]
+
     registration_fields = forms.MultipleChoiceField(
         choices=Event.REGISTRATION_FIELDS,
         widget=forms.CheckboxSelectMultiple,
@@ -94,6 +108,9 @@ class EventSettingsForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_method = 'post'
+        # свёрнутые группы настроек: браузер не может сфокусироваться на невидимом поле, поэтому проверку делает сервер
+        self.helper.attrs = {'novalidate': 'novalidate'}
+        self.helper.layout = Layout(Accordion(*(AccordionGroup(title, *fields) for title, fields in self.GROUPS)))
         self.helper.add_input(Submit('submit', 'Сохранить'))
         self.fields['registration_close_datetime'].input_formats = settings.INPUT_DATE_FORMATS + [
             '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%m/%d/%Y %H:%M', '%m/%d/%Y %H:%M:%S'

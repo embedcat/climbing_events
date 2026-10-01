@@ -1,0 +1,14 @@
+{% extends 'events/event/base.html' %}
+{% load vite %}
+
+{# «Участники» панели на Vue (frontend/src/screens/panel): таблица организатора с PIN, оплатой и контактами #}
+{% block site_entry %}{% vite_entry 'src/entries/panel.ts' %}{% endblock site_entry %}
+
+{% block title %}Участники{% endblock title %}
+
+{% block body %}
+<div id="panel-app" data-screen="people" data-event-id="{{ event.id }}" data-csrf-token="{{ csrf_token }}"></div>
+<noscript>
+  <p>Для работы таблицы нужен включённый JavaScript. Список участников открыт на <a href="{% url 'participants' event.id %}">странице события</a>.</p>
+</noscript>
+{% endblock body %}

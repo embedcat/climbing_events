@@ -1,17 +1,8 @@
-/* Общее для экранов участника: цвета, типографика, кнопки, шторка, всплывающее сообщение.
-   Визуальный язык из docs/mockups: flash — зелёный, redpoint — синий, оранжевый — «требует действия».
-   Всё под .re-screen, чтобы не пересекаться со стилями Bootstrap и старого сайта. */
+/* Общее для экранов участника: типографика, кнопки, шторка, всплывающее сообщение.
+   Цвета и шрифты (tokens.css) общие для всего сайта и переключаются темой.
+   Всё под .re-screen, чтобы не пересекаться со стилями Bootstrap. */
 
 .re-screen {
-  --app-bg: #f3f5f8; --surface: #fbfcfd; --surface-2: #e6eaef; --line: #d5dbe2; --line-strong: #b6bfca;
-  --ink: #17212c; --muted: #56626f; --faint: #a1abb6; --shadow: rgba(23, 33, 44, .16); --scrim: rgba(8, 12, 16, .45);
-  --fl: #157443; --fl-soft: #d6efdf; --rp: #1d52bb; --rp-soft: #dbe5fa;
-  --accent: #cf4812; --accent-soft: #fde5d6; --on-accent: #ffffff;
-  --danger: #bf262c; --danger-soft: #fadede;
-  --font-display: "Unbounded", "IBM Plex Sans", system-ui, sans-serif;
-  --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-data: "IBM Plex Mono", ui-monospace, Consolas, "Liberation Mono", monospace;
-
   margin-inline: auto;
   border-radius: 16px;
   background: var(--app-bg);

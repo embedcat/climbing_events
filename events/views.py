@@ -5,8 +5,6 @@ import logging
 from asgiref.sync import sync_to_async
 from django import views
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.paginator import Paginator
-from django.db.models import Q
 from django.forms import formset_factory, modelformset_factory, ModelChoiceField
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
@@ -41,28 +39,36 @@ class IsSuperuserMixin(braces.UserPassesTestMixin):
         return user.is_superuser
 
 
+def _site_context(request) -> dict:
+    """ Что Vue-страницам главной и кабинета нужно знать про того, кто смотрит, и куда вести ссылки """
+    return {
+        'authenticated': request.user.is_authenticated,
+        'isSuperuser': request.user.is_superuser,
+        'links': {
+            'home': reverse('main'),
+            'create': reverse('create'),
+            'mine': reverse('my_events'),
+            'login': reverse('account_login'),
+            'help': reverse('help', kwargs={'type': 'workflow'}),
+            'stat': reverse('stat'),
+            'about': reverse('about'),
+        },
+    }
+
+
 class MainView(views.View):
+    """ Главная: каталог событий целиком на Vue (frontend/src/screens/home). Первую страницу кладём в HTML,
+    остальное экран берёт из /api/site/events/ """
     @staticmethod
     def get(request):
         if int(settings.DEFAULT_EVENT_ID) != 0:
             return redirect('event', event_id=settings.DEFAULT_EVENT_ID)
-        if request.user.is_authenticated:
-            if request.user.is_superuser:
-                events = Event.objects.all().order_by('-date')
-            else:
-                events = Event.objects.filter(Q(is_published=True) | Q(owner=request.user)).order_by('-date')
-        else:
-            events = Event.objects.filter(is_published=True).order_by('-date')
-
-        paginator = Paginator(events, 9)
-        page_number = request.GET.get('page')
-        page_obj = paginator.get_page(page_number)
-
         return render(
             request=request,
             template_name='events/index.html',
             context={
-                'events': page_obj,
+                'home_initial': services.get_site_events(user=request.user),
+                'site_context': _site_context(request),
             }
         )
 
@@ -91,40 +97,20 @@ def event_page_redirect(request, event_id, **kwargs):
 
 
 class AdminActionsView(IsOwnerMixin, views.View):
+    """ «Обзор» панели события: целиком на Vue (frontend/src/screens/panel), данные из /api/events/<id>/panel/.
+    Старые формы действий заменены API: переключатели и служебные действия живут там """
     @staticmethod
     def get(request, event_id):
         event = get_object_or_404(Event, id=event_id)
-        entered_num = event.participant.filter(is_entered_result=True).count()
-        paid_num = event.participant.filter(paid=True).count()
-        return render(
-            request=request,
-            template_name='events/event/admin-actions.html',
-            context={
-                'event': event,
-                'entered_num': entered_num,
-                'paid_num': paid_num,
-                'male_link': str(request.build_absolute_uri(reverse('results', args=(event_id,)))) + '?autorefresh&m',
-                'female_link': str(request.build_absolute_uri(reverse('results', args=(event_id,)))) + '?autorefresh&f',
-            }
-        )
+        return render(request=request, template_name='events/event/admin-actions.html', context={'event': event})
 
+
+class PanelParticipantsView(IsOwnerMixin, views.View):
+    """ «Участники» панели: таблица организатора на Vue, данные из /api/events/<id>/participants/ """
     @staticmethod
-    def post(request, event_id):
+    def get(request, event_id):
         event = get_object_or_404(Event, id=event_id)
-        if 'update_score' in request.POST:
-            services.update_results(event=event)
-        if 'clear_results' in request.POST:
-            services.clear_results(event=event)
-        if 'clear_event' in request.POST:
-            services.clear_event(event=event)
-        if 'remove_event' in request.POST:
-            services.remove_event(event=event)
-            return redirect('my_events')
-        if 'mock_data' in request.POST:
-            services.clear_event(event=event)
-            services.debug_create_participants(event=event, num=50)
-            services.debug_apply_random_results(event=event)
-        return redirect('admin_actions', event_id)
+        return render(request=request, template_name='events/event/panel-people.html', context={'event': event})
 
 
 def export_results_thread(event_id: int):
@@ -446,7 +432,7 @@ class ParticipantView(IsOwnerMixin, views.View):
                                )
         if form.is_valid():
             services.update_participant(event=event, participant=participant, cd=form.cleaned_data)
-            return redirect('participants', event_id)
+            return redirect('panel_participants', event_id)
         else:
             return render(
                 request=request,
@@ -495,7 +481,7 @@ class ParticipantRemoveView(IsOwnerMixin, views.View):
         if 'participant_remove' in request.POST:
             participant.delete()
             services.update_results(event=event)
-            return redirect('participants', event_id=event_id)
+            return redirect('panel_participants', event_id=event_id)
         return render(
             request=request,
             template_name='events/event/participant-remove.html',
@@ -508,14 +494,15 @@ class ParticipantRemoveView(IsOwnerMixin, views.View):
 
 
 class MyEventsView(LoginRequiredMixin, views.View):
+    """ Кабинет организатора: его события с числами, на Vue (frontend/src/screens/mine) """
     @staticmethod
     def get(request):
-        events = Event.objects.filter(owner=request.user.id).order_by('-date')
         return render(request=request,
                       template_name='events/profile/my-events.html',
                       context={
-                          'events': events,
-                          'all_events': Event.objects.exclude(owner=request.user.id).order_by('-date') if request.user.is_superuser else None,
+                          'mine_initial': services.get_my_events(user=request.user,
+                                                                 scope=request.GET.get('scope', 'mine')),
+                          'site_context': _site_context(request),
                       })
 
 

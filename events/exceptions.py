@@ -74,3 +74,20 @@ class RegistrationNotNeededError(Exception):
 class PayUnavailableError(Exception):
     def __str__(self):
         return "Оплата временно недоступна."
+
+
+class InvalidFlagsError(Exception):
+    """Переключатели панели: неизвестное имя или значение не булево"""
+
+    def __str__(self):
+        return "Неверные переключатели."
+
+
+class InvalidPanelActionError(Exception):
+    def __str__(self):
+        return "Неизвестное действие."
+
+
+class PanelActionNotAllowedError(Exception):
+    def __str__(self):
+        return "Это действие сейчас недоступно."

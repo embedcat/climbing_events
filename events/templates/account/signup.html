@@ -1,48 +1,45 @@
 {% extends "account/base.html" %}
 
 {% load i18n %}
-{% load crispy_forms_tags %}
 
 {% block head_title %}{% trans "Signup" %}{% endblock %}
 
 {% block container %}
-<div class="row justify-content-center">
-  <div class="col-lg-5">
-    <div class="card shadow-lg border-0 rounded-lg mt-5">
-      <div class="card-header">
-        <h3 class="text-center font-weight-light my-4">Регистрация для <strong>организаторов</strong></h3>
-        <h4 class="text-center" style="color: red;">Внимание! Эта форма для организаторов соревнований! Если вы участник соревнований, вам <a href="/">сюда</a></h4>
-      </div>
-      <div class="card-body">
-        <form class="signup" id="signup_form" method="post" action="{% url 'account_signup' %}">
-          {% csrf_token %}
-          <div id="div_id_email" class="form-group"><label for="id_email" class=" requiredField">
-            E-mail<span class="asteriskField">*</span> </label>
-            <div class=""><input type="email" name="email" placeholder="E-mail address" autocomplete="email"
-                                 class="textinput textInput form-control" required id="id_email"></div>
-          </div>
-          <div id="div_id_password1" class="form-group"><label for="id_password1" class=" requiredField">
-            Пароль<span class="asteriskField">*</span> </label>
-            <div class=""><input type="password" name="password1" placeholder="Password" autocomplete="new-password"
-                                 class="textinput textInput form-control" required id="id_password1"></div>
-          </div>
-          <div id="div_id_password2" class="form-group"><label for="id_password2" class=" requiredField">
-            Пароль (ещё раз)<span class="asteriskField">*</span> </label>
-            <div class=""><input type="password" name="password2" placeholder="Password (again)"
-                                 class="textinput textInput form-control" required id="id_password2"></div>
-          </div>
-          {% if redirect_field_value %}
-          <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}"/>
-          {% endif %}
-          <button class="btn btn-primary btn-block" type="submit">Зарегистрироваться</button>
-        </form>
-      </div>
-      <div class="card-footer text-center py-3">
-        <a href="{{ login_url }}">Есть аккаунт? Войти</a>
-      </div>
+<div class="site-narrow">
+  <h1>Регистрация организатора</h1>
+  <p class="text-body-secondary">Аккаунт нужен, чтобы создавать и вести события. Участникам он не нужен: регистрируйтесь на <a href="{% url 'main' %}">странице события</a>.</p>
+  <div class="card">
+    <div class="card-body">
+      <form class="signup" id="signup_form" method="post" action="{% url 'account_signup' %}">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger" role="alert">{% for error in form.non_field_errors %}{{ error }}{% endfor %}</div>
+        {% endif %}
+        <div id="div_id_email" class="mb-3">
+          <label for="id_email" class="form-label">E-mail</label>
+          <input type="email" name="email" autocomplete="email" class="form-control{% if form.email.errors %} is-invalid{% endif %}"
+                 required id="id_email" value="{{ form.email.value|default:'' }}">
+          {% for error in form.email.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+        </div>
+        <div id="div_id_password1" class="mb-3">
+          <label for="id_password1" class="form-label">Пароль</label>
+          <input type="password" name="password1" autocomplete="new-password"
+                 class="form-control{% if form.password1.errors %} is-invalid{% endif %}" required id="id_password1">
+          {% for error in form.password1.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+        </div>
+        <div id="div_id_password2" class="mb-3">
+          <label for="id_password2" class="form-label">Пароль (ещё раз)</label>
+          <input type="password" name="password2" autocomplete="new-password"
+                 class="form-control{% if form.password2.errors %} is-invalid{% endif %}" required id="id_password2">
+          {% for error in form.password2.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+        </div>
+        {% if redirect_field_value %}
+        <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}"/>
+        {% endif %}
+        <button class="btn btn-primary w-100" type="submit">Зарегистрироваться</button>
+      </form>
     </div>
   </div>
+  <p class="small text-body-secondary">Есть аккаунт? <a href="{{ login_url }}">Войти</a></p>
 </div>
-
-
 {% endblock %}

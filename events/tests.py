@@ -328,28 +328,33 @@ class ViewsTestCase(ClimbingEventsBaseTestCase):
         self.event.is_registration_open = True
         self.event.save()
 
-    def test_main_view_pagination(self):
-        # We need multiple events to test pagination. 
-        # By default, views.py has `Paginator(events, 9)`
-        # Let's create 11 published events
-        for i in range(11):
+    @override_settings(VITE_DEV_SERVER='http://localhost:5173')
+    def test_main_view_mounts_vue_with_first_catalog_page_inside(self):
+        # каталог на главной — Vue; первую страницу Django кладёт в HTML, остальное экран берёт из API
+        for i in range(14):
             e = services.create_event(owner=self.superuser, title=f"Event {i}", date=datetime(2026, 10, 1))
             e.is_published = True
             e.save()
 
-        # Request first page
         response = self.client.get(reverse('main'))
         self.assertEqual(response.status_code, 200)
-        self.assertIn('events', response.context)
-        # Should display 9 events on page 1
-        self.assertEqual(len(response.context['events']), 9)
-        self.assertTrue(response.context['events'].has_other_pages())
+        self.assertContains(response, 'id="home-app"')
+        self.assertContains(response, 'src/entries/home.ts')
+        initial = response.context['home_initial']
+        self.assertEqual(len(initial['results']), services.SITE_PAGE_SIZE)
+        self.assertTrue(initial['has_more'])
+        self.assertEqual(initial['counts'], {'upcoming': 15, 'past': 0})
+        self.assertContains(response, 'id="home-initial"')
+        self.assertContains(response, 'id="site-context"')
 
-        # Request second page
-        response_page2 = self.client.get(reverse('main') + '?page=2')
-        self.assertEqual(response_page2.status_code, 200)
-        # Should display 3 events on page 2 (12 total events)
-        self.assertEqual(len(response_page2.context['events']), 3)
+    @override_settings(VITE_DEV_SERVER='http://localhost:5173')
+    def test_my_events_view_mounts_vue_for_organizer_and_redirects_guest(self):
+        self.assertEqual(self.client.get(reverse('my_events')).status_code, 302)
+        self.client.force_login(self.superuser)
+        response = self.client.get(reverse('my_events'))
+        self.assertContains(response, 'id="mine-app"')
+        self.assertContains(response, 'src/entries/mine.ts')
+        self.assertEqual([c['title'] for c in response.context['mine_initial']['results']], ['View Event'])
 
     @override_settings(VITE_DEV_SERVER='http://localhost:5173')
     def test_every_event_address_mounts_the_same_vue_app(self):

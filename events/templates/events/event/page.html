@@ -14,15 +14,20 @@
   {% else %}
   <title>Событие не опубликовано — RockEvents</title>
   {% endif %}
+  {% include 'events/snippets/sn-favicon.html' %}
+  {% include 'events/snippets/sn-theme-init.html' %}
   <style>
-    html, body { margin: 0; background: #f3f5f8; }
-    @media (prefers-color-scheme: dark) { html, body { background: #0f141a; color: #e4e9ef; } }
+    html, body { margin: 0; background: #f3f5f8; color: #17212c; }
+    @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]), :root:not([data-theme="light"]) body { background: #0f141a; color: #e4e9ef; } }
+    :root[data-theme="dark"], :root[data-theme="dark"] body { background: #0f141a; color: #e4e9ef; }
     .re-plain { max-width: 520px; margin: 0 auto; padding: 48px 16px; font: 16px/1.4 system-ui, sans-serif; }
   </style>
-  {% if can_view %}{% vite_entry 'src/entries/event.ts' %}{% endif %}
+  {# event.ts подключает каркас сайта сам; у закрытой страницы свой экран нужен только для полосы #}
+  {% if can_view %}{% vite_entry 'src/entries/event.ts' %}{% else %}{% vite_entry 'src/entries/site.ts' %}{% endif %}
   {% include 'events/snippets/sn-metrika.html' %}
 </head>
-<body>
+<body class="{% if can_view %}re-body{% else %}site-body{% endif %}">
+{% include 'events/snippets/sn-site-bar.html' %}
 {% if can_view %}
 <div id="event-app" data-event-id="{{ event.id }}" data-csrf-token="{{ csrf_token }}"
      data-manage-url="{% url 'admin_actions' event.id %}" data-matrix-url="{% url 'matrix' event.id %}"></div>

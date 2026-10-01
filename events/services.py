@@ -16,7 +16,7 @@ from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.mail import send_mail
 from django.db import transaction
-from django.db.models import QuerySet, Count
+from django.db.models import Case, Count, IntegerField, Q, QuerySet, When
 from django.http import HttpResponse
 from django.utils import timezone
 from django.utils.formats import date_format
@@ -27,6 +27,7 @@ from events.exceptions import (
     DuplicateParticipantError, EntryClosedError, InvalidResultsError, ParticipantNotFoundError,
     ParticipantTooYoungError, PayUnavailableError, RegistrationClosedError, RegistrationNotNeededError,
     ResultsUpdateNotAllowedError, SetFullError, WithoutRegistrationDisabledError,
+    InvalidFlagsError, InvalidPanelActionError, PanelActionNotAllowedError,
 )
 from events.models import CustomUser, Event, PayDetail, PromoCode, Route, Participant, Wallet
 
@@ -372,16 +373,19 @@ def _clear_participant_score(participant: Participant) -> None:
     participant.save()
 
 
-def is_registration_open(event: Event) -> bool:
+def is_registration_open(event: Event, participants_count: int | None = None) -> bool:
+    """ participants_count — сколько участников уже записано, если вызывающий его знает (каталог событий) """
     if not event.is_published:
         return False
     if not event.is_registration_open:
         return False
-    if event.set_max_participants != 0 and event.participant.count() >= event.set_max_participants * event.set_num:
+    if participants_count is None:
+        participants_count = event.participant.count()
+    if event.set_max_participants != 0 and participants_count >= event.set_max_participants * event.set_num:
         return False
     if not event.is_premium:
-        if event.participant.count() >= event.max_participants:
-            return False        
+        if participants_count >= event.max_participants:
+            return False
     return True
 
 
@@ -740,17 +744,20 @@ YOOMONEY_FORM_URL = 'https://yoomoney.ru/quickpay/confirm.xml'
 _SBP_SUM_RE = re.compile(r'[?&]sum=(\d+)')
 
 
-def get_event_stage(event: Event) -> str:
+def get_event_stage(event: Event, participants_count: int | None = None, entered_count: int | None = None) -> str:
     """ Что сейчас с событием: от этого зависят карточка этапа, кнопка внизу и закрытые вкладки «Ввод» и «Результаты».
     «Ввод закрыт» — день события после того, как организатор закрыл ввод, а is_expired ещё не выставлен:
-    узнаём по тому, что кто-то уже внёс результат """
+    узнаём по тому, что кто-то уже внёс результат. Количества участников можно передать готовыми """
     if event.is_expired:
         return STAGE_DONE
     if is_event_live(event=event):
         return STAGE_LIVE
-    if event.participant.filter(is_entered_result=True).exists():
+    if entered_count is None:
+        entered_count = event.participant.filter(is_entered_result=True).count()
+    if entered_count > 0:
         return STAGE_OVER
-    return STAGE_REGISTRATION if is_registration_open(event=event) else STAGE_REGISTRATION_CLOSED
+    return STAGE_REGISTRATION if is_registration_open(event=event, participants_count=participants_count) \
+        else STAGE_REGISTRATION_CLOSED
 
 
 def is_pay_available(event: Event) -> bool:
@@ -966,6 +973,191 @@ def get_pay_payload(event: Event, participant: Participant, success_url: str) ->
         raise PayUnavailableError
     return dict(type='yoomoney', amount=amount, receiver=event.wallet.wallet_id,
                 label=f'e{event.id}_p{participant.id}', success_url=success_url, action=YOOMONEY_FORM_URL)
+
+
+# ================================================
+# ======== Site: catalog and organizer cabinet ===
+# ================================================
+
+SITE_PAGE_SIZE = 12
+SITE_MAX_REFS = 20
+STAGE_DRAFT = 'draft'
+
+
+def _site_events(user):
+    """ Какие события видит пользователь: опубликованные, свои черновики организатору, всё — суперпользователю """
+    events = Event.objects.all()
+    if user and user.is_authenticated:
+        if user.is_superuser:
+            return events
+        return events.filter(Q(is_published=True) | Q(owner=user))
+    return events.filter(is_published=True)
+
+
+def _with_counts(events):
+    return events.annotate(
+        n_participants=Count('participant', distinct=True),
+        n_entered=Count('participant', filter=Q(participant__is_entered_result=True), distinct=True),
+        n_paid=Count('participant', filter=Q(participant__paid=True), distinct=True),
+    )
+
+
+def _site_event_card(event: Event, user=None) -> dict:
+    """ Карточка события для главной и кабинета; количества берём из аннотаций _with_counts """
+    stage = get_event_stage(event=event, participants_count=event.n_participants, entered_count=event.n_entered) \
+        if event.is_published else STAGE_DRAFT
+    return dict(
+        id=event.id,
+        title=event.title,
+        date=event.date_display,
+        gym=event.gym,
+        short_description=event.short_description,
+        poster=event.poster.url if event.poster else None,
+        stage=stage,
+        is_results_allowed=event.is_results_allowed,
+        is_without_registration=event.is_without_registration,
+        mine=bool(user and user.is_authenticated and event.owner_id == user.id),
+    )
+
+
+def get_site_events(user, query: str = '', when: str = 'upcoming', offset: int = 0) -> dict:
+    """ Главная: события по поиску, «Предстоящие» (идущие сейчас, затем ближайшие) или «Прошедшие» (свежие первыми).
+    Счётчики считаются по тому же поиску, чтобы подписи вкладок не врали """
+    events = _site_events(user)
+    query = (query or '').strip()
+    if query:
+        events = events.filter(Q(title__icontains=query) | Q(gym__icontains=query))
+    counts = dict(upcoming=events.filter(is_expired=False).count(), past=events.filter(is_expired=True).count())
+    past = when == 'past'
+    events = events.filter(is_expired=past)
+    # идущие сейчас события первыми, дальше ближайшие по дате
+    live_first = Case(When(is_enter_result_allowed=True, then=0), default=1, output_field=IntegerField())
+    events = events.order_by('-date', '-id') if past else events.order_by(live_first, 'date', 'id')
+    offset = max(0, offset)
+    page = list(_with_counts(events).select_related('owner')[offset:offset + SITE_PAGE_SIZE + 1])
+    return dict(
+        results=[_site_event_card(event, user) for event in page[:SITE_PAGE_SIZE]],
+        counts=counts,
+        has_more=len(page) > SITE_PAGE_SIZE,
+    )
+
+
+def get_site_participations(refs: list) -> list:
+    """ «Вы участвуете» на главной. refs — пары (id события, id участника или None) из записей браузера.
+    Отдаём только опубликованные события, а про участника — то, что ему показывает страница события:
+    статус оплаты и место (если организатор не скрыл результаты) """
+    refs = refs[:SITE_MAX_REFS]
+    events = {event.id: event for event in
+              _with_counts(Event.objects.filter(is_published=True, id__in=[event_id for event_id, _ in refs]))}
+    found = []
+    for event_id, participant_id in refs:
+        event = events.get(event_id)
+        if event is None:
+            continue
+        item = dict(event=_site_event_card(event), me=None)
+        participant = event.participant.filter(id=participant_id).first() if participant_id else None
+        if participant:
+            me = get_participant_me(event=event, participant=participant)
+            item['me'] = dict(
+                paid=me['paid'], pay_required=is_pay_available(event=event), standing=me['standing'],
+                group=me['participant']['group'], set=me['participant']['set'],
+                set_index=me['participant']['set_index'],
+            )
+        found.append(item)
+    return found
+
+
+def get_my_events(user, scope: str = 'mine') -> dict:
+    """ Кабинет организатора: его события с числами для карточек. Суперпользователь по scope=all видит все """
+    show_all = scope == 'all' and user.is_superuser
+    events = Event.objects.all() if show_all else Event.objects.filter(owner=user)
+    results = []
+    for event in _with_counts(events.order_by('-date', '-id')).select_related('owner'):
+        card = _site_event_card(event, user)
+        card.update(
+            participants_count=event.n_participants,
+            entered_count=event.n_entered,
+            paid_count=event.n_paid,
+            is_pay_allowed=event.is_pay_allowed,
+            is_premium=event.is_premium,
+            owner=event.owner.email if show_all else None,
+        )
+        results.append(card)
+    return dict(scope='all' if show_all else 'mine', is_superuser=user.is_superuser, results=results)
+
+
+# ================================================
+# ============ Organizer panel: overview =========
+# ================================================
+
+PANEL_FLAGS = ('is_published', 'is_registration_open', 'is_enter_result_allowed', 'is_results_allowed')
+PANEL_ACTIONS = ('update_score', 'clear_results', 'clear_event', 'remove_event', 'mock_data')
+
+
+def get_panel_overview(event: Event) -> dict:
+    """ «Обзор» панели события: переключатели дня события, числа и чек-лист подготовки.
+    Чек-лист только из того, что можно проверить: описание заменено, оплата настроена, событие опубликовано.
+    Оплата необязательна (optional), её отсутствие не держит чек-лист открытым """
+    counts = event.participant.aggregate(
+        total=Count('id'),
+        entered=Count('id', filter=Q(is_entered_result=True)),
+        paid=Count('id', filter=Q(paid=True)),
+    )
+    stage = get_event_stage(event=event, participants_count=counts['total'], entered_count=counts['entered']) \
+        if event.is_published else STAGE_DRAFT
+    default_description = Event._meta.get_field('description').default
+    description = (event.description or '').strip()
+    pay_ready = is_pay_available(event=event)
+    return dict(
+        id=event.id,
+        title=event.title,
+        date=event.date_display,
+        gym=event.gym,
+        stage=stage,
+        is_expired=event.is_expired,
+        is_premium=event.is_premium,
+        is_pay_allowed=event.is_pay_allowed,
+        flags={name: bool(getattr(event, name)) for name in PANEL_FLAGS},
+        participants_count=counts['total'],
+        entered_count=counts['entered'],
+        paid_count=counts['paid'],
+        checklist=[
+            dict(id='description', done=bool(description) and description != default_description,
+                 poster=bool(event.poster) and not event.poster.name.endswith('default_poster.png')),
+            dict(id='pay', done=pay_ready, optional=True, price=get_pay_amount(event=event) if pay_ready else None),
+            dict(id='publish', done=event.is_published),
+        ],
+    )
+
+
+def update_event_flags(event: Event, flags: dict) -> None:
+    """ Переключатели «Обзора»: только известные имена и только булевы значения, остальные настройки не трогаем """
+    if not isinstance(flags, dict) or not flags or any(
+            name not in PANEL_FLAGS or not isinstance(value, bool) for name, value in flags.items()):
+        raise InvalidFlagsError
+    for name, value in flags.items():
+        setattr(event, name, value)
+    event.save(update_fields=list(flags))
+
+
+def run_panel_action(event: Event, action: str, is_superuser: bool = False) -> None:
+    """ Служебные действия «Обзора». Завершённое событие очищать нельзя, тестовые данные — только суперпользователю """
+    if action not in PANEL_ACTIONS:
+        raise InvalidPanelActionError
+    if action == 'clear_event' and event.is_expired or action == 'mock_data' and not is_superuser:
+        raise PanelActionNotAllowedError
+    if action == 'update_score':
+        update_results(event=event)
+    elif action == 'clear_results':
+        clear_results(event=event)
+    elif action == 'clear_event':
+        clear_event(event=event)
+    elif action == 'remove_event':
+        remove_event(event=event)
+    elif action == 'mock_data':
+        clear_event(event=event)
+        debug_create_participants(event=event, num=50)
+        debug_apply_random_results(event=event)
 
 
 # ================================================

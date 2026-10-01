@@ -14,7 +14,8 @@ export interface RememberedParticipant {
   set_index?: number
 }
 
-export const rememberKey = (eventId: number): string => `rockevents-me:v1:${eventId}`
+const REMEMBER_PREFIX = 'rockevents-me:v1:'
+export const rememberKey = (eventId: number): string => `${REMEMBER_PREFIX}${eventId}`
 
 function pick(who: RememberedParticipant): RememberedParticipant {
   const picked: RememberedParticipant = {
@@ -38,6 +39,19 @@ export function loadRememberedParticipant(store: KeyValueStore, eventId: number)
   } catch {
     return null
   }
+}
+
+/** Все события, в которых браузер помнит участника: для «Вы участвуете» на главной и строки в меню сайта */
+export function listRememberedEvents(store: KeyValueStore): { eventId: number, who: RememberedParticipant }[] {
+  const found: { eventId: number, who: RememberedParticipant }[] = []
+  for (const key of store.keys()) {
+    if (!key.startsWith(REMEMBER_PREFIX)) continue
+    const eventId = Number(key.slice(REMEMBER_PREFIX.length))
+    if (!Number.isInteger(eventId) || eventId <= 0) continue
+    const who = loadRememberedParticipant(store, eventId)
+    if (who) found.push({ eventId, who })
+  }
+  return found.sort((a, b) => b.eventId - a.eventId)
 }
 
 export function forgetParticipant(store: KeyValueStore, eventId: number): void {

@@ -123,6 +123,20 @@ all domain logic lives in one app, organized by *layer* instead:
   `place == 0`. `services.get_results` остался для Excel-протокола.
 - Браузер помнит участника (`frontend/src/domain/remember.ts`: id, имя, пол, группа, сет, без PIN): по нему страница
   события показывает карточку «Вы». Запись общая для всех экранов страницы (`createRememberedMe`).
+- Общий каркас сайта (`frontend/src/site/`, `styles/tokens.css`, `styles/site.css`): полоса с логотипом, меню и темой
+  над каждой страницей. Разметку отдают Django-шаблоны (`snippets/sn-site-bar.html`, `sn-theme-init.html`), поведение —
+  `site/siteBar.ts`; каждая точка входа Vue подключает его сама (`import '../site'`), страницы Django без своего экрана —
+  `entries/site.ts` (блок `site_entry` в `events/base.html`). Тема: `data-theme` на `<html>` (цвета) и `data-bs-theme`
+  (Bootstrap 5.3 на страницах Django), выбор в `localStorage` (`domain/theme.ts`). Цвета и шрифты только в `tokens.css`.
+- Главная (`/`, `screens/home/`) и «Мои события» (`/my_events/`, `screens/mine/`) — Vue; первую страницу данных Django
+  кладёт в HTML (`json_script`: `home-initial`, `mine-initial`, `site-context`). Данные: `/api/site/events/`,
+  `/api/site/participations/` («Вы участвуете» по записям браузера), `/api/site/my-events/`
+  (`services.get_site_events`, `get_site_participations`, `get_my_events`).
+- Панель события организатора: рамку (боковое меню разделов, крошки) рисует `events/event/base.html` с тегами
+  `panel_sections`/`panel_current` из `events_tags.py`; «Обзор» (`/e/<id>/admin_actions/`) и «Участники»
+  (`/e/<id>/people/`) — Vue (`screens/panel/`, точка входа `entries/panel.ts`), данные `/api/events/<id>/panel/`,
+  `panel/flags/`, `panel/actions/` (`services.get_panel_overview`, `update_event_flags`, `run_panel_action`).
+  «Настройки» — форма Django в аккордеонах (`EventSettingsForm.GROUPS`), остальные разделы пока формы Django.
 - Массовый ввод организатором (`/e/<id>/matrix/`, только владелец и суперпользователь): Vue-экран
   `frontend/src/screens/matrix/`, API `/api/events/<id>/matrix/` и `matrix/save/` (`services.get_matrix_payload`,
   `services.save_matrix_changes`: всё-или-ничего, пишет только переданные трассы, места пересчитывает после записи).

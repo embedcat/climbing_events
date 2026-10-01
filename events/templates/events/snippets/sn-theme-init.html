@@ -1,0 +1,12 @@
+{# Применяет выбранную тему до первой отрисовки, чтобы страница не мигала. Логика та же, что в frontend/src/domain/theme.ts #}
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('rockevents-theme'), d = document.documentElement;
+      var dark = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
+      var explicit = t === 'light' || t === 'dark';
+      if (explicit) d.setAttribute('data-theme', t);
+      d.setAttribute('data-bs-theme', explicit ? t : (dark ? 'dark' : 'light'));
+    } catch (e) {}
+  })();
+</script>

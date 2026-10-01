@@ -1,0 +1,129 @@
+/* Главная и кабинет «Мои события» (docs/mockups/site.html): карточки событий, поиск, фильтры.
+   Страницы стоят в рамке сайта (site.css), поэтому здесь только содержимое. Свои классы .re-h-*, чтобы порядок
+   подключения CSS в сборке ничего не ломал. */
+
+.re-screen.re-home {
+  display: flex; flex-direction: column; gap: 16px; margin: 0; border-radius: 0; background: transparent; font-size: 15px;
+}
+.re-screen.re-home :is(h1, h2) { margin: 0; font-family: var(--font-display); font-weight: 600; letter-spacing: -.01em; text-wrap: balance; }
+.re-screen.re-home h1 { font-size: 20px; line-height: 1.25; }
+.re-screen.re-home h2 { font-size: 16px; }
+.re-h-lead { margin: 0; max-width: 60ch; font-size: 14px; color: var(--muted); }
+.re-h-label { margin: 0; font-size: 10.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.re-h-hint { margin: 0; font-size: 12.5px; color: var(--muted); }
+.re-home a { color: inherit; text-decoration: none; }
+.re-home :is(a, button, input):focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* кнопки, метки, фильтры */
+.re-h-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 13px; border: 1.5px solid var(--line-strong);
+  border-radius: 10px; background: var(--surface); color: var(--ink); font: 600 13.5px/1.3 var(--font-ui); text-align: center; cursor: pointer;
+  touch-action: manipulation;
+}
+.re-h-btn:hover { border-color: var(--ink); }
+.re-h-btn.is-primary { border-color: var(--accent); background: var(--accent); color: var(--on-accent); }
+.re-h-btn.is-big { padding: 12px 18px; border-radius: 12px; font-size: 15px; }
+.re-h-btn:disabled { opacity: .45; cursor: default; }
+.re-h-btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.re-tag {
+  display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 999px; background: var(--surface-2);
+  color: var(--muted); font-size: 12px; font-weight: 600; white-space: nowrap;
+}
+.re-tag.is-ok { background: var(--fl-soft); color: var(--fl); }
+.re-tag.is-warn { background: var(--accent-soft); color: var(--accent); }
+.re-tag.is-live::before {
+  content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: re-h-pulse 2s ease-in-out infinite;
+}
+@keyframes re-h-pulse { 50% { opacity: .35; } }
+
+.re-h-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.re-h-chips button {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border: 1.5px solid var(--line); border-radius: 999px;
+  background: var(--surface); font-size: 13.5px; cursor: pointer;
+}
+.re-h-chips button[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--surface); }
+.re-h-chips .re-h-cnt { font-family: var(--font-data); font-size: 11.5px; opacity: .65; }
+
+/* шапка главной и поиск */
+.re-h-hero { display: flex; flex-direction: column; gap: 12px; }
+.re-h-copy { display: flex; flex-direction: column; gap: 6px; }
+.re-h-search {
+  display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 12px; border: 1.5px solid var(--line); border-radius: 12px;
+  background: var(--surface);
+}
+.re-h-search:focus-within { border-color: var(--ink); }
+.re-h-search svg { flex: none; width: 18px; height: 18px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; }
+.re-h-search input { flex: 1; min-width: 0; border: 0; background: none; color: var(--ink); font-size: 16px; outline: none; }
+.re-h-search input::placeholder { color: var(--faint); }
+.re-h-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.re-h-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* «Вы участвуете» */
+.re-h-mine { display: flex; flex-direction: column; gap: 8px; }
+.re-h-mcard {
+  display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 12px;
+  border: 1.5px solid var(--accent); border-radius: 14px; background: var(--accent-soft); text-align: left;
+}
+.re-h-mcard .re-h-poster { width: 44px; height: 58px; border-radius: 8px; }
+.re-h-mt { font-size: 15px; font-weight: 600; line-height: 1.25; }
+.re-h-ms { font-size: 12.5px; color: var(--muted); }
+.re-h-go { font-size: 13px; font-weight: 600; color: var(--accent); white-space: nowrap; }
+
+/* карточки событий */
+.re-h-poster { display: block; overflow: hidden; border-radius: 12px; background: var(--surface-2); box-shadow: 0 0 0 1px var(--line); }
+.re-h-poster img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.re-h-evs { display: flex; flex-direction: column; gap: 10px; }
+.re-h-ev {
+  display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 12px; padding: 10px; border: 1px solid var(--line);
+  border-radius: 16px; background: var(--surface);
+}
+.re-h-ev .re-h-poster { width: 76px; height: 100px; }
+.re-h-ev.is-past { opacity: .85; }
+.re-h-main { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.re-h-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.re-home .re-h-title { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.25; font-family: var(--font-ui); letter-spacing: 0; }
+.re-h-title a:hover { text-decoration: underline; text-underline-offset: 2px; }
+.re-h-meta { font-size: 12.5px; color: var(--muted); }
+.re-h-desc {
+  display: none; margin: 0; font-size: 13.5px; color: var(--muted); -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.re-h-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
+.re-h-none { padding: 18px; border: 1px dashed var(--line-strong); border-radius: 14px; color: var(--muted); }
+.re-h-more { align-self: center; }
+.re-h-loading { padding: 18px 4px; color: var(--muted); }
+.re-h-err { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 10px 12px; border: 1px solid var(--danger); border-radius: 12px; background: var(--danger-soft); font-size: 13.5px; }
+
+.re-h-promo { display: flex; flex-direction: column; gap: 10px; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.re-screen.re-home .re-h-promo h2 { font-size: 15px; }
+.re-h-promo ol { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; font-size: 13.5px; color: var(--muted); }
+.re-h-foot {
+  display: flex; flex-wrap: wrap; gap: 10px 28px; margin-top: 6px; padding-top: 16px; border-top: 1px solid var(--line);
+  font-size: 13px; color: var(--muted);
+}
+.re-h-foot div { display: flex; flex-direction: column; gap: 6px; min-width: 130px; }
+.re-h-foot b { font-size: 10.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; }
+.re-h-foot a:hover { color: var(--ink); text-decoration: underline; }
+
+/* кабинет */
+.re-h-cards { display: flex; flex-direction: column; gap: 10px; }
+.re-h-card { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.re-h-stats { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--muted); }
+.re-h-stats b { font-family: var(--font-data); color: var(--ink); font-weight: 600; }
+
+@media (min-width: 760px) {
+  .re-screen.re-home { gap: 20px; }
+  .re-screen.re-home h1 { font-size: 26px; }
+  .re-h-hero { display: grid; grid-template-columns: minmax(0, 1fr) 360px; align-items: end; gap: 16px 32px; }
+    .re-h-mine { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .re-h-mine > .re-h-label { grid-column: 1 / -1; }
+  .re-h-evs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .re-h-ev { grid-template-columns: 120px minmax(0, 1fr); gap: 16px; padding: 14px; }
+  .re-h-ev .re-h-poster { width: 120px; height: 160px; }
+  .re-h-main { gap: 6px; }
+  .re-h-desc { display: -webkit-box; }
+  .re-h-promo { flex-direction: row; align-items: center; justify-content: space-between; gap: 24px; }
+  .re-h-promo > div { display: flex; flex-direction: column; gap: 6px; }
+  .re-h-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) { .re-tag.is-live::before { animation: none; } }

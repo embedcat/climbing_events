@@ -1,0 +1,1000 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Каркас сайта: главная и панель организатора</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=Unbounded:wght@600&display=swap">
+<style>
+/* Макет общего каркаса сайта. Слева настройки макета, справа телефон или окно браузера.
+   Внутри: полоса сайта (логотип, меню, тема), главная, кабинет организатора и панель события.
+   Страница события участника (event-phone.html) встаёт в тот же каркас: над её шапкой та же полоса сайта. */
+:root{
+  --bg:#e9edf1; --app-bg:#f3f5f8; --surface:#fbfcfd; --surface-2:#e6eaef; --line:#d5dbe2; --line-strong:#b6bfca;
+  --ink:#17212c; --muted:#56626f; --faint:#a1abb6; --shadow:rgba(23,33,44,.16); --scrim:rgba(8,12,16,.45);
+  --fl:#157443; --fl-soft:#d6efdf; --rp:#1d52bb; --rp-soft:#dbe5fa;
+  --accent:#cf4812; --accent-soft:#fde5d6; --on-accent:#ffffff;
+  --danger:#bf262c; --danger-soft:#fadede;
+  --frame:#1a2129; --frame-line:#2e3844;
+  --pa-bg:#22303f; --pa-wall:#2e4358; --pa-h1:#ff8f55; --pa-h2:#5bcb8c; --pa-h3:#f4c95d; --pa-ink:#f3f5f8;
+  --font-display:"Unbounded","IBM Plex Sans",system-ui,sans-serif;
+  --font-ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-data:"IBM Plex Mono",ui-monospace,Consolas,"Liberation Mono",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b1015; --app-bg:#0f141a; --surface:#161d25; --surface-2:#1d2631; --line:#29333f; --line-strong:#3b4756;
+    --ink:#e4e9ef; --muted:#98a4b1; --faint:#56626f; --shadow:rgba(0,0,0,.55); --scrim:rgba(0,0,0,.6);
+    --fl:#5bcb8c; --fl-soft:#15321f; --rp:#89aaf6; --rp-soft:#1a2746;
+    --accent:#ff8f55; --accent-soft:#3b2317; --on-accent:#1a0d05;
+    --danger:#ff7b7b; --danger-soft:#3a1a1c;
+    --frame:#05070a; --frame-line:#27303b;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b1015; --app-bg:#0f141a; --surface:#161d25; --surface-2:#1d2631; --line:#29333f; --line-strong:#3b4756;
+  --ink:#e4e9ef; --muted:#98a4b1; --faint:#56626f; --shadow:rgba(0,0,0,.55); --scrim:rgba(0,0,0,.6);
+  --fl:#5bcb8c; --fl-soft:#15321f; --rp:#89aaf6; --rp-soft:#1a2746;
+  --accent:#ff8f55; --accent-soft:#3b2317; --on-accent:#1a0d05;
+  --danger:#ff7b7b; --danger-soft:#3a1a1c;
+  --frame:#05070a; --frame-line:#27303b;
+  color-scheme:dark;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:14px;line-height:1.4}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:inherit}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.muted{color:var(--muted)}
+:is(button,input,select,textarea,a):focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+/* макет: настройки и устройство */
+.page{display:grid;grid-template-columns:minmax(0,330px) auto;justify-content:center;align-items:start;gap:40px;padding-inline:16px;padding-block:24px}
+@media (max-width:800px){.page{grid-template-columns:minmax(0,1fr);gap:24px}}
+.panel{display:flex;flex-direction:column;gap:14px;padding-top:8px;min-width:0}
+.eyebrow{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.panel h1{margin:4px 0 0;font-family:var(--font-display);font-weight:600;font-size:22px;letter-spacing:-.01em;text-wrap:balance}
+.panel p{margin:0;max-width:46ch;color:var(--muted)}
+.opt{display:flex;flex-direction:column;gap:6px}
+.label{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.seg{display:inline-flex;flex-wrap:wrap;align-self:flex-start;gap:2px;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)}
+.seg button{border:0;background:transparent;padding:5px 10px;border-radius:6px;color:var(--muted);font-size:13px;white-space:nowrap;cursor:pointer}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:0 1px 2px var(--shadow)}
+.jump{display:flex;flex-wrap:wrap;gap:4px}
+.jump button{padding:4px 9px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font-size:12.5px;color:var(--muted);cursor:pointer}
+.jump button[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--surface)}
+.notes{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--muted)}
+.notes b{color:var(--ink);font-weight:600}
+.linkbtn{align-self:flex-start;padding:0;border:0;background:none;color:var(--muted);font-size:13px;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+
+.device{width:390px;height:clamp(640px,calc(100vh - 48px),840px);padding:11px;border-radius:46px;background:var(--frame);
+  box-shadow:0 24px 60px var(--shadow),inset 0 0 0 1px var(--frame-line)}
+@media (max-width:800px){.device{margin-inline:auto}}
+@media (max-width:460px){.device{width:100%;height:min(780px,calc(100svh - 32px));padding:0;border-radius:20px;box-shadow:0 0 0 1px var(--line)}}
+.screen{position:relative;width:100%;height:100%;overflow:hidden;border-radius:36px;background:var(--app-bg);container:app / inline-size}
+@media (max-width:460px){.screen{border-radius:19px}}
+.browser-bar{display:none}
+.page.desk{grid-template-columns:minmax(0,300px) minmax(0,1120px)}
+@media (max-width:1100px){.page.desk{grid-template-columns:minmax(0,1fr)}}
+.device.desk{display:flex;flex-direction:column;width:100%;padding:0;border-radius:12px;background:var(--surface-2);box-shadow:0 24px 60px var(--shadow),0 0 0 1px var(--line)}
+.device.desk .browser-bar{flex:none;display:flex;align-items:center;gap:12px;height:38px;padding:0 14px;border-bottom:1px solid var(--line)}
+.bb-dots{display:flex;gap:6px}
+.bb-dots i{width:10px;height:10px;border-radius:50%;background:var(--line-strong)}
+.bb-url{flex:0 1 420px;margin-inline:auto;padding:4px 12px;border-radius:999px;background:var(--surface);font-family:var(--font-data);font-size:12px;color:var(--muted);text-align:center}
+.device.desk .screen{flex:1 1 auto;height:auto;min-height:0;border-radius:0 0 12px 12px}
+
+/* приложение */
+.app{--col:1040px;--gut:16px;position:absolute;inset:0;display:flex;flex-direction:column;color:var(--ink);font-size:15px}
+.body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.wrap{display:flex;flex-direction:column;gap:16px;padding:16px var(--gut) 28px;max-width:calc(var(--col) + 2 * var(--gut));margin-inline:auto}
+.wrap h1,.wrap h2{margin:0;font-family:var(--font-display);font-weight:600;letter-spacing:-.01em;text-wrap:balance}
+.wrap h1{font-size:20px;line-height:1.25}
+.wrap h2{font-size:16px}
+.lead{margin:0;font-size:14px;color:var(--muted);max-width:60ch}
+.bh{margin:0;font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.hint{margin:0;font-size:12.5px;color:var(--muted)}
+
+/* полоса сайта: на каждой странице, в том числе над шапкой события */
+.site{flex:none;display:flex;align-items:center;gap:6px;height:50px;padding:0 10px 0 14px;background:var(--surface);border-bottom:1px solid var(--line);z-index:5}
+.brand{display:flex;align-items:center;padding:4px 6px 4px 0;border:0;background:none;color:var(--ink);cursor:pointer}
+.brand .site-logo{display:block;height:26px;width:auto;fill:currentColor}
+.brand .lg-dot{fill:var(--accent)}
+.site-nav{display:none;gap:2px;margin-left:10px}
+.site-nav button{padding:7px 11px;border:0;border-radius:8px;background:none;color:var(--muted);font-size:14px;cursor:pointer}
+.site-nav button:hover{color:var(--ink);background:var(--surface-2)}
+.site-nav button[aria-current="page"]{color:var(--ink);font-weight:600}
+.sp{flex:1}
+.ibtn{display:grid;place-items:center;width:38px;height:38px;border:0;border-radius:10px;background:none;color:var(--muted);cursor:pointer}
+.ibtn:hover{background:var(--surface-2);color:var(--ink)}
+.ibtn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.acc{display:flex;align-items:center;gap:6px;padding:3px 6px 3px 3px;border:1px solid var(--line);border-radius:999px;background:var(--surface);cursor:pointer}
+.acc[aria-expanded="true"]{border-color:var(--ink)}
+.acc svg{width:14px;height:14px;fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.avatar{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-size:12.5px;font-weight:600}
+.avatar.admin{background:var(--ink);color:var(--surface)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 18px;border:1.5px solid var(--line-strong);border-radius:12px;background:var(--surface);color:var(--ink);font-size:15px;font-weight:600;text-align:center;text-decoration:none;cursor:pointer;touch-action:manipulation}
+.btn.primary{border-color:var(--accent);background:var(--accent);color:var(--on-accent)}
+.btn.sm{padding:8px 13px;border-radius:10px;font-size:13.5px}
+.btn.danger{border-color:var(--danger);color:var(--danger)}
+.btn.wide{width:100%}
+.btn:disabled{opacity:.45;cursor:default}
+.btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.menu-host{position:absolute;inset:0;z-index:20;pointer-events:none}
+.menu-host.open{pointer-events:auto}
+.menu-bg{position:absolute;inset:0;background:var(--scrim)}
+.menu{position:absolute;top:54px;right:8px;display:flex;flex-direction:column;gap:2px;width:min(310px,calc(100% - 16px));padding:8px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:0 14px 40px var(--shadow)}
+.menu .who{display:flex;flex-direction:column;gap:1px;padding:8px 10px 10px;border-bottom:1px solid var(--line);margin-bottom:4px}
+.menu .who b{font-size:14px}
+.menu .who span{font-size:12.5px;color:var(--muted)}
+.menu .it{display:flex;align-items:center;gap:10px;padding:10px;border:0;border-radius:9px;background:none;font-size:14.5px;text-align:left;cursor:pointer}
+.menu .it:hover{background:var(--surface-2)}
+.menu .it svg{width:18px;height:18px;flex:none;fill:none;stroke:var(--muted);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.menu hr{width:100%;height:1px;margin:4px 0;border:0;background:var(--line)}
+.menu .theme{display:flex;flex-direction:column;gap:6px;padding:8px 10px}
+.menu .theme .seg{align-self:stretch}
+.menu .theme .seg button{flex:1;padding:7px 4px}
+
+/* главная */
+.hero{display:flex;flex-direction:column;gap:12px}
+.search{display:flex;align-items:center;gap:8px;height:46px;padding:0 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface)}
+.search:focus-within{border-color:var(--ink)}
+.search svg{flex:none;width:18px;height:18px;fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round}
+.search input{flex:1;min-width:0;border:0;background:none;font-size:16px;outline:none}
+.search input::placeholder{color:var(--faint)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border:1.5px solid var(--line);border-radius:999px;background:var(--surface);font-size:13.5px;cursor:pointer}
+.chips button[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--surface)}
+.chips .cnt{font-family:var(--font-data);font-size:11.5px;opacity:.65}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:999px;background:var(--surface-2);color:var(--muted);font-size:12px;font-weight:600;white-space:nowrap}
+.pill.ok{background:var(--fl-soft);color:var(--fl)}
+.pill.due{background:var(--accent);color:var(--on-accent)}
+.pill.warn{background:var(--accent-soft);color:var(--accent)}
+.pill.live::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+.poster{display:block;overflow:hidden;border-radius:12px;background:var(--pa-bg)}
+.poster svg{display:block;width:100%;height:100%}
+.pa-bg{fill:var(--pa-bg)} .pa-wall{fill:var(--pa-wall)} .pa-h1{fill:var(--pa-h1)} .pa-h2{fill:var(--pa-h2)} .pa-h3{fill:var(--pa-h3)}
+.pa-t{fill:var(--pa-ink);font-family:var(--font-display);font-weight:600;font-size:10.5px;letter-spacing:.02em}
+
+.mine-strip{display:flex;flex-direction:column;gap:8px}
+.mine-card{display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:12px;width:100%;padding:10px 12px;border:1.5px solid var(--accent);border-radius:14px;background:var(--accent-soft);text-align:left;cursor:pointer}
+.mine-card .poster{width:44px;height:58px;border-radius:8px}
+.mc-t{font-size:15px;font-weight:600;line-height:1.25}
+.mc-s{font-size:12.5px;color:var(--muted)}
+.mc-go{font-size:13px;font-weight:600;color:var(--accent);white-space:nowrap}
+
+.evs{display:flex;flex-direction:column;gap:10px}
+.ev{display:grid;grid-template-columns:76px minmax(0,1fr);gap:12px;padding:10px;border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+.ev .poster{width:76px;height:100px}
+.ev-main{display:flex;flex-direction:column;gap:5px;min-width:0}
+.ev-t{margin:0;font-size:16px;font-weight:600;line-height:1.25;cursor:pointer}
+.ev-m{font-size:12.5px;color:var(--muted)}
+.ev-d{display:none;margin:0;font-size:13.5px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ev-a{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto}
+.none{padding:18px;border:1px dashed var(--line-strong);border-radius:14px;color:var(--muted)}
+.more{align-self:center}
+.promo{display:flex;flex-direction:column;gap:10px;padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+.promo h2{font-size:15px}
+.promo ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px;font-size:13.5px;color:var(--muted)}
+.foot{display:flex;flex-wrap:wrap;gap:10px 28px;padding-top:16px;margin-top:6px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+.foot div{display:flex;flex-direction:column;gap:6px;min-width:130px}
+.foot b{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase}
+.foot button{align-self:flex-start;padding:0;border:0;background:none;color:var(--muted);font-size:13px;text-align:left;cursor:pointer}
+.foot button:hover{color:var(--ink);text-decoration:underline}
+
+/* страница события в каркасе сайта */
+.evhead{position:sticky;top:0;z-index:4;padding:14px var(--gut) 0;background:var(--surface);border-bottom:1px solid var(--line)}
+.evhead-in{max-width:calc(var(--col) + 2 * var(--gut));margin-inline:auto}
+.evhead-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.ev-title{font-family:var(--font-display);font-weight:600;font-size:15px;line-height:1.25;text-wrap:balance}
+.ev-date{margin-top:2px;font-size:12.5px;color:var(--muted)}
+.manage{flex:none;display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border:1.5px solid var(--accent);border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:12.5px;font-weight:600;cursor:pointer}
+.tabs{display:flex;margin-top:8px}
+.tabs button{flex:1;padding:10px 0 11px;border:0;border-bottom:2px solid transparent;background:none;color:var(--muted);font-size:13px;cursor:pointer}
+.tabs button[aria-current="page"]{border-bottom-color:var(--accent);color:var(--ink);font-weight:600}
+.stub{display:grid;grid-template-columns:92px minmax(0,1fr);gap:14px;align-items:start}
+.stub .poster{width:92px;height:122px;border-radius:10px}
+.facts{display:flex;flex-direction:column;gap:7px;margin:0}
+.facts div{display:flex;flex-direction:column;gap:1px}
+.facts dt{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.facts dd{margin:0;font-size:14.5px}
+.status{display:flex;flex-direction:column;gap:4px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.status.go{border-color:var(--fl)}
+.status b{font-size:15px}
+.status p{margin:0;font-size:13.5px;color:var(--muted)}
+.banner{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:13.5px}
+.banner.info{border-color:var(--accent);background:var(--accent-soft)}
+.cta-bar{flex:none;display:flex;gap:8px;padding:10px 16px calc(14px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line)}
+.cta-bar .btn{flex:1}
+
+/* кабинет и панель события */
+.head-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px}
+.mini{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--muted)}
+.mini b{font-family:var(--font-data);color:var(--ink);font-weight:600}
+.row-card{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+.row-top{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+.row-t{font-size:16px;font-weight:600;line-height:1.25}
+.crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:2px 6px;font-size:13px;color:var(--muted)}
+.crumbs button{padding:0;border:0;background:none;color:var(--muted);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.crumbs i{font-style:normal;color:var(--faint)}
+.back{display:inline-flex;align-items:center;gap:4px;align-self:flex-start;padding:4px 0;border:0;background:none;color:var(--muted);font-size:13.5px;cursor:pointer}
+.layout{display:flex;flex-direction:column;min-height:100%}
+.side{display:none}
+.content{display:flex;flex-direction:column;gap:16px;padding:16px var(--gut) 28px;min-width:0}
+.sec-menu{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:hidden}
+.sec-menu button{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;padding:13px 14px;border:0;border-top:1px solid var(--line);background:none;text-align:left;cursor:pointer}
+.sec-menu button:first-child{border-top:0}
+.sec-menu b{display:block;font-size:15px;font-weight:500}
+.sec-menu small{display:block;font-size:12.5px;color:var(--muted)}
+.sec-menu svg,.chev{width:16px;height:16px;fill:none;stroke:var(--faint);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.card{display:flex;flex-direction:column;gap:12px;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+.card h2{font-size:15px}
+.switches{display:flex;flex-direction:column}
+.sw{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
+.sw:first-child{border-top:0;padding-top:2px}
+.sw b{display:block;font-size:14.5px;font-weight:500}
+.sw small{display:block;font-size:12.5px;color:var(--muted)}
+.tgl{position:relative;width:46px;height:28px;padding:0;border:1.5px solid var(--line-strong);border-radius:999px;background:var(--surface-2);cursor:pointer;transition:background .15s}
+.tgl::after{content:"";position:absolute;top:2px;left:2px;width:21px;height:21px;border-radius:50%;background:var(--surface);box-shadow:0 1px 3px var(--shadow);transition:transform .15s}
+.tgl[aria-checked="true"]{border-color:var(--fl);background:var(--fl)}
+.tgl[aria-checked="true"]::after{transform:translateX(18px)}
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.kpi{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.kpi b{font-family:var(--font-display);font-size:22px;font-weight:600;line-height:1.15;font-variant-numeric:tabular-nums}
+.kpi span{font-size:12px;color:var(--muted)}
+.bar{display:block;height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:3px;background:var(--fl)}
+.todo{display:flex;flex-direction:column}
+.todo button{display:grid;grid-template-columns:22px minmax(0,1fr) auto;align-items:center;gap:10px;padding:10px 0;border:0;border-top:1px solid var(--line);background:none;text-align:left;font-size:14.5px;cursor:pointer}
+.todo button:first-child{border-top:0}
+.todo .tick{display:grid;place-items:center;width:20px;height:20px;border:1.5px solid var(--line-strong);border-radius:50%}
+.todo .done .tick{border-color:var(--fl);background:var(--fl);color:#fff}
+.todo .tick svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.todo small{color:var(--muted);font-size:12.5px}
+.links{display:flex;flex-direction:column;gap:8px}
+.link{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px}
+.link code{overflow:hidden;padding:8px 10px;border-radius:8px;background:var(--surface-2);font-family:var(--font-data);font-size:12px;white-space:nowrap;text-overflow:ellipsis}
+.danger-zone{border-color:var(--danger)}
+.danger-zone summary{cursor:pointer;font-size:15px;font-weight:600;color:var(--danger)}
+.danger-zone .acts{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.danger-zone .acts div{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+
+.fields{display:flex;flex-direction:column;gap:12px}
+.fld{display:flex;flex-direction:column;gap:5px;min-width:0}
+.fld>span{font-size:12.5px;font-weight:500;color:var(--muted)}
+.fld input,.fld select,.fld textarea{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--app-bg);font-size:16px}
+.fld textarea{min-height:110px;resize:vertical}
+.fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:var(--ink)}
+.row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.acc-group{border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:hidden}
+.acc-group+.acc-group{margin-top:8px}
+.acc-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;padding:13px 14px;border:0;background:none;text-align:left;cursor:pointer}
+.acc-head b{display:block;font-size:15px;font-weight:600}
+.acc-head small{display:block;font-size:12.5px;color:var(--muted)}
+.acc-head .chev{transition:transform .15s}
+.acc-head[aria-expanded="true"] .chev{transform:rotate(90deg)}
+.acc-body{display:flex;flex-direction:column;gap:12px;padding:4px 14px 16px;border-top:1px solid var(--line)}
+.savebar{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px calc(14px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line)}
+.savebar span{font-size:13px;color:var(--muted)}
+.savebar.dirty span{color:var(--accent);font-weight:600}
+
+.tbl-tools{display:flex;flex-wrap:wrap;gap:8px}
+.tbl-tools .search{flex:1 1 220px;height:42px}
+.plist{margin:0;padding:0;list-style:none;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.prow{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;padding:10px 14px;border:0;border-top:1px solid var(--line);background:none;text-align:left;cursor:pointer}
+.plist li:first-child .prow{border-top:0}
+.pn{display:flex;align-items:center;gap:6px;font-size:15px;font-weight:500}
+.pm{font-size:12.5px;color:var(--muted)}
+.pside{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.pin{font-family:var(--font-data);font-size:13px;font-weight:600}
+.pc{display:none;font-size:13.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plist-cols{display:none}
+.tick-ok{color:var(--fl);font-weight:600}
+.cards-grid{display:flex;flex-direction:column;gap:10px}
+.file{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.file b{display:block;font-size:14.5px;font-weight:600}
+.file small{display:block;font-size:12.5px;color:var(--muted)}
+.file .new{margin-left:6px;padding:1px 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:11px;font-weight:600}
+.route-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.route{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 2px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-family:var(--font-data);font-size:13px;font-weight:600}
+.route i{width:16px;height:4px;border-radius:2px}
+.auth{display:flex;flex-direction:column;gap:14px;max-width:420px;margin-inline:auto;width:100%;padding-top:10px}
+.auth .card{gap:14px}
+
+.sheet-host{position:absolute;inset:0;z-index:30;pointer-events:none}
+.sheet-host.open{pointer-events:auto}
+.sheet-bg{position:absolute;inset:0;background:var(--scrim)}
+.sheet{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:10px;max-height:82%;overflow-y:auto;padding:10px 16px 18px;border-radius:20px 20px 0 0;background:var(--surface);box-shadow:0 -8px 30px var(--shadow)}
+.grabber{align-self:center;width:40px;height:4px;border-radius:2px;background:var(--line-strong)}
+.sheet h3{margin:0;font-size:18px}
+.sheet .kv{display:flex;justify-content:space-between;gap:12px;padding-top:9px;border-top:1px solid var(--line);font-size:14px}
+.sheet .kv span:first-child{color:var(--muted)}
+.sheet-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+.toast{position:absolute;left:16px;right:16px;bottom:84px;z-index:40;padding:10px 14px;border-radius:12px;background:var(--ink);color:var(--surface);font-size:13.5px;text-align:center;box-shadow:0 8px 24px var(--shadow)}
+
+/* компьютер */
+@container app (min-width:760px){
+  .app{--gut:max(28px,calc((100% - var(--col)) / 2))}
+  .site{padding-inline:max(20px,calc((100% - var(--col)) / 2 - 8px))}
+  .site-nav{display:flex}
+  .wrap{padding:28px var(--gut) 40px;gap:20px}
+  .wrap h1{font-size:26px}
+  .hero{display:grid;grid-template-columns:minmax(0,1fr) 360px;align-items:end;gap:16px 32px}
+  .hero .copy{display:flex;flex-direction:column;gap:6px}
+  .mine-strip{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .evs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+  .ev{grid-template-columns:120px minmax(0,1fr);gap:16px;padding:14px}
+  .ev .poster{width:120px;height:160px}
+  .ev-main{gap:6px}
+  .promo{flex-direction:row;align-items:center;justify-content:space-between;gap:24px}
+  .promo>div{display:flex;flex-direction:column;gap:6px}
+  .evhead{padding-top:18px}
+  .ev-title{font-size:22px}
+  .ev-date{font-size:14px}
+  .tabs{gap:6px;margin-top:12px}
+  .tabs button{flex:none;padding:10px 14px 12px;font-size:14.5px}
+  .stub{grid-template-columns:260px minmax(0,1fr);gap:24px}
+  .stub .poster{width:100%;height:auto;aspect-ratio:3/4}
+  .cards-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .layout{display:grid;grid-template-columns:250px minmax(0,1fr);align-items:start;max-width:calc(var(--col) + 2 * var(--gut));margin-inline:auto;width:100%}
+  .side{display:flex;flex-direction:column;gap:3px;position:sticky;top:0;padding:24px 12px 24px var(--gut)}
+  .side .ev-box{display:flex;flex-direction:column;gap:6px;padding:0 0 14px 8px;margin-bottom:6px;border-bottom:1px solid var(--line)}
+  .side .ev-box b{font-family:var(--font-display);font-size:14px;line-height:1.25}
+  .side .grp{margin:12px 0 2px 10px}
+  .side button.it{display:flex;align-items:center;gap:8px;padding:8px 10px;border:0;border-radius:9px;background:none;color:var(--muted);font-size:14.5px;text-align:left;cursor:pointer}
+  .side button.it:hover{background:var(--surface-2);color:var(--ink)}
+  .side button.it[aria-current="page"]{background:var(--surface-2);color:var(--ink);font-weight:600}
+  .side .ext{margin-left:auto;color:var(--faint);font-size:12px}
+  .content{padding:28px var(--gut) 40px 12px}
+  .phone-only{display:none!important}
+  .kpis{gap:12px}
+  .tbl-tools .search{flex:0 0 340px}
+  .plist-cols{display:grid;grid-template-columns:minmax(0,1.8fr) 70px minmax(0,1fr) 40px 100px 80px;gap:12px;padding:0 15px;font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .prow{grid-template-columns:minmax(0,1.8fr) 70px minmax(0,1fr) 40px 100px 80px;gap:12px;padding-block:11px}
+  .prow .pm,.prow .pside{display:none}
+  .prow .pc{display:block}
+  .sheet{top:50%;right:auto;bottom:auto;left:50%;width:min(460px,calc(100% - 48px));max-height:84%;padding:20px 22px;border-radius:16px;transform:translate(-50%,-50%)}
+  .grabber{display:none}
+  .toast{right:auto;left:50%;width:min(440px,calc(100% - 32px));bottom:30px;transform:translateX(-50%)}
+  .savebar{padding-inline:max(28px,calc((100% - var(--col)) / 2))}
+  .savebar.in-panel{padding-left:calc(max(28px,calc((100% - var(--col)) / 2)) + 262px)}
+  .menu{right:max(12px,calc((100% - var(--col)) / 2 - 8px))}
+}
+@container app (max-width:759px){.desk-only{display:none!important}}
+@media (prefers-reduced-motion:reduce){.pill.live::before{animation:none}.tgl,.tgl::after,.acc-head .chev{transition:none}}
+</style>
+
+<div class="page" id="page">
+  <aside class="panel" aria-label="Настройки макета">
+    <div>
+      <div class="eyebrow">Макет · RockEvents</div>
+      <h1>Каркас сайта</h1>
+    </div>
+    <p>Общая рамка для всего сайта: полоса с логотипом, меню аккаунта и выбором темы стоит над каждой страницей, в том числе над страницей события. Главная ведёт к событиям, кабинет организатора и панель события собраны в одном месте.</p>
+
+    <div class="opt">
+      <span class="label" id="o-device">Устройство</span>
+      <div class="seg" data-opt="device" role="group" aria-labelledby="o-device">
+        <button type="button" data-v="phone">Телефон</button>
+        <button type="button" data-v="desk">Компьютер</button>
+      </div>
+    </div>
+    <div class="opt">
+      <span class="label" id="o-role">Кто смотрит</span>
+      <div class="seg" data-opt="role" role="group" aria-labelledby="o-role">
+        <button type="button" data-v="guest">Гость</button>
+        <button type="button" data-v="part">Участник</button>
+        <button type="button" data-v="org">Организатор</button>
+        <button type="button" data-v="admin">Суперадмин</button>
+      </div>
+    </div>
+    <div class="opt">
+      <span class="label" id="o-theme">Тема</span>
+      <div class="seg" data-opt="theme" role="group" aria-labelledby="o-theme">
+        <button type="button" data-v="auto">Авто</button>
+        <button type="button" data-v="light">Светлая</button>
+        <button type="button" data-v="dark">Тёмная</button>
+      </div>
+    </div>
+    <div class="opt">
+      <span class="label">Экраны</span>
+      <div class="jump" id="jump"></div>
+    </div>
+
+    <ul class="notes">
+      <li><b>Тема</b> — «Авто» (как в системе), «Светлая», «Тёмная». Выбор запоминается в браузере и не требует входа: переключатель в полосе сайта и в меню.</li>
+      <li><b>Выход из события</b> — логотип в полосе сайта ведёт на главную. Организатору в шапке события есть «Управление».</li>
+      <li><b>Участник</b> без аккаунта: главная показывает «Вы участвуете» по записям браузера.</li>
+      <li><b>Организатор</b> видит «Мои события», создаёт событие и работает в панели: с телефона разделы — список, с компьютера — боковое меню.</li>
+      <li><b>Обзор панели</b> — главные переключатели дня события: публикация, регистрация, ввод и результаты.</li>
+    </ul>
+    <button type="button" class="linkbtn" data-act="reset">Сбросить демо</button>
+  </aside>
+
+  <div class="device" id="device">
+    <div class="browser-bar" aria-hidden="true"><span class="bb-dots"><i></i><i></i><i></i></span><span class="bb-url" id="url">rockevents.ru</span></div>
+    <div class="screen">
+      <div class="app" id="app">
+        <header class="site" id="site"></header>
+        <div class="body" id="body"></div>
+        <div id="foot"></div>
+      </div>
+      <div class="menu-host" id="menu"></div>
+      <div class="sheet-host" id="sheet"></div>
+      <div class="toast" id="toast" role="status" hidden></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function plural(n, one, few, many) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return one;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+  return many;
+}
+
+/* ---------- демо-данные ---------- */
+// stage: reg — регистрация открыта, closed — закрыта, live — идёт ввод, over — ввод закрыт, done — завершено, draft — не опубликовано
+const EVENTS = [
+  { id: 128, title: 'Осенний фестиваль боулдеринга', date: '4 октября 2026', gym: 'Скалодром на Лесной', stage: 'reg', mine: true, n: 42, entered: 0, paid: 31, fee: 1500, owner: 'Анна Лесная',
+    short: 'Три сета по 2,5 часа, 15 трасс, призы от магазина «Вертикаль». Регистрация до 3 октября.', poster: 0 },
+  { id: 127, title: 'Ночной боулдеринг на Сходненской', date: '1 октября 2026', gym: 'Скалодром «Сходня»', stage: 'live', mine: false, n: 36, entered: 21, fee: 0, owner: 'Пётр Громов',
+    short: 'Один сет, 12 трасс. Ввод результатов открыт, таблица обновляется сама.', poster: 1 },
+  { id: 131, title: 'Кубок «Вертикали» среди новичков', date: '18 октября 2026', gym: 'Скалодром «Вертикаль»', stage: 'closed', mine: false, n: 48, entered: 0, fee: 1000, owner: 'Пётр Громов',
+    short: 'Места закончились. Хотите участвовать — напишите организатору.', poster: 2 },
+  { id: 119, title: 'Открытое первенство клуба «Магнезия»', date: '14 сентября 2026', gym: 'Скалодром на Лесной', stage: 'done', mine: true, n: 52, entered: 49, paid: 50, fee: 800, owner: 'Анна Лесная',
+    short: 'Итоговые результаты и призёры на странице события.', poster: 3 },
+  { id: 105, title: 'Летний фестиваль «Камень»', date: '20 июля 2026', gym: 'Скалодром «Камень»', stage: 'done', mine: false, n: 61, entered: 58, fee: 0, owner: 'Ирина Север',
+    short: 'Три сета, три группы, зачёт отдельно у мужчин и женщин.', poster: 0 },
+  { id: 132, title: 'Зимний боулдеринг (черновик)', date: '6 декабря 2026', gym: 'Скалодром на Лесной', stage: 'draft', mine: true, n: 0, entered: 0, fee: 0, owner: 'Анна Лесная',
+    short: 'Событие ещё не опубликовано: его видите только вы.', poster: 2 },
+];
+const REMEMBERED = [
+  { id: 128, who: 'Зайцева Юлия', note: 'Сет 3, 16:00 · взнос не оплачен', go: 'Открыть' },
+  { id: 119, who: 'Зайцева Юлия', note: '4 место из 14 · Спорт, женщины', go: 'Результаты' },
+];
+const NAMES = [
+  ['Зайцева', 'Юлия', 'Ж', 'Спорт', 3, 8335, false, false], ['Кузнецов', 'Алексей', 'М', 'Новички', 1, 4172, true, false],
+  ['Орлова', 'Анна', 'Ж', 'Любители', 2, 6029, true, false], ['Соколов', 'Дмитрий', 'М', 'Спорт', 1, 5518, true, false],
+  ['Лебедева', 'Ксения', 'Ж', 'Новички', 2, 7741, false, false], ['Волков', 'Игорь', 'М', 'Любители', 3, 1093, true, false],
+  ['Морозова', 'Алина', 'Ж', 'Спорт', 1, 2864, true, false], ['Белов', 'Артём', 'М', 'Новички', 3, 9350, false, false],
+  ['Карпова', 'Ева', 'Ж', 'Любители', 2, 3306, true, false], ['Громов', 'Никита', 'М', 'Спорт', 2, 4481, true, false],
+  ['Ершова', 'Вера', 'Ж', 'Новички', 1, 6612, true, false], ['Тихонов', 'Павел', 'М', 'Любители', 1, 7205, false, false],
+];
+const SECTIONS = [
+  { id: 'overview', t: 'Обзор', group: '', d: 'Главное в день события' },
+  { id: 'desc', t: 'Описание и афиша', group: 'Подготовка', d: 'Название, дата, афиша, текст' },
+  { id: 'settings', t: 'Настройки', group: 'Подготовка', d: 'Регистрация, группы и сеты, подсчёт' },
+  { id: 'routes', t: 'Трассы', group: 'Подготовка', d: '15 трасс · категории и цвета' },
+  { id: 'pay', t: 'Оплата', group: 'Подготовка', d: 'Взнос, промокоды, кошелёк' },
+  { id: 'people', t: 'Участники', group: 'В день события', d: 'PIN, контакты, оплата' },
+  { id: 'matrix', t: 'Ввод результатов', group: 'В день события', d: 'Матрица для бумажных карточек', ext: true },
+  { id: 'files', t: 'Протоколы и файлы', group: 'Итоги', d: 'Excel, QR-коды, карточки с PIN' },
+  { id: 'premium', t: 'Полный доступ', group: 'Служебное', d: 'Только суперадмин', admin: true },
+];
+const SET_GROUPS = [
+  { id: 'access', t: 'Публикация и доступ', d: 'Опубликовано · регистрация открыта · ввод и результаты' },
+  { id: 'reg', t: 'Регистрация', d: 'Поля анкеты, возраст, PIN после регистрации' },
+  { id: 'sets', t: 'Группы и сеты', d: '3 группы · 3 сета · до 16 в сете' },
+  { id: 'score', t: 'Подсчёт', d: 'От количества пролазов, flash +25%' },
+  { id: 'view', t: 'Что видят участники', d: 'Полные результаты, цвет и стоимость трасс' },
+  { id: 'entry', t: 'Ввод результатов участником', d: 'Проверка перед отправкой, повторный ввод' },
+];
+
+const state = {
+  device: 'phone', role: 'guest', theme: 'auto', screen: 'home', evt: 128, section: 'overview', tab: 'info',
+  menu: false, sheet: null, q: '', when: 'up', mineFilter: 'all', scope: 'mine', open: 'sets', dirty: false, pq: '',
+  flags: { 128: { pub: true, reg: true, enter: false, res: true } },
+  toast: '',
+};
+const isOrg = () => state.role === 'org' || state.role === 'admin';
+const isAdmin = () => state.role === 'admin';
+const ev = (id) => EVENTS.find((e) => e.id === id);
+const flags = (id) => state.flags[id] || (state.flags[id] = { pub: ev(id).stage !== 'draft', reg: ev(id).stage === 'reg', enter: ev(id).stage === 'live', res: true });
+// этап считаем по тем же переключателям, что в панели
+function stageOf(e) {
+  if (e.stage === 'done' || !state.flags[e.id]) return e.stage;
+  const f = state.flags[e.id];
+  if (!f.pub) return 'draft';
+  if (f.enter) return 'live';
+  if (e.entered > 0) return 'over';
+  return f.reg ? 'reg' : 'closed';
+}
+const STAGE = {
+  reg: ['Регистрация открыта', 'ok'], closed: ['Регистрация закрыта', ''], live: ['Идёт сейчас', 'ok live'],
+  over: ['Ввод закрыт', ''], done: ['Завершено', ''], draft: ['Черновик', 'warn'],
+};
+const pill = (stage) => `<span class="pill ${STAGE[stage][1]}">${STAGE[stage][0]}</span>`;
+
+/* ---------- иконки ---------- */
+const I = {
+  sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/></svg>',
+  moon: '<svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>',
+  auto: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17" /><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg>',
+  menu: '<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+  chev: '<svg viewBox="0 0 24 24" class="chev"><path d="M9 6l6 6-6 6"/></svg>',
+  down: '<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>',
+  search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>',
+  plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+  check: '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  list: '<svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>',
+  wallet: '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18M16 14.5h2"/></svg>',
+  out: '<svg viewBox="0 0 24 24"><path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9"/></svg>',
+  book: '<svg viewBox="0 0 24 24"><path d="M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h10"/></svg>',
+  chart: '<svg viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>',
+  gear: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>',
+  ext: '<svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg>',
+  copy: '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></svg>',
+  down2: '<svg viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>',
+};
+const LOGO = '<svg class="site-logo" viewBox="0 0 160.1 26" width="160" height="26" aria-hidden="true"><path class="lg-mark" fill-rule="evenodd" transform="scale(0.04685)" d="M0 1.2 L655 1.2 L327.5 554 Z M45 26.6 C 45 27, 144.9 196.3, 147.8 200.8 C 151.1 205.9, 166 195.1, 166 187.6 C 166 183.9, 170.5 180.8, 177.7 179.4 C 185 178, 187 178.3, 194.2 181.4 C 199.5 183.7, 199.5 183.7, 201.8 175.8 C 205.9 161.6, 207.2 155.4, 208 146.6 C 208.9 135.5, 208.6 135.8, 231.3 123.1 C 252.8 111, 267.5 97.7, 286.1 73.9 C 302 53.5, 323.5 54.3, 330.9 75.7 C 334.8 86.8, 335.8 88.3, 338.6 87.6 C 348.6 85.1, 359.7 96.4, 361.5 111.1 C 362.1 115.7, 362.1 115.7, 375.2 120.6 C 389.6 126, 396.3 130.7, 400.1 138.1 C 402.7 143.2, 403.9 143, 410.9 136.6 C 420.1 128.1, 424.9 128.2, 436.5 137.1 C 440 139.8, 447.6 144.5, 453.2 147.6 C 468.6 156, 473.1 159.6, 480 169 C 491.9 185.1, 504.4 199, 507 199 C 508.2 198.9, 608.1 31.8, 609.8 27 C 610 26.4, 506 26, 327.6 26 C 172.2 26, 45 26.3, 45 26.6 M300.2 70.6 C 298.4 72, 294.2 76.9, 290.8 81.3 C 287.5 85.8, 280.4 93.9, 275.1 99.3 C 264.2 110.3, 264.3 110.4, 277.3 116.6 C 284.2 119.9, 286.6 119.2, 295.5 110.7 C 299.2 107.2, 301.2 106, 303 106.2 C 307 106.7, 305.9 110.6, 297.1 128.4 C 292.6 137.3, 288.1 147.9, 287 152.2 C 285.9 156.4, 283.3 163.5, 281.4 168 C 277.7 176.5, 277.7 176.3, 279.6 188.6 C 280.2 192.7, 278.5 196, 275.8 196 C 273.6 196, 267.3 188.1, 263.2 180.3 C 258 170.2, 255.7 169.4, 246.4 174.3 C 240.8 177.2, 237.4 186.7, 236.4 202 C 235.5 217.2, 229.8 229, 223.4 229 C 221 229, 220.2 228.4, 214.2 221.7 C 212.4 219.7, 209.3 217.3, 207.3 216.5 C 203 214.7, 202 213.4, 197.8 205.5 C 192.8 195.8, 191.7 194.6, 185.4 192.6 C 177.4 190.1, 177.6 189.7, 172.5 219.2 C 171.7 224, 170.3 229.5, 169.4 231.3 C 166.8 236.8, 184.6 266.6, 190.3 266.4 C 195 266.2, 196.1 265.3, 199.8 257.7 C 203.8 249.7, 205.4 248.3, 212 247 C 221.4 245.2, 226.5 242.4, 247.7 226.8 C 252.1 223.6, 253.1 222.3, 254.4 217.6 C 257.2 208, 262.9 205.4, 279 206.4 C 289.6 207, 289.6 207, 302.6 199.5 C 318.3 190.3, 328.7 185.2, 332 184.9 C 337.7 184.6, 340.2 185.1, 342.3 187.3 C 343.5 188.6, 349.7 195.2, 356 202 C 391.9 240.6, 396.1 243.3, 411.4 237.6 C 429.2 230.9, 440.6 234.1, 444.4 246.9 C 445.1 249.4, 446.7 253.3, 447.8 255.5 C 450.5 260.7, 453 270.3, 453 275.6 C 453 281.7, 454.2 289, 455.1 288.5 C 458.8 286.2, 465.4 271.1, 465.1 265.5 C 464.9 259.1, 467.4 256, 472.8 256 C 474 256, 475.5 254.5, 477 251.7 C 479.9 246.2, 477.4 240.6, 467.1 229.7 C 459.2 221.4, 458.9 220.6, 456.4 201 C 454.8 188.2, 454.9 175.6, 456.6 163.3 C 457.2 159.2, 457.2 159.2, 449.1 155 C 444.6 152.7, 437.3 148.1, 432.8 144.9 C 423.2 137.9, 421.6 137.7, 416.5 143.1 C 407.1 152.7, 398.1 152.4, 392.5 142.3 C 388.7 135.5, 385.7 133.5, 370.8 127.9 C 354.6 121.8, 353.9 121.2, 353.1 112.3 C 352 100.9, 347.3 95.9, 338.1 96.3 C 331.3 96.6, 328.4 93.4, 323.8 80.7 C 319.4 68.2, 308.9 63.8, 300.2 70.6 M279 214.6 C 264.7 217.8, 265.5 216.7, 265.5 231.4 C 265.5 246, 265.8 245.4, 253.3 253.7 C 242.3 261, 242.1 264.6, 252.1 277.5 C 256.6 283.4, 265.4 298.9, 267.6 304.9 C 268.6 307.9, 271.3 312.1, 273.6 314.6 C 278.4 319.6, 286 333.8, 288.3 342 C 290.1 348.1, 292.8 351.1, 300.3 355.4 C 305.7 358.5, 323.4 383.8, 326.6 393 C 329.5 401.2, 332.2 406.4, 337 413.1 C 343.6 422.2, 348.8 432.9, 347.3 434.4 C 347 434.7, 344.1 431.4, 341 427.1 C 337.8 422.8, 334 418.4, 332.5 417.4 C 327.3 413.8, 325.3 411.1, 323.5 404.9 C 318.7 389.1, 295.2 375.8, 268.3 373.6 C 259.3 372.9, 253.4 368.1, 243 352.8 C 239.1 347, 233.6 342, 232.5 343.2 C 231.9 343.7, 326.6 503.5, 327.5 503.5 C 327.9 503.5, 352.1 463.2, 381.3 414 C 434.3 324.5, 434.3 324.5, 434.5 313 C 434.5 305.1, 435.1 299.6, 436.4 295.3 C 439.4 285, 438.4 270.9, 433.7 259.5 C 431.7 254.6, 429.7 249, 429.4 247.3 C 428.2 241, 425 240.9, 408.6 247.1 C 400.1 250.2, 398.7 254.4, 399 275.5 C 399.3 294, 398.7 307.4, 397.4 312.8 C 396.5 316.6, 396.1 320.8, 396.5 323 C 397.2 327, 395.3 338.7, 393.9 339.6 C 393.4 339.9, 392.5 338.9, 391.9 337.3 C 378.4 304.5, 367.6 288, 351.5 275.4 C 345.6 270.8, 333 245.6, 333 238.3 C 333 234.1, 329.7 229.5, 323.8 225.6 C 320.9 223.6, 316.4 220.5, 313.7 218.6 C 309.2 215.3, 304.5 213.9, 294.5 212.6 C 292.1 212.3, 285.8 213.2, 279 214.6"/><g class="lg-word" transform="translate(37.82 20.00) scale(0.20)"><path d="M29.8 -24.4L21.5 -24.4L21.5 0L5.9 0L5.9 -70.1L32.5 -70.1Q41 -70 43.8 -67.2Q46.7 -64.3 46.7 -58.2L46.7 -41.2Q46.7 -35.1 41.4 -32.2Q40 -31.5 40 -31.1Q40 -30.7 41.4 -30.1Q47.2 -27.1 47.2 -21L47.2 0L31.6 0L31.6 -22.5Q31.6 -24.4 29.8 -24.4M29.8 -56.6L21.5 -56.6L21.5 -37.9L29.8 -37.9Q31.6 -37.9 31.6 -39.7L31.6 -54.7Q31.6 -56.6 29.8 -56.6M58.4 -11.9L58.4 -58.2Q58.4 -64.3 61.3 -67.2Q64.2 -70 72.7 -70.1L85.5 -70.1Q94 -70 96.9 -67.2Q99.8 -64.3 99.8 -58.2L99.8 -11.9Q99.8 -5.8 96.9 -2.9Q94 0 85.5 0L72.7 0Q64.2 0 61.3 -2.9Q58.4 -5.8 58.4 -11.9M74.1 -54.7L74.1 -15.3Q74.1 -13.5 75.8 -13.5L82.3 -13.5Q84.1 -13.5 84.1 -15.3L84.1 -54.7Q84.1 -56.6 82.3 -56.6L75.8 -56.6Q74.1 -56.6 74.1 -54.7M151.3 -58.2L151.3 -43.4L136.7 -43.4L136.7 -54.7Q136.7 -56.6 134.9 -56.6L128.4 -56.6Q126.6 -56.6 126.6 -54.7L126.6 -15.3Q126.6 -13.5 128.4 -13.5L134.9 -13.5Q136.7 -13.5 136.7 -15.3L136.7 -26.7L151.3 -26.7L151.3 -11.9Q151.3 -5.8 148.4 -2.9Q145.6 0 137.1 0L125.2 0Q116.7 0 113.9 -2.9Q111 -5.8 111 -11.9L111 -58.2Q111 -64.3 113.9 -67.2Q116.7 -70 125.2 -70.1L137.1 -70.1Q145.6 -70 148.4 -67.2Q151.3 -64.3 151.3 -58.2M190 0L178.2 -31.2L178.2 0L162.5 0L162.5 -70.1L178.2 -70.1L178.2 -40.5L189 -70.1L204.8 -70.1L192.1 -35.7L205.8 0L190 0M212 -70.1L247.1 -70.1L247.1 -56.6L227.6 -56.6L227.6 -41.8L244.3 -41.8L244.3 -28.3L227.6 -28.3L227.6 -13.5L247.1 -13.5L247.1 0L212 0L212 -13.5L212 -70.1M263.7 0L251 -70.1L266.6 -70.1L276.1 -11.6L285.6 -70.1L301.2 -70.1L288.5 0L263.7 0M308.7 -70.1L343.8 -70.1L343.8 -56.6L324.3 -56.6L324.3 -41.8L341 -41.8L341 -28.3L324.3 -28.3L324.3 -13.5L343.8 -13.5L343.8 0L308.6 0L308.6 -13.5L308.7 -13.5L308.7 -70.1M381.2 0L367.2 -39.1L367.2 0L352.6 0L352.6 -70.1L368.2 -70.1L382.2 -29.5L382.2 -70.1L396.8 -70.1L396.8 0L381.2 0M440.8 -56.6L428 -56.6L428 0L412.4 0L412.4 -56.6L399.5 -56.6L399.5 -70.1L440.8 -70.1L440.8 -56.6M446.5 -37.1Q443.6 -40 443.6 -46.6L443.6 -58.2Q443.6 -64.3 446.5 -67.2Q449.4 -70 457.9 -70.1L469.7 -70.1Q478.2 -70 481.1 -67.2Q483.9 -64.3 483.9 -58.2L483.9 -46.8L469.3 -46.8L469.3 -54.7Q469.3 -56.6 467.5 -56.6L460.5 -56.6Q458.7 -56.6 458.7 -54.7L458.7 -48Q458.7 -45.7 468.7 -40.6Q478.7 -35.4 481.5 -32.6Q484.4 -29.6 484.4 -23L484.4 -11.9Q484.4 -5.8 481.5 -2.9Q478.7 0 470.2 0L457.4 0Q448.9 0 446 -2.9Q443.1 -5.8 443.1 -11.9L443.1 -23.2L458.3 -23.2L458.3 -15.3Q458.3 -13.5 460.1 -13.5L467 -13.5Q468.8 -13.5 468.8 -15.3L468.8 -22.1Q468.8 -23.9 459.1 -29.1Q449.4 -34.2 446.5 -37.1"/><path class="lg-dot" d="M492.4 -16.6L509 -16.6L509 0L492.4 0L492.4 -16.6"/><path d="M541.3 -24.4L533 -24.4L533 0L517.4 0L517.4 -70.1L543.9 -70.1Q552.4 -70 555.3 -67.2Q558.2 -64.3 558.2 -58.2L558.2 -41.2Q558.2 -35.1 552.9 -32.2Q551.5 -31.5 551.5 -31.1Q551.5 -30.7 552.9 -30.1Q558.7 -27.1 558.7 -21L558.7 0L543.1 0L543.1 -22.5Q543.1 -24.4 541.3 -24.4M541.3 -56.6L533 -56.6L533 -37.9L541.3 -37.9Q543.1 -37.9 543.1 -39.7L543.1 -54.7Q543.1 -56.6 541.3 -56.6M595.6 -15.3L595.6 -70.1L611.2 -70.1L611.2 -11.9Q611.2 -5.8 608.3 -2.9Q605.5 0 597 0L584.2 0Q575.7 0 572.8 -2.9Q569.9 -5.8 569.9 -11.9L569.9 -70.1L585.5 -70.1L585.5 -15.3Q585.5 -13.5 587.3 -13.5L593.8 -13.5Q595.6 -13.5 595.6 -15.3"/></g></svg>';
+function poster(i, title) {
+  const v = [
+    '<path class="pa-h1" d="M20 104c4-3 10-2 11 2s-3 8-8 8-7-6-3-10z"/><circle class="pa-h2" cx="52" cy="92" r="4.5"/><path class="pa-h3" d="M74 112c3-5 11-5 13 0 1 4-4 6-8 6s-7-2-5-6z"/><circle class="pa-h1" cx="96" cy="78" r="3.5"/>',
+    '<circle class="pa-h3" cx="30" cy="100" r="5"/><path class="pa-h2" d="M56 88c3-4 10-3 11 1s-3 7-7 7-6-4-4-8z"/><circle class="pa-h1" cx="86" cy="116" r="4"/><circle class="pa-h2" cx="100" cy="84" r="3"/>',
+    '<path class="pa-h2" d="M24 110c3-4 10-3 11 2s-4 7-8 6-5-4-3-8z"/><circle class="pa-h1" cx="60" cy="96" r="4.5"/><circle class="pa-h3" cx="90" cy="108" r="5"/><path class="pa-h1" d="M92 76c2-3 7-2 8 1s-2 5-5 5-4-3-3-6z"/>',
+    '<circle class="pa-h1" cx="28" cy="96" r="4"/><circle class="pa-h3" cx="58" cy="108" r="5.5"/><path class="pa-h2" d="M80 86c3-4 10-3 11 1s-3 7-7 7-6-4-4-8z"/><circle class="pa-h1" cx="100" cy="116" r="3.5"/>',
+  ][i % 4];
+  const words = esc(title).split(' ');
+  const t = words.slice(0, 3).map((w, k) => `<text class="pa-t" x="10" y="${24 + k * 13}">${w.slice(0, 11).toUpperCase()}</text>`).join('');
+  return `<span class="poster" aria-hidden="true"><svg viewBox="0 0 120 160" preserveAspectRatio="xMidYMid slice"><rect class="pa-bg" width="120" height="160"/><path class="pa-wall" d="M0 78 L120 50 L120 160 L0 160Z"/>${v}${t}</svg></span>`;
+}
+
+/* ---------- полоса сайта и меню ---------- */
+const THEME_ICON = { auto: I.auto, light: I.sun, dark: I.moon };
+const THEME_NAME = { auto: 'Авто', light: 'Светлая', dark: 'Тёмная' };
+const initials = () => (state.role === 'admin' ? 'ВК' : 'АЛ');
+const WHO = () => (state.role === 'admin' ? { name: 'Владелец сайта', mail: 'kip@rockevents.ru' } : { name: 'Анна Лесная', mail: 'anna@lesnaya.ru' });
+
+function renderSite() {
+  const nav = [['home', 'События'], ...(isOrg() ? [['mine', 'Мои события']] : []), ['help', 'Инструкции']];
+  const cur = { home: 'home', event: 'home', mine: 'mine', create: 'mine', panel: 'mine', wallets: 'mine', help: 'help' }[state.screen];
+  $('#site').innerHTML =
+    `<button type="button" class="brand" data-act="go" data-s="home" aria-label="RockEvents: на главную">${LOGO}</button>` +
+    `<nav class="site-nav" aria-label="Разделы сайта">${nav.map(([s, l]) => `<button type="button" data-act="go" data-s="${s}"${cur === s ? ' aria-current="page"' : ''}>${l}</button>`).join('')}</nav>` +
+    `<span class="sp"></span>` +
+    `<button type="button" class="ibtn" data-act="theme" aria-label="Тема: ${THEME_NAME[state.theme]}. Сменить" title="Тема: ${THEME_NAME[state.theme]}">${THEME_ICON[state.theme]}</button>` +
+    (state.role === 'guest' || state.role === 'part'
+      ? `<button type="button" class="btn sm" data-act="go" data-s="login">Войти</button><button type="button" class="ibtn phone-menu" data-act="menu" aria-label="Меню" aria-expanded="${state.menu}">${I.menu}</button>`
+      : `<button type="button" class="acc" data-act="menu" aria-label="Меню аккаунта" aria-expanded="${state.menu}"><span class="avatar${isAdmin() ? ' admin' : ''}">${initials()}</span>${I.down}</button>`);
+}
+
+function renderMenu() {
+  const host = $('#menu');
+  host.classList.toggle('open', state.menu);
+  if (!state.menu) { host.innerHTML = ''; return; }
+  const it = (s, icon, label) => `<button type="button" class="it" data-act="go" data-s="${s}">${I[icon]}${label}</button>`;
+  let body = '';
+  if (isOrg()) {
+    const w = WHO();
+    body += `<div class="who"><b>${w.name}</b><span>${w.mail}${isAdmin() ? ' · суперадмин' : ''}</span></div>` +
+      it('mine', 'list', 'Мои события') + it('create', 'plus', 'Создать событие') + it('wallets', 'wallet', 'Кошельки');
+    if (isAdmin()) body += '<hr>' + `<button type="button" class="it" data-act="go" data-s="mine" data-scope="all">${I.list}Все события</button>` +
+      `<button type="button" class="it" data-act="toast" data-m="Откроется статистика платформы">${I.chart}Статистика</button>` +
+      `<button type="button" class="it" data-act="toast" data-m="Откроется админка Django (/dja)">${I.gear}Админка Django</button>`;
+    body += '<hr>' + it('help', 'book', 'Инструкции');
+  } else {
+    body += (state.role === 'part' ? '<div class="who"><b>Вас помнит этот браузер</b><span>Зайцева Юлия · 2 события</span></div>' : '') +
+      it('home', 'list', 'События') + it('help', 'book', 'Инструкции') + it('create', 'plus', 'Создать событие') + it('login', 'out', 'Войти');
+  }
+  body += '<hr><div class="theme"><span class="label">Тема</span><div class="seg" data-opt="theme" role="group" aria-label="Тема">' +
+    ['auto', 'light', 'dark'].map((t) => `<button type="button" data-v="${t}" aria-pressed="${state.theme === t}">${THEME_NAME[t]}</button>`).join('') + '</div></div>';
+  if (isOrg()) body += '<hr>' + `<button type="button" class="it" data-act="logout">${I.out}Выйти</button>`;
+  host.innerHTML = `<div class="menu-bg" data-act="menu-close"></div><div class="menu" role="menu">${body}</div>`;
+}
+
+/* ---------- главная ---------- */
+function eventCta(e, st) {
+  const go = (s, l, p) => `<button type="button" class="btn sm${p ? ' primary' : ''}" data-act="open-ev" data-id="${e.id}" data-tab="${s}">${l}</button>`;
+  if (st === 'draft') return `<button type="button" class="btn sm primary" data-act="panel" data-id="${e.id}">Продолжить настройку</button>`;
+  if (st === 'reg') return go('reg', 'Зарегистрироваться', true) + go('info', 'Подробнее');
+  if (st === 'live') return go('enter', 'Внести результат', true) + go('results', 'Результаты');
+  if (st === 'closed') return go('info', 'Подробнее');
+  return go('results', 'Результаты', true);
+}
+function eventCard(e) {
+  const st = stageOf(e);
+  return `<article class="ev">${poster(e.poster, e.title)}<div class="ev-main">
+    <div class="row-top">${pill(st)}${e.mine && isOrg() ? '<span class="pill">ваше</span>' : ''}</div>
+    <h3 class="ev-t" data-act="open-ev" data-id="${e.id}" data-tab="info">${esc(e.title)}</h3>
+    <div class="ev-m">${e.date} · ${esc(e.gym)}</div>
+    <p class="ev-d">${esc(e.short)}</p>
+    <div class="ev-a">${eventCta(e, st)}</div></div></article>`;
+}
+function homeBody() {
+  const q = state.q.trim().toLowerCase();
+  const visible = EVENTS.filter((e) => stageOf(e) !== 'draft' || (isOrg() && e.mine));
+  const upcoming = visible.filter((e) => e.stage !== 'done'), past = visible.filter((e) => e.stage === 'done');
+  const list = (state.when === 'up' ? upcoming : past).filter((e) => !q || `${e.title} ${e.gym}`.toLowerCase().includes(q));
+  let h = '<div class="wrap">';
+  h += `<section class="hero"><div class="copy"><h1>Скалолазные соревнования</h1><p class="lead">Найдите событие, зарегистрируйтесь и вносите результаты с телефона. Результаты обновляются сразу.</p></div>` +
+    `<label class="search" for="q"><span class="sr-only">Найти событие</span>${I.search}<input id="q" type="search" placeholder="Название или скалодром" value="${esc(state.q)}" autocomplete="off"></label></section>`;
+  if (state.role === 'part') {
+    h += '<section class="mine-strip" aria-label="Вы участвуете"><h2 class="bh">Вы участвуете</h2>' + REMEMBERED.map((r) => {
+      const e = ev(r.id);
+      return `<button type="button" class="mine-card" data-act="open-ev" data-id="${e.id}" data-tab="${r.id === 119 ? 'results' : 'info'}">${poster(e.poster, e.title)}` +
+        `<span><span class="mc-t">${esc(e.title)}</span><br><span class="mc-s">${r.who} · ${r.note}</span></span><span class="mc-go">${r.go} →</span></button>`;
+    }).join('') + '</section>';
+  }
+  if (isOrg()) {
+    h += '<div class="head-row"><div class="mini">Вы вошли как организатор</div><div style="display:flex;gap:8px;flex-wrap:wrap">' +
+      '<button type="button" class="btn sm" data-act="go" data-s="mine">Мои события</button><button type="button" class="btn sm primary" data-act="go" data-s="create">Создать событие</button></div></div>';
+  }
+  h += `<div class="chips" role="group" aria-label="Период"><button type="button" data-act="when" data-v="up" aria-pressed="${state.when === 'up'}">Предстоящие<span class="cnt">${upcoming.length}</span></button>` +
+    `<button type="button" data-act="when" data-v="past" aria-pressed="${state.when === 'past'}">Прошедшие<span class="cnt">${past.length}</span></button></div>`;
+  h += list.length ? `<div class="evs">${list.map(eventCard).join('')}</div>` : '<div class="none">Ничего не нашли. Проверьте название или посмотрите прошедшие события.</div>';
+  if (list.length >= 3) h += '<button type="button" class="btn sm more" data-act="toast" data-m="Подгрузятся следующие события">Показать ещё</button>';
+  if (state.role === 'guest') {
+    h += `<section class="promo"><div><h2>Проводите соревнования?</h2><ol><li>Создайте событие и опубликуйте афишу.</li><li>Участники регистрируются сами и вносят результаты по PIN.</li><li>Протоколы и карточки участников — в Excel и на печать.</li></ol></div>` +
+      '<button type="button" class="btn primary" data-act="go" data-s="login">Создать событие</button></section>';
+  }
+  h += `<footer class="foot"><div><b>Участникам</b><button type="button" data-act="go" data-s="help">Как вносить результаты</button><button type="button" data-act="go" data-s="home">Все события</button></div>` +
+    `<div><b>Организаторам</b><button type="button" data-act="go" data-s="${isOrg() ? 'create' : 'login'}">Создать событие</button><button type="button" data-act="go" data-s="help">Инструкции</button></div>` +
+    `<div><b>Проект</b><button type="button" data-act="toast" data-m="О проекте">О проекте</button><button type="button" data-act="toast" data-m="Статистика платформы">Статистика</button></div></footer>`;
+  return h + '</div>';
+}
+
+/* ---------- страница события в каркасе ---------- */
+function eventBody() {
+  const e = ev(state.evt), st = stageOf(e);
+  const tabs = [['info', 'Инфо'], ['enter', 'Ввод'], ['people', 'Участники'], ['results', 'Результаты']];
+  const mine = isOrg() && e.mine || isAdmin();
+  const stageText = {
+    reg: ['Регистрация открыта', `До 3 октября, 23:59 · ${e.n} ${plural(e.n, 'участник', 'участника', 'участников')} · свободно 6 мест`, true],
+    closed: ['Регистрация закрыта', 'Хотите участвовать — напишите организатору, контакты в описании ниже.', false],
+    live: ['Идёт', `Ввод результатов открыт · внесли ${e.entered} из ${e.n}.`, true],
+    over: ['Ввод результатов закрыт', 'Не успели внести результат или нашли ошибку — подойдите к организатору.', false],
+    done: ['Соревнование завершено', `${e.date} · ${e.n} участников. Итоговые результаты открыты.`, false],
+    draft: ['Событие не опубликовано', 'Его видите только вы и суперадмин.', false],
+  }[st];
+  const content = state.tab === 'info'
+    ? `<section class="stub">${poster(e.poster, e.title)}<dl class="facts"><div><dt>Когда</dt><dd>${e.date}</dd></div><div><dt>Где</dt><dd>${esc(e.gym)}</dd></div>${e.fee ? `<div><dt>Взнос</dt><dd>${e.fee} ₽</dd></div>` : ''}</dl></section>` +
+      `<section class="status${stageText[2] ? ' go' : ''}"><b>${stageText[0]}</b><p>${stageText[1]}</p></section>`
+    : `<section class="status"><b>${tabs.find((t) => t[0] === state.tab)[1]}</b><p>Содержимое вкладки — по макету event-phone.html (карточки, анкета, таблицы).</p></section>`;
+  return `<div class="evhead"><div class="evhead-in"><div class="evhead-top"><div><div class="ev-title">${esc(e.title)}</div><div class="ev-date">${e.date} · ${esc(e.gym)}</div></div>` +
+    (mine ? `<button type="button" class="manage" data-act="panel" data-id="${e.id}">${I.gear.replace('<svg', '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"')}Управление</button>` : '') +
+    `</div><nav class="tabs" aria-label="Разделы события">${tabs.map(([s, l]) => `<button type="button" data-act="etab" data-t="${s}"${state.tab === s ? ' aria-current="page"' : ''}>${l}</button>`).join('')}</nav></div></div>` +
+    `<div class="wrap">${content}<div class="banner info"><span>Вкладки события остаются как в макете страницы события. Над шапкой — общая полоса сайта: логотип ведёт на главную, внутри неё тема и меню.</span></div></div>`;
+}
+function eventFoot() {
+  const e = ev(state.evt), st = stageOf(e);
+  if (st === 'reg') return '<div class="cta-bar"><button type="button" class="btn primary" data-act="toast" data-m="Откроется анкета регистрации">Зарегистрироваться</button></div>';
+  if (st === 'live') return '<div class="cta-bar"><button type="button" class="btn" data-act="etab" data-t="results">Результаты</button><button type="button" class="btn primary" data-act="etab" data-t="enter">Внести результат</button></div>';
+  return '';
+}
+
+/* ---------- вход, создание, кошельки, инструкции ---------- */
+function loginBody() {
+  return `<div class="wrap"><div class="auth"><h1>Вход для организаторов</h1><p class="lead">Участникам вход не нужен: регистрируйтесь и вносите результаты на странице события.</p>` +
+    `<div class="card"><div class="fields"><label class="fld"><span>Email</span><input type="email" value="anna@lesnaya.ru" autocomplete="email"></label>` +
+    `<label class="fld"><span>Пароль</span><input type="password" value="••••••••" autocomplete="current-password"></label></div>` +
+    `<button type="button" class="btn primary wide" data-act="login">Войти</button><div class="mini"><button type="button" class="linkbtn" data-act="toast" data-m="Восстановление пароля">Забыли пароль?</button></div></div>` +
+    `<p class="hint">Нет аккаунта? <button type="button" class="linkbtn" data-act="login">Зарегистрироваться как организатор</button>. Одобрение не нужно.</p></div></div>`;
+}
+function createBody() {
+  return `<div class="wrap"><div class="auth"><button type="button" class="back" data-act="go" data-s="mine">← Мои события</button><h1>Новое событие</h1>` +
+    `<p class="lead">Название и дату можно поменять позже. Остальное настроите в панели события: там же чек-лист подготовки.</p>` +
+    `<div class="card"><div class="fields"><label class="fld"><span>Название</span><input value="" placeholder="Например, Осенний фестиваль"></label>` +
+    `<div class="row2"><label class="fld"><span>Дата</span><input type="date" value="2026-11-14"></label><label class="fld"><span>Окончание <i style="font-style:normal;color:var(--faint)">если несколько дней</i></span><input type="date"></label></div></div>` +
+    `<button type="button" class="btn primary wide" data-act="create">Создать и перейти к настройке</button></div></div></div>`;
+}
+function walletsBody() {
+  return `<div class="wrap">${crumbs([['Мои события', 'mine'], ['Кошельки']])}<div class="head-row"><h1>Кошельки ЮMoney</h1><button type="button" class="btn sm primary" data-act="toast" data-m="Откроется форма добавления кошелька">Добавить</button></div>` +
+    `<p class="lead">Сюда приходят стартовые взносы, если событие принимает оплату через ЮMoney. Для СБП кошелёк не нужен.</p>` +
+    `<div class="card"><h2>Ссылка для уведомлений</h2><div class="link"><code>https://rockevents.ru/pay/notify/</code><button type="button" class="btn sm" data-act="toast" data-m="Ссылка скопирована">${I.copy}Копировать</button></div><p class="hint">Её нужно указать в настройках кошелька на стороне ЮMoney.</p></div>` +
+    `<div class="file"><div><b>Клуб «Лесная» · ****6789</b><small>используется в 2 событиях</small></div><button type="button" class="btn sm" data-act="toast" data-m="Редактирование кошелька">Изменить</button></div></div>`;
+}
+function helpBody() {
+  const items = ['Общее', 'Создание события', 'Настройки', 'Описание', 'Управление', 'Оплата', 'Трассы', 'Протоколы', 'Полный доступ'];
+  return `<div class="wrap"><h1>Инструкции для организаторов</h1><p class="lead">Те же тексты, что на сайте сейчас, в общем каркасе. На телефоне разделы — список, с компьютера — меню слева.</p>` +
+    `<div class="sec-menu">${items.map((t, i) => `<button type="button" data-act="toast" data-m="Откроется раздел «${t}»"><span><b>${t}</b></span>${I.chev}</button>`).join('')}</div></div>`;
+}
+function crumbs(parts) {
+  return `<nav class="crumbs desk-only" aria-label="Путь">${parts.map(([t, s], i) => (s ? `<button type="button" data-act="go" data-s="${s}"${s === 'panel' ? '' : ''}>${esc(t)}</button><i>›</i>` : `<span>${esc(t)}</span>`)).join('')}</nav>`;
+}
+
+/* ---------- мои события ---------- */
+function mineBody() {
+  const all = isAdmin() && state.scope === 'all';
+  let list = EVENTS.filter((e) => all || e.mine);
+  const f = state.mineFilter;
+  const cnt = (fn) => list.filter(fn).length;
+  if (f === 'live') list = list.filter((e) => ['live', 'over'].includes(stageOf(e)));
+  if (f === 'soon') list = list.filter((e) => ['reg', 'closed', 'draft'].includes(stageOf(e)));
+  if (f === 'done') list = list.filter((e) => e.stage === 'done');
+  const base = EVENTS.filter((e) => all || e.mine);
+  const c = (fn) => base.filter(fn).length;
+  return `<div class="wrap"><div class="head-row"><h1>${all ? 'Все события' : 'Мои события'}</h1><button type="button" class="btn primary sm" data-act="go" data-s="create">${I.plus}Создать событие</button></div>` +
+    (isAdmin() ? `<div class="chips" role="group" aria-label="Чьи события"><button type="button" data-act="scope" data-v="mine" aria-pressed="${!all}">Мои</button><button type="button" data-act="scope" data-v="all" aria-pressed="${all}">Все события сайта</button></div>` : '') +
+    `<div class="chips" role="group" aria-label="Фильтр"><button type="button" data-act="mf" data-v="all" aria-pressed="${f === 'all'}">Все<span class="cnt">${base.length}</span></button>` +
+    `<button type="button" data-act="mf" data-v="live" aria-pressed="${f === 'live'}">Идут<span class="cnt">${c((e) => ['live', 'over'].includes(stageOf(e)))}</span></button>` +
+    `<button type="button" data-act="mf" data-v="soon" aria-pressed="${f === 'soon'}">Впереди<span class="cnt">${c((e) => ['reg', 'closed', 'draft'].includes(stageOf(e)))}</span></button>` +
+    `<button type="button" data-act="mf" data-v="done" aria-pressed="${f === 'done'}">Завершены<span class="cnt">${c((e) => e.stage === 'done')}</span></button></div>` +
+    (list.length ? `<div class="cards-grid">${list.map((e) => {
+      const st = stageOf(e), pay = e.fee && e.paid !== undefined;
+      return `<article class="row-card"><div class="row-top">${pill(st)}${e.fee ? '<span class="pill">★ с оплатой</span>' : ''}</div>` +
+        `<div class="row-t">${esc(e.title)}</div><div class="ev-m">${e.date} · ${esc(e.gym)}${all ? ` · ${e.owner}` : ''}</div>` +
+        `<div class="mini"><span>участников <b>${e.n}</b></span><span>внесли результат <b>${e.entered}</b></span>${pay ? `<span>оплатили <b>${e.paid}</b></span>` : ''}</div>` +
+        `<div class="ev-a"><button type="button" class="btn sm primary" data-act="panel" data-id="${e.id}">Панель</button><button type="button" class="btn sm" data-act="open-ev" data-id="${e.id}" data-tab="info">Страница события</button>` +
+        (st === 'live' || st === 'over' ? `<button type="button" class="btn sm" data-act="panel" data-id="${e.id}" data-sec="matrix">Ввод результатов</button>` : '') + '</div></article>';
+    }).join('')}</div>` : '<div class="none">Здесь пока ничего нет.</div>') + '</div>';
+}
+
+/* ---------- панель события ---------- */
+const TICK = I.check;
+function sideHTML(e) {
+  const secs = SECTIONS.filter((s) => !s.admin || isAdmin());
+  let h = `<aside class="side desk-only" aria-label="Разделы панели"><div class="ev-box"><button type="button" class="back" data-act="go" data-s="mine">← Мои события</button><b>${esc(e.title)}</b><div class="row-top">${pill(stageOf(e))}</div>` +
+    `<button type="button" class="linkbtn" data-act="open-ev" data-id="${e.id}" data-tab="info">Страница события ↗</button></div>`;
+  let grp = null;
+  for (const s of secs) {
+    if (s.group !== grp) { grp = s.group; if (grp) h += `<div class="bh grp">${grp}</div>`; }
+    h += `<button type="button" class="it" data-act="sec" data-id="${s.id}"${state.section === s.id ? ' aria-current="page"' : ''}>${s.t}${s.ext ? '<span class="ext">↗</span>' : ''}</button>`;
+  }
+  return h + '</aside>';
+}
+function panelBody() {
+  const e = ev(state.evt), sec = SECTIONS.find((s) => s.id === state.section) || SECTIONS[0];
+  const fn = { overview: overviewHTML, people: peopleHTML, settings: settingsHTML, files: filesHTML, desc: descHTML, routes: routesHTML, pay: payHTML, matrix: matrixHTML, premium: premiumHTML }[sec.id];
+  const back = state.section === 'overview'
+    ? `<button type="button" class="back phone-only" data-act="go" data-s="mine">← Мои события</button>`
+    : `<button type="button" class="back phone-only" data-act="sec" data-id="overview">← ${esc(e.title)}</button>`;
+  return `<div class="layout">${sideHTML(e)}<div class="content">${crumbs([['Мои события', 'mine'], [e.title, 'panel'], [sec.t]])}${back}` +
+    `<div class="head-row"><h1>${sec.id === 'overview' ? esc(e.title) : sec.t}</h1>${sec.id === 'overview' ? pill(stageOf(e)) : ''}</div>${fn(e)}</div></div>`;
+}
+function sectionMenu(e) {
+  const secs = SECTIONS.filter((s) => s.id !== 'overview' && (!s.admin || isAdmin()));
+  const hint = { people: `${e.n} ${plural(e.n, 'участник', 'участника', 'участников')}`, settings: 'Регистрация, сеты, подсчёт' };
+  return `<div class="phone-only"><h2 class="bh" style="margin-bottom:8px">Разделы</h2><div class="sec-menu">${secs.map((s) =>
+    `<button type="button" data-act="sec" data-id="${s.id}"><span><b>${s.t}${s.ext ? ' ↗' : ''}</b><small>${hint[s.id] || s.d}</small></span>${I.chev}</button>`).join('')}</div></div>`;
+}
+function overviewHTML(e) {
+  const f = flags(e.id), st = stageOf(e);
+  const sw = (key, t, d) => `<div class="sw"><div><b>${t}</b><small>${d}</small></div><button type="button" class="tgl" role="switch" data-act="flag" data-k="${key}" aria-checked="${f[key]}" aria-label="${t}"></button></div>`;
+  const pc = e.n ? Math.round((e.entered / e.n) * 100) : 0;
+  const todo = [
+    ['desc', true, 'Описание и афиша', 'заполнено'], ['routes', true, 'Трассы', '15 трасс'],
+    ['settings', true, 'Группы, сеты и подсчёт', 'настроено'], ['pay', e.fee > 0, 'Оплата взноса', e.fee ? `${e.fee} ₽` : 'выключена, можно пропустить'],
+    ['overview', f.pub, 'Опубликовать событие', f.pub ? 'опубликовано' : 'участники пока не видят'],
+  ];
+  const doneN = todo.filter((t) => t[1]).length;
+  return `<div style="display:contents">` +
+    `<section class="card"><h2>Сейчас</h2><div class="switches">` +
+    sw('pub', 'Событие опубликовано', 'Видно на главной и по ссылке') + sw('reg', 'Регистрация открыта', 'Анкета и кнопка «Зарегистрироваться»') +
+    sw('enter', 'Ввод результатов открыт', 'Вкладка «Ввод» принимает PIN') + sw('res', 'Результаты открыты', 'Таблицы, места и призёры') +
+    `</div><p class="hint">Этап для участников: <b>${STAGE[st][0]}</b>. Закрыть ввод по окончании события — здесь же, автоматики по времени нет.</p></section>` +
+    `<div class="kpis"><div class="kpi"><b>${e.n}</b><span>${plural(e.n, 'участник', 'участника', 'участников')}</span></div><div class="kpi"><b>${e.entered}</b><span>внесли результат</span></div>` +
+    `<div class="kpi"><b>${e.fee ? e.paid ?? 31 : '—'}</b><span>оплатили взнос</span></div></div>` +
+    (e.entered ? `<div><div class="bar" aria-hidden="true"><i style="width:${pc}%"></i></div><p class="hint" style="margin-top:6px">Внесли результат ${e.entered} из ${e.n}</p></div>` : '') +
+    (doneN < todo.length ? `<section class="card"><h2>Подготовка · ${doneN} из ${todo.length}</h2><div class="todo">${todo.map(([s, ok, t, small]) =>
+      `<button type="button" class="${ok ? 'done' : ''}" data-act="sec" data-id="${s}"><span class="tick">${ok ? TICK : ''}</span><span>${t}<br><small>${small}</small></span>${I.chev}</button>`).join('')}</div></section>` : '') +
+    `<section class="card"><h2>Для зала</h2><div class="links"><div class="link"><code>rockevents.ru/e/${e.id}/results/?autorefresh&amp;m</code><button type="button" class="btn sm" data-act="toast" data-m="Ссылка на монитор (мужчины) скопирована">${I.copy}М</button></div>` +
+    `<div class="link"><code>rockevents.ru/e/${e.id}/results/?autorefresh&amp;f</code><button type="button" class="btn sm" data-act="toast" data-m="Ссылка на монитор (женщины) скопирована">${I.copy}Ж</button></div></div>` +
+    `<p class="hint">Монитор для экрана в зале: таблица обновляется каждые 10 секунд. QR-коды и карточки с PIN — в разделе «Протоколы и файлы».</p></section>` +
+    sectionMenu(e) +
+    `<details class="card danger-zone"><summary>Служебные действия</summary><div class="acts">` +
+    [['Пересчитать результаты', 'Заново считает баллы и места', 'btn sm'], ['Удалить результаты', 'Участники остаются, результаты стираются', 'btn sm danger'],
+      ['Очистить событие', 'Удаляет участников, трассы и прохождения', 'btn sm danger'], ['Удалить событие', 'Удаляет событие целиком', 'btn sm danger']]
+      .map(([t, d, c]) => `<div><span>${d}</span><button type="button" class="${c}" data-act="toast" data-m="Спросим подтверждение: «${t}»">${t}</button></div>`).join('') + '</div></details></div>';
+}
+function peopleHTML(e) {
+  const q = state.pq.trim().toLowerCase();
+  const rows = NAMES.filter((r) => !q || `${r[0]} ${r[1]}`.toLowerCase().includes(q));
+  return `<div style="display:contents"><div class="tbl-tools"><label class="search" for="pq"><span class="sr-only">Поиск</span>${I.search}<input id="pq" type="search" placeholder="Фамилия или PIN" value="${esc(state.pq)}" autocomplete="off"></label>` +
+    `<button type="button" class="btn sm" data-act="toast" data-m="Стартовый список скачивается в Excel">${I.down2}Стартовый список</button>` +
+    `<button type="button" class="btn sm" data-act="toast" data-m="Печатные карточки: PIN, QR и поле для отметок">Карточки с PIN <span class="pill warn">новое</span></button></div>` +
+    `<p class="hint">${e.n} ${plural(e.n, 'участник', 'участника', 'участников')}. Показаны первые ${NAMES.length}. Строка открывает карточку: контакты, оплата, правка анкеты.</p>` +
+    `<div class="plist-cols" aria-hidden="true"><span>Участник</span><span>PIN</span><span>Группа</span><span>Сет</span><span>Оплата</span><span>Результат</span></div>` +
+    `<ul class="plist">${rows.map((r, i) => `<li><button type="button" class="prow" data-act="person" data-i="${NAMES.indexOf(r)}"><span><span class="pn">${r[0]} ${r[1]}</span><span class="pm">${r[3]} · ${r[2]} · сет ${r[4]}</span></span>` +
+      `<span class="pside"><span class="pin">${r[5]}</span><span>${r[6] ? '<span class="pill ok">оплачен</span>' : '<span class="pill due">не оплачен</span>'}</span></span>` +
+      `<span class="pc pin">${r[5]}</span><span class="pc">${r[3]} · ${r[2]}</span><span class="pc">${r[4]}</span><span class="pc">${r[6] ? '<span class="pill ok">оплачен</span>' : '<span class="pill due">не оплачен</span>'}</span><span class="pc ${i % 3 ? 'tick-ok' : ''}">${i % 3 ? 'внесён' : '—'}</span></button></li>`).join('')}</ul></div>`;
+}
+function settingsHTML() {
+  const field = (t, v) => `<label class="fld"><span>${t}</span><input value="${v}" data-dirty></label>`;
+  const tg = (t, d, on) => `<div class="sw"><div><b>${t}</b>${d ? `<small>${d}</small>` : ''}</div><button type="button" class="tgl" role="switch" data-act="tgl" aria-checked="${on}" aria-label="${t}"></button></div>`;
+  const bodies = {
+    access: tg('Опубликовано', 'Видно на главной', true) + tg('Регистрация открыта', '', true) + field('Автоматически закрыть регистрацию', '3 октября 2026, 23:00') + tg('Ввод результатов разрешён', '', false) + tg('Просмотр результатов разрешён', '', true),
+    reg: `<label class="fld"><span>Поля анкеты</span><input value="пол, год рождения, разряд, город, команда, email, телефон" data-dirty></label>` + field('Обязательные поля', 'год рождения') + field('Минимальный возраст', '14') + tg('Показывать PIN после регистрации', '', true) + tg('Ввод результатов без регистрации', 'Анкета и результаты в одной форме', false) + field('Типы регистрации', ''),
+    sets: `<div class="row2">${field('Групп', '3')}${field('Список групп', 'Новички, Любители, Спорт')}</div><div class="row2">${field('Сетов', '3')}${field('Список сетов', '10:00, 13:00, 16:00')}</div>` + field('Максимум участников в сете (0 — без ограничения)', '16'),
+    score: `<label class="fld"><span>Система подсчёта</span><select data-dirty><option>От количества пролазов</option><option>Французская</option><option>Сумма баллов</option></select></label><div class="row2">${field('Очки за трассу', '80')}${field('Бонус за flash, %', '25')}</div>` + field('Считать лучших трасс (0 — все)', '0') + tg('Считать стоимость трассы отдельно по группам', '', true),
+    view: tg('Показывать полные результаты', '', true) + tg('Показывать цвет и категорию трассы', '', false) + tg('Показывать стоимость трассы', '', true) + tg('Учитывать только введённые результаты', '', true),
+    entry: tg('Проверка перед отправкой', 'Участник видит сводку отметок', false) + tg('Повторный ввод разрешён', 'Участник может исправить свои результаты', true),
+  };
+  return '<div style="display:contents"><p class="lead">Тот же набор настроек, что и сейчас, собранный по темам. Редкие блоки свёрнуты.</p><div>' + SET_GROUPS.map((g) =>
+    `<section class="acc-group"><button type="button" class="acc-head" data-act="acc" data-id="${g.id}" aria-expanded="${state.open === g.id}"><span><b>${g.t}</b><small>${g.d}</small></span>${I.chev}</button>` +
+    (state.open === g.id ? `<div class="acc-body">${bodies[g.id]}</div>` : '') + '</section>').join('') + '</div></div>';
+}
+function filesHTML(e) {
+  const f = (t, d, b, ic, nw) => `<div class="file"><div><b>${t}${nw ? '<span class="new">новое</span>' : ''}</b><small>${d}</small></div><button type="button" class="btn sm" data-act="toast" data-m="${t}: скачивание">${ic || I.down2}${b}</button></div>`;
+  return `<div style="display:contents"><div class="cards-grid">` +
+    f('Стартовый список', 'Листы по сетам, Excel', 'Скачать') + f('Итоговый протокол', 'Места, баллы и прохождения по группам, Excel', 'Скачать') +
+    f('Карточки участников с PIN', 'На печать: PIN, QR-код для ввода, поле для отметок трасс', 'Печать', I.down2, true) +
+    f('QR-код: страница события', 'Для афиши и чата', 'PNG') + f('QR-код: регистрация', 'Откроет анкету', 'PNG') + f('QR-код: ввод результатов', 'Откроет ввод, PIN подставится из карточки', 'PNG') +
+    `</div><p class="hint">Файлы собираются на сервере: прежние протоколы лежат в списке ниже и их можно удалить.</p>` +
+    `<div class="file"><div><b>protocol_2026-10-04.xlsx</b><small>3,4 МБ · сформирован вчера</small></div><button type="button" class="btn sm" data-act="toast" data-m="Файл скачивается">Скачать</button></div></div>`;
+}
+function descHTML(e) {
+  return `<div style="display:contents"><div class="card"><div class="fields"><label class="fld"><span>Название</span><input value="${esc(e.title)}" data-dirty></label>` +
+    `<div class="row2"><label class="fld"><span>Дата</span><input value="2026-10-04" type="date" data-dirty></label><label class="fld"><span>Скалодром</span><input value="${esc(e.gym)}" data-dirty></label></div>` +
+    `<label class="fld"><span>Краткое описание</span><input value="${esc(e.short)}" data-dirty></label></div></div>` +
+    `<div class="card"><h2>Афиша</h2><div style="display:flex;gap:14px;align-items:center">${poster(e.poster, e.title).replace('class="poster"', 'class="poster" style="width:72px;height:96px"')}<div class="fields"><button type="button" class="btn sm" data-act="toast" data-m="Выбор файла афиши">Загрузить другую</button><p class="hint">JPG или PNG, на сервере сожмём до WebP.</p></div></div></div>` +
+    `<div class="card"><h2>Описание</h2><label class="fld"><span class="sr-only">Описание</span><textarea data-dirty>Формат. Фестиваль для всех уровней: 15 трасс, три сета по 2,5 часа…</textarea></label><p class="hint">Редактор текста как сейчас: заголовки, списки, ссылки.</p></div></div>`;
+}
+function routesHTML() {
+  const colors = ['#e5483b', '#2f7fd8', '#2f9e60', '#f1b83a', '#8a5bd6'];
+  return `<div style="display:contents"><p class="lead">Категории и цвета задаются редко и обычно скрыты от участников, поэтому раздел отдельный.</p>` +
+    `<div class="route-grid">${Array.from({ length: 15 }, (_, i) => `<div class="route">${i + 1}<i style="background:${colors[i % 5]}"></i><span class="muted" style="font-size:11px;font-family:var(--font-ui);font-weight:400">${['6A', '6B', '6C', '7A', '5'][i % 5]}</span></div>`).join('')}</div>` +
+    `<p class="hint">Нажатие на трассу открывает её категорию и цвет. Число трасс меняется в «Настройках».</p></div>`;
+}
+function payHTML() {
+  return `<div style="display:contents"><div class="card"><div class="switches"><div class="sw"><div><b>Принимать взнос на сайте</b><small>Кнопка «Оплатить» и статус оплаты у участников</small></div><button type="button" class="tgl" role="switch" data-act="tgl" aria-checked="true" aria-label="Принимать взнос"></button></div></div>` +
+    `<div class="seg" role="group" aria-label="Способ"><button type="button" aria-pressed="true">ЮMoney</button><button type="button" aria-pressed="false">СБП</button></div>` +
+    `<div class="row2"><label class="fld"><span>Взнос, ₽</span><input value="1500" data-dirty></label><label class="fld"><span>Кошелёк</span><select data-dirty><option>Клуб «Лесная» · ****6789</option></select></label></div></div>` +
+    `<div class="card"><h2>Промокоды</h2><div class="file"><div><b>LESNAYA</b><small>новая цена 1 200 ₽ · использован 7 из 20</small></div><button type="button" class="btn sm" data-act="toast" data-m="Удаление промокода">Удалить</button></div><button type="button" class="btn sm" data-act="toast" data-m="Новый промокод">Добавить промокод</button></div>` +
+    `<div class="file"><div><b>Кто оплатил</b><small>31 из 42 · по СБП оплату отмечаете вручную</small></div><button type="button" class="btn sm" data-act="go" data-s="panel" data-sec="people">Открыть</button></div></div>`;
+}
+function matrixHTML(e) {
+  return `<div style="display:contents"><div class="banner info"><span>Матрица занимает весь экран: с компьютера — таблица на всю ширину, с телефона — шаги «участник → трассы». Боковое меню здесь убирается, остаётся «‹ Панель события».</span><button type="button" class="btn sm primary" data-act="toast" data-m="Откроется макет matrix.html">Открыть матрицу</button></div>` +
+    `<div class="kpis"><div class="kpi"><b>${e.entered}</b><span>внесли результат</span></div><div class="kpi"><b>${e.n - e.entered}</b><span>ждут ввода</span></div><div class="kpi"><b>3</b><span>сета</span></div></div></div>`;
+}
+function premiumHTML() {
+  return `<div style="display:contents"><div class="card"><div class="fields"><label class="fld"><span>Стоимость полного доступа, ₽</span><input value="990" data-dirty></label></div>` +
+    `<div class="switches"><div class="sw"><div><b>Полный доступ</b><small>Оплата на сайте, итоговые протоколы, больше 50 участников</small></div><button type="button" class="tgl" role="switch" data-act="tgl" aria-checked="true" aria-label="Полный доступ"></button></div>` +
+    `<div class="sw"><div><b>Событие состоялось</b><small>Переключается автоматически на следующий день</small></div><button type="button" class="tgl" role="switch" data-act="tgl" aria-checked="false" aria-label="Состоялось"></button></div></div></div></div>`;
+}
+
+/* ---------- рендер ---------- */
+const URLS = { home: '', event: 'e/128/', mine: 'my_events/', create: 'create/', panel: 'e/128/admin_actions/', wallets: 'wallets/', help: 'help/workflow/', login: 'accounts/login/' };
+const SCREENS = [['home', 'Главная'], ['event', 'Страница события'], ['login', 'Вход'], ['mine', 'Мои события'], ['create', 'Создать событие'], ['panel', 'Панель события'], ['wallets', 'Кошельки'], ['help', 'Инструкции']];
+function bodyHTML() {
+  switch (state.screen) {
+    case 'event': return eventBody();
+    case 'login': return loginBody();
+    case 'mine': return isOrg() ? mineBody() : loginBody();
+    case 'create': return isOrg() ? createBody() : loginBody();
+    case 'panel': return isOrg() ? panelBody() : loginBody();
+    case 'wallets': return isOrg() ? walletsBody() : loginBody();
+    case 'help': return helpBody();
+    default: return homeBody();
+  }
+}
+function footHTML() {
+  if (state.screen === 'event') return eventFoot();
+  const dirtyScreens = state.screen === 'panel' && ['settings', 'desc', 'pay', 'premium'].includes(state.section);
+  if (dirtyScreens) {
+    return `<div class="savebar in-panel${state.dirty ? ' dirty' : ''}"><span>${state.dirty ? 'Есть несохранённые изменения' : 'Все изменения сохранены'}</span><button type="button" class="btn primary" data-act="save"${state.dirty ? '' : ' disabled'}>Сохранить</button></div>`;
+  }
+  return '';
+}
+function renderBody(keepScroll) {
+  const body = $('#body'), top = body.scrollTop;
+  body.innerHTML = bodyHTML();
+  body.scrollTop = keepScroll ? top : 0;
+  $('#foot').innerHTML = footHTML();
+}
+function renderFrame() {
+  const desk = state.device === 'desk';
+  $('#page').classList.toggle('desk', desk);
+  $('#device').classList.toggle('desk', desk);
+  const base = { home: '', event: 'e/128/', mine: 'my_events/', create: 'create/', panel: `e/${state.evt}/admin_actions/`, wallets: 'wallets/', help: 'help/workflow/', login: 'accounts/login/' }[state.screen];
+  $('#url').textContent = `rockevents.ru/${base}`;
+}
+function paintOpts() {
+  document.querySelectorAll('.panel .seg[data-opt]').forEach((seg) => {
+    const v = String(state[seg.dataset.opt]);
+    seg.querySelectorAll('button[data-v]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+  });
+  $('#jump').innerHTML = SCREENS.map(([s, l]) => `<button type="button" data-act="jump" data-s="${s}" aria-pressed="${state.screen === s}">${l}</button>`).join('');
+}
+function applyTheme() {
+  const root = document.documentElement;
+  if (state.theme === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', state.theme);
+}
+function renderSheet() {
+  const host = $('#sheet'), r = state.sheet !== null ? NAMES[state.sheet] : null;
+  host.classList.toggle('open', !!r);
+  host.innerHTML = r ? '<div class="sheet-bg" data-act="sheet-close"></div><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-t"><div class="grabber"></div>' +
+    `<h3 id="sh-t">${r[0]} ${r[1]}</h3><div class="kv"><span>PIN</span><b class="pin">${r[5]}</b></div><div class="kv"><span>Группа</span><b>${r[3]}, ${r[2] === 'Ж' ? 'женщины' : 'мужчины'}</b></div>` +
+    `<div class="kv"><span>Сет</span><b>${r[4]}</b></div><div class="kv"><span>Телефон</span><b>+7 900 123-45-67</b></div><div class="kv"><span>Email</span><b>${r[0].toLowerCase()}@mail.ru</b></div>` +
+    `<div class="kv"><span>Взнос</span>${r[6] ? '<span class="pill ok">оплачен</span>' : '<span class="pill due">не оплачен</span>'}</div>` +
+    '<div class="sheet-actions"><button type="button" class="btn" data-act="sheet-close">Закрыть</button><button type="button" class="btn primary" data-act="toast" data-m="Откроется правка анкеты">Править анкету</button></div></div>' : '';
+}
+function renderAll() { renderFrame(); renderSite(); renderBody(); renderMenu(); renderSheet(); paintOpts(); applyTheme(); }
+let toastTimer;
+function toast(msg) {
+  const el = $('#toast'); el.textContent = msg; el.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 2600);
+}
+function go(screen, extra = {}) {
+  state.screen = screen; state.menu = false; state.sheet = null;
+  if (screen === 'panel') { state.section = extra.sec || 'overview'; if (extra.id) state.evt = +extra.id; }
+  if (screen === 'event') { state.tab = extra.tab || 'info'; if (extra.id) state.evt = +extra.id; }
+  if (extra.scope) state.scope = extra.scope;
+  state.dirty = false;
+  renderAll();
+}
+
+/* ---------- события ---------- */
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const d = el.dataset;
+  switch (d.act) {
+    case 'go': go(d.s, { scope: d.scope, sec: d.sec }); break;
+    case 'jump': go(d.s); break;
+    case 'open-ev': go('event', { id: d.id, tab: d.tab }); break;
+    case 'etab': state.tab = d.t; renderBody(); $('#foot').innerHTML = footHTML(); break;
+    case 'panel': go('panel', { id: d.id, sec: d.sec }); break;
+    case 'sec':
+      if (d.id === 'matrix') { toast('Матрица откроется на весь экран (макет matrix.html)'); }
+      state.section = d.id; state.dirty = false; renderBody(); $('#foot').innerHTML = footHTML(); break;
+    case 'menu': state.menu = !state.menu; renderSite(); renderMenu(); break;
+    case 'menu-close': state.menu = false; renderSite(); renderMenu(); break;
+    case 'theme': state.theme = { auto: 'light', light: 'dark', dark: 'auto' }[state.theme]; renderSite(); renderMenu(); paintOpts(); applyTheme(); toast(`Тема: ${THEME_NAME[state.theme].toLowerCase()}`); break;
+    case 'when': state.when = d.v; renderBody(true); break;
+    case 'mf': state.mineFilter = d.v; renderBody(true); break;
+    case 'scope': state.scope = d.v; renderBody(true); break;
+    case 'flag': {
+      const f = flags(state.evt); f[d.k] = !f[d.k];
+      renderBody(true); renderSite();
+      toast({ pub: f.pub ? 'Событие опубликовано' : 'Событие снято с публикации', reg: f.reg ? 'Регистрация открыта' : 'Регистрация закрыта', enter: f.enter ? 'Ввод открыт: участники вводят результаты по PIN' : 'Ввод закрыт', res: f.res ? 'Результаты открыты' : 'Результаты скрыты' }[d.k]);
+      break;
+    }
+    case 'tgl': el.setAttribute('aria-checked', String(el.getAttribute('aria-checked') !== 'true')); state.dirty = true; $('#foot').innerHTML = footHTML(); break;
+    case 'acc': state.open = state.open === d.id ? '' : d.id; renderBody(true); break;
+    case 'save': state.dirty = false; $('#foot').innerHTML = footHTML(); toast('Сохранено'); break;
+    case 'person': state.sheet = +d.i; renderSheet(); break;
+    case 'sheet-close': state.sheet = null; renderSheet(); break;
+    case 'login': state.role = state.role === 'admin' ? 'admin' : 'org'; go('mine'); toast('Вы вошли'); break;
+    case 'create': state.dirty = false; go('panel', { id: 132 }); toast('Событие создано. Осталось настроить и опубликовать.'); break;
+    case 'logout': state.role = 'guest'; go('home'); break;
+    case 'toast': state.menu = false; renderMenu(); renderSite(); toast(d.m); break;
+    case 'reset': reset(); break;
+    default: break;
+  }
+});
+document.addEventListener('input', (e) => {
+  if (e.target.id === 'q') { state.q = e.target.value; const pos = e.target.selectionStart; renderBody(true); const n = $('#q'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }
+  else if (e.target.id === 'pq') { state.pq = e.target.value; const pos = e.target.selectionStart; renderBody(true); const n = $('#pq'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }
+  else if (e.target.matches('[data-dirty]')) { if (!state.dirty) { state.dirty = true; $('#foot').innerHTML = footHTML(); } }
+});
+document.addEventListener('change', (e) => {
+  if (e.target.matches('select[data-dirty]') && !state.dirty) { state.dirty = true; $('#foot').innerHTML = footHTML(); }
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (state.sheet !== null) { state.sheet = null; renderSheet(); } else if (state.menu) { state.menu = false; renderSite(); renderMenu(); }
+});
+// настройки макета, они же переключатель темы внутри меню
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('.seg[data-opt] button[data-v]');
+  if (!b) return;
+  const opt = b.parentElement.dataset.opt;
+  if (state[opt] === b.dataset.v) return;
+  state[opt] = b.dataset.v;
+  if (opt === 'role') {
+    state.menu = false;
+    if (['mine', 'create', 'panel', 'wallets'].includes(state.screen) && !isOrg()) state.screen = 'home';
+    if (state.role === 'guest' && state.screen === 'event') state.screen = 'event';
+  }
+  renderAll();
+});
+
+function reset() {
+  Object.assign(state, { screen: 'home', evt: 128, section: 'overview', tab: 'info', menu: false, sheet: null, q: '', when: 'up', mineFilter: 'all', scope: 'mine', open: 'sets', dirty: false, pq: '', flags: { 128: { pub: true, reg: true, enter: false, res: true } } });
+  renderAll();
+}
+renderAll();
+})();
+</script>

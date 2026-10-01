@@ -1,15 +1,3 @@
-function onReady() {
-    var a = document.querySelector(".main-navigation");
-    document.querySelector(".js-extend-main-navigation").addEventListener(
-        "click",
-        function (e) {
-            e.preventDefault(), a.classList.toggle("extended");
-        },
-        !1
-    );
-}
-document.addEventListener("DOMContentLoaded", onReady);
-
 function confirm_action() {
     return confirm("Вы уверены?");
 }

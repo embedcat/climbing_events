@@ -13,9 +13,10 @@ from django.utils.http import parse_etags, quote_etag
 from datetime import datetime
 
 from events.exceptions import (
-    DuplicateParticipantError, EntryClosedError, InvalidResultsError, ParticipantNotFoundError,
-    ParticipantTooYoungError, PayUnavailableError, RegistrationClosedError, RegistrationNotNeededError,
-    ResultsUpdateNotAllowedError, SetFullError, WithoutRegistrationDisabledError,
+    DuplicateParticipantError, EntryClosedError, InvalidFlagsError, InvalidPanelActionError, InvalidResultsError,
+    PanelActionNotAllowedError, ParticipantNotFoundError, ParticipantTooYoungError, PayUnavailableError,
+    RegistrationClosedError, RegistrationNotNeededError, ResultsUpdateNotAllowedError, SetFullError,
+    WithoutRegistrationDisabledError,
 )
 from events.models import Event, Participant, Route, Wallet, PromoCode
 from events import services
@@ -36,6 +37,14 @@ ENTRY_ERRORS = {
     SetFullError: (status.HTTP_400_BAD_REQUEST, 'set_full'),
     ParticipantTooYoungError: (status.HTTP_400_BAD_REQUEST, 'too_young'),
     InvalidResultsError: (status.HTTP_400_BAD_REQUEST, 'invalid_results'),
+}
+
+
+# ошибки панели организатора
+PANEL_ERRORS = {
+    InvalidFlagsError: (status.HTTP_400_BAD_REQUEST, 'invalid_flags'),
+    InvalidPanelActionError: (status.HTTP_400_BAD_REQUEST, 'invalid_action'),
+    PanelActionNotAllowedError: (status.HTTP_403_FORBIDDEN, 'action_not_allowed'),
 }
 
 
@@ -270,6 +279,41 @@ class EventViewSet(viewsets.ModelViewSet):
                              'participant': e.participant_id}, status=status.HTTP_400_BAD_REQUEST)
         return Response({**services.get_matrix_payload(event=event), 'saved': saved})
 
+    @action(detail=True, methods=['get'], url_path='panel', permission_classes=[permissions.IsAuthenticated])
+    def panel(self, request, pk=None):
+        """«Обзор» панели события: переключатели дня события, числа, чек-лист подготовки"""
+        event = self.get_object()
+        _ensure_event_editor(request, event)
+        return Response(services.get_panel_overview(event=event))
+
+    @action(detail=True, methods=['post'], url_path='panel/flags', permission_classes=[permissions.IsAuthenticated])
+    def panel_flags(self, request, pk=None):
+        """Переключатели «Обзора»: {"is_published": true, ...}. Отвечает свежим обзором"""
+        event = self.get_object()
+        _ensure_event_editor(request, event)
+        try:
+            services.update_event_flags(event=event, flags=request.data)
+        except InvalidFlagsError as e:
+            http_status, code = PANEL_ERRORS[type(e)]
+            return Response({'error': str(e), 'code': code}, status=http_status)
+        return Response(services.get_panel_overview(event=event))
+
+    @action(detail=True, methods=['post'], url_path='panel/actions', permission_classes=[permissions.IsAuthenticated])
+    def panel_actions(self, request, pk=None):
+        """Служебные действия: update_score, clear_results, clear_event, remove_event, mock_data (суперпользователь).
+        После удаления события отвечает адресом, куда вести дальше"""
+        event = self.get_object()
+        _ensure_event_editor(request, event)
+        name = request.data.get('action')
+        try:
+            services.run_panel_action(event=event, action=name, is_superuser=request.user.is_superuser)
+        except tuple(PANEL_ERRORS) as e:
+            http_status, code = PANEL_ERRORS[type(e)]
+            return Response({'error': str(e), 'code': code}, status=http_status)
+        if name == 'remove_event':
+            return Response({'removed': True, 'redirect': reverse('my_events')})
+        return Response(services.get_panel_overview(event=event))
+
 
 class ParticipantViewSet(viewsets.ModelViewSet):
     serializer_class = ParticipantSerializer
@@ -465,6 +509,47 @@ class PromoCodeViewSet(viewsets.ModelViewSet):
         if user.is_superuser:
             return PromoCode.objects.all()
         return PromoCode.objects.filter(event__owner=user)
+
+
+def _parse_refs(raw: str) -> list:
+    """ «128:7,119:9,105» -> [(128, 7), (119, 9), (105, None)]: событие и, если известен, участник в нём """
+    refs = []
+    for part in (raw or '').split(','):
+        event_id, _, participant_id = part.strip().partition(':')
+        if event_id.isdigit() and (not participant_id or participant_id.isdigit()):
+            refs.append((int(event_id), int(participant_id) if participant_id else None))
+    return refs
+
+
+class SiteEventsApiView(APIView):
+    """ Главная: каталог событий. ?q=поиск&when=upcoming|past&offset=0 """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, format=None):
+        try:
+            offset = int(request.query_params.get('offset', 0))
+        except ValueError:
+            offset = 0
+        when = 'past' if request.query_params.get('when') == 'past' else 'upcoming'
+        return Response(services.get_site_events(
+            user=request.user, query=request.query_params.get('q', ''), when=when, offset=offset))
+
+
+class SiteParticipationsApiView(APIView):
+    """ «Вы участвуете»: карточки событий по записям браузера. ?refs=128:7,119:9 (событие:участник) """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, format=None):
+        return Response(dict(results=services.get_site_participations(
+            refs=_parse_refs(request.query_params.get('refs', '')))))
+
+
+class SiteMyEventsApiView(APIView):
+    """ Кабинет организатора: его события с числами. ?scope=all — все события сайта, только суперпользователю """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, format=None):
+        return Response(services.get_my_events(user=request.user, scope=request.query_params.get('scope', 'mine')))
 
 
 class StatApiView(APIView):

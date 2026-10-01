@@ -2,6 +2,11 @@
    анкета, оплата и закрытые экраны. На телефоне одна колонка, с 760 px те же экраны шире.
    Цвета и кнопки лежат в common.css, ввод и результаты — в entry.css и results.css. */
 
+/* Страница на всю высоту окна: полоса сайта сверху, под ней приложение события. Полоса не прокручивается,
+   поэтому прокручивается только содержимое внутри экрана. */
+body.re-body { display: flex; flex-direction: column; height: 100vh; height: 100dvh; margin: 0; overflow: hidden; }
+.re-body > #event-app { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+
 /* оболочка: шапка, прокручиваемое содержимое и закреплённая внизу панель с главным действием.
    В сборке порядок файлов CSS зависит от общих чанков, поэтому .re-screen из common.css перебиваем специфичностью,
    а не порядком подключения. */
@@ -11,21 +16,11 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  height: 100dvh;
+  flex: 1 1 auto;
+  min-height: 0;
   margin: 0;
   overflow: hidden;
   border-radius: 0;
-}
-@media (prefers-color-scheme: dark) {
-  .re-screen.re-app {
-    --app-bg: #0f141a; --surface: #161d25; --surface-2: #1d2631; --line: #29333f; --line-strong: #3b4756;
-    --ink: #e4e9ef; --muted: #98a4b1; --faint: #56626f; --shadow: rgba(0, 0, 0, .55); --scrim: rgba(0, 0, 0, .6);
-    --fl: #5bcb8c; --fl-soft: #15321f; --rp: #89aaf6; --rp-soft: #1a2746;
-    --accent: #ff8f55; --accent-soft: #3b2317; --on-accent: #1a0d05;
-    --danger: #ff7b7b; --danger-soft: #3a1a1c;
-    color-scheme: dark;
-  }
 }
 /* экран отдаёт шапке содержимое и панель действий как прямых детей оболочки */
 .re-fill { display: contents; }
@@ -34,7 +29,10 @@
 .re-head-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .re-title { font-family: var(--font-display); font-weight: 600; font-size: 15px; line-height: 1.25; text-wrap: balance; }
 .re-date { margin-top: 2px; font-size: 12.5px; color: var(--muted); }
-.re-manage { flex: none; padding-top: 2px; font-size: 12.5px; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
+.re-manage {
+  flex: none; display: inline-flex; align-items: center; padding: 5px 11px; border: 1.5px solid var(--accent); border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent); font-size: 12.5px; font-weight: 600; text-decoration: none;
+}
 .re-tabs { display: flex; margin-top: 8px; }
 .re-tabs a {
   flex: 1; display: block; padding: 10px 0 11px; border-bottom: 2px solid transparent; color: var(--muted);
@@ -69,7 +67,7 @@
 .re-intro { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 14px; align-items: start; }
 .re-poster {
   display: block; width: 92px; max-width: 100%; aspect-ratio: 3 / 4; padding: 0; border: 0; border-radius: 10px; overflow: hidden;
-  background: var(--surface-2); cursor: zoom-in; box-shadow: 0 2px 10px var(--shadow);
+  background: var(--surface-2); cursor: zoom-in; box-shadow: 0 0 0 1px var(--line), 0 2px 10px var(--shadow);
 }
 .re-poster img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .re-fact-list { display: flex; flex-direction: column; gap: 7px; margin: 0; }
@@ -248,7 +246,7 @@
   .re-head { padding: 22px var(--gut) 0; }
   .re-title { font-size: 22px; }
   .re-date { font-size: 14px; }
-  .re-manage { font-size: 13.5px; }
+  .re-manage { font-size: 13px; }
   .re-tabs { gap: 6px; margin-top: 12px; }
   .re-tabs a { flex: none; padding: 10px 14px 12px; font-size: 14.5px; }
   .re-main { gap: 18px; padding: 28px var(--gut) 40px; }

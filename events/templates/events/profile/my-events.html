@@ -1,15 +1,20 @@
-{% extends 'events/profile/base.html' %}
-{% load crispy_forms_tags %}
+{% extends 'events/base.html' %}
+{% load vite %}
 
-{% block title %}
-Мои события
-{% endblock title %}
+{# Кабинет целиком на Vue; список событий кладём в HTML, чтобы экран не мигал загрузкой #}
+{% block site_entry %}{% vite_entry 'src/entries/mine.ts' %}{% endblock site_entry %}
 
-{% block body %}
-{% include 'events/snippets/sn-my-events-table.html' with events=events %}
-{% if all_events %}
-<h4>Все события</h4>
-{% include 'events/snippets/sn-my-events-table.html' with events=all_events %}
-{% endif %}
-
-{% endblock body %}
+{% block container %}
+{{ site_context|json_script:"site-context" }}
+{{ mine_initial|json_script:"mine-initial" }}
+<div id="mine-app"></div>
+<noscript>
+  <h1>Мои события</h1>
+  <p>Для работы кабинета нужен включённый JavaScript. Ваши события:</p>
+  <ul>
+    {% for event in mine_initial.results %}
+    <li><a href="{% url 'admin_actions' event.id %}">{{ event.title }}</a> — {{ event.date }}</li>
+    {% endfor %}
+  </ul>
+</noscript>
+{% endblock container %}

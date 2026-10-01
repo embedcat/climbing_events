@@ -6,6 +6,8 @@ export interface KeyValueStore {
   /** false, если браузер не дал сохранить */
   set(key: string, value: string): boolean
   remove(key: string): void
+  /** все ключи хранилища: страница ищет по ним записи о запомненных участниках */
+  keys(): string[]
 }
 
 export function browserStore(): KeyValueStore {
@@ -32,6 +34,13 @@ export function browserStore(): KeyValueStore {
         /* хранилище недоступно, удалять нечего */
       }
     },
+    keys() {
+      try {
+        return Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i)).filter((k): k is string => k !== null)
+      } catch {
+        return []
+      }
+    },
   }
 }
 
@@ -48,5 +57,6 @@ export function memoryStore(initial: Record<string, string> = {}): KeyValueStore
     remove: (key) => {
       data.delete(key)
     },
+    keys: () => Array.from(data.keys()),
   }
 }

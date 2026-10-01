@@ -1,97 +1,22 @@
 {% extends 'events/event/base.html' %}
-{% load crispy_forms_tags %}
+{% load vite events_tags %}
 
-{% block title %}
-Управление <small><em>(<a href="{% url 'help' type='actions' %}">инструкции</a>)</em></small>
-{% endblock title %}
+{# «Обзор» панели на Vue (frontend/src/screens/panel): переключатели дня события, числа, чек-лист, служебные действия #}
+{% block site_entry %}{% vite_entry 'src/entries/panel.ts' %}{% endblock site_entry %}
+
+{% block title %}{{ event.title }}{% endblock title %}
 
 {% block body %}
-<h3>{% if event.is_premium %}<i class="fa-solid fa-star text-warning"></i> Событие с полным {% else %} Событие с базовым {% endif %}доступом:</h3>
-{% if event.is_premium %}
-<p>Вам доступен полный функционал!</p>
-{% else %}
-<p>В базовом варианте Вам доступен полный функционал, за исключением возможности приёма стартовых взносов на сайте, экспорт итоговых протоколов и ограничено максимальное количество участников в 50 человек.</p>
-<p><a href="{% url 'pay_premium_create' event.id %}">Открыть полный доступ</a></p>
-{% endif %}
-<h3>Сведения:</h3>
-<ol class="list-group list-group-flush">
-    <li class="list-group-item">
-        <div>Дата события: {{ event.date_display }}</div>
-    </li>
-    <li class="list-group-item">
-        <div>Зарегистрировано участников: {{ event.participant.count }}</div>
-    </li>
-    <li class="list-group-item">
-        <div>Внесено результатов: {{ entered_num }}</div>
-    </li>
-    {% if event.is_pay_allowed %}
-    <li class="list-group-item">
-        <div>Оплачено взносов: <a href="{% url 'pay_details' event.id %}">{{ paid_num }}</a></div>
-    </li>
-    {% endif %}
-</ol>
-<h3>Редактировать:</h3>
-<ol class="list-group list-group-flush">
-    <li class="list-group-item">
-        <div><a href="{% url 'admin_description' event.id %}">Описание</a></div>
-    </li>
-    <li class="list-group-item">
-        <div><a href="{% url 'admin_settings' event.id %}">Основные настройки</a></div>
-    </li>
-    <li class="list-group-item">
-        <div><a href="{% url 'pay_settings' event.id %}">Оплата</a></div>
-    </li>
-    <li class="list-group-item">
-        <div><a href="{% url 'route_editor' event.id %}">Трассы</a></div>
-    </li>
-    <li class="list-group-item">
-        <div><a href="{% url 'matrix' event.id %}">Ввод результатов</a> - перенос бумажных карточек и протоколов трасс</div>
-    </li>
-</ol>
-<h3>Действия:</h3>
-<form method="post">
-    {% csrf_token %}
-    <ol class="list-group list-group-flush">
-        <li class="list-group-item">
-            <div>
-                <input class="btn btn-primary" id="submit-id-update_score" name="update_score" type="submit" value="Пересчитать рузультаты" onclick="return confirm_action();" />
-                - Пересчитывает баллы трасс и участников
-            </div>
-        </li>
-        <li class="list-group-item">
-            <div>
-              <input class="btn btn-warning" id="submit-id-clear_results" name="clear_results" type="submit" value="Удалить результаты" onclick="return confirm_action();" />
-               - Удаляет результаты участников
-            </div>
-        </li>
-        <li class="list-group-item">
-            <div>
-              <input class="btn btn-danger" id="submit-id-clear_event" name="clear_event" type="submit" value="Очистить событие" onclick="return confirm_action();" {% if event.is_expired %}disabled{% endif %} />
-               - Удаляет всех участников, трассы и прохождения
-            </div>
-        </li>
-        <li class="list-group-item">
-            <div>
-              <input class="btn btn-danger" id="submit-id-remove_event" name="remove_event" type="submit" value="Удалить событие" onclick="return confirm_action();" />
-               - Удаляет событие полностью
-            </div>
-        </li>
-        <li class="list-group-item">
-            <div>
-              <input class="btn btn-danger" id="submit-id-mock_data" name="mock_data" type="submit" value="Тестовые данные" onclick="return confirm_action();" />
-               - Создать случайных участников и внести результаты (для тестирования)
-            </div>
-        </li>
-    </ol>
-</form>
-<h3>Страницы с автообновлением результатов:</h3>
-<p>Страница будет обновляться каждые 10 секунд, удобно использовать для трансляции результатов в режиме реального времени, например на большом экране в зале</p>
-<ol class="list-group list-group-flush">
-    <li class="list-group-item">
-        <div><a href="{{ male_link }}">Мужчины</a></div>
-    </li>
-    <li class="list-group-item">
-        <div><a href="{{ female_link }}">Женщины</a></div>
-    </li>
-</ol>
+{% panel_sections as sections %}
+{{ sections|json_script:"panel-sections" }}
+<div id="panel-app" data-screen="overview" data-event-id="{{ event.id }}" data-csrf-token="{{ csrf_token }}"
+     data-superuser="{% if user.is_superuser %}1{% endif %}"></div>
+<noscript>
+  <p>Для работы панели нужен включённый JavaScript. Разделы:</p>
+  <ul>
+    {% for group in sections %}{% for item in group.items %}
+    <li><a href="{{ item.url }}">{{ item.title }}</a></li>
+    {% endfor %}{% endfor %}
+  </ul>
+</noscript>
 {% endblock body %}

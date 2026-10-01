@@ -1,0 +1,145 @@
+/* Панель события организатора (docs/mockups/site.html): «Обзор» и таблица «Участники».
+   Рамка панели (боковое меню, крошки) приходит из Django (site.css), здесь только содержимое. Классы .re-p-* */
+
+.re-screen.re-panel {
+  display: flex; flex-direction: column; gap: 16px; margin: 0; border-radius: 0; background: transparent; font-size: 15px;
+}
+.re-panel a { color: inherit; text-decoration: none; }
+.re-panel :is(a, button, input, summary):focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.re-screen.re-panel :is(h2, h3) { margin: 0; font-family: var(--font-display); font-weight: 600; letter-spacing: -.01em; text-wrap: balance; }
+.re-screen.re-panel h2 { font-size: 15px; }
+.re-p-hint { margin: 0; font-size: 12.5px; color: var(--muted); }
+.re-p-under { margin-top: 6px; }
+.re-p-label { margin: 0; font-size: 10.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.re-screen.re-panel h2.re-p-label { font: 600 10.5px/1.4 var(--font-ui); letter-spacing: .07em; }
+.re-p-loading { padding: 18px 4px; color: var(--muted); }
+.re-p-err {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 10px 12px;
+  border: 1px solid var(--danger); border-radius: 12px; background: var(--danger-soft); font-size: 13.5px;
+}
+
+.re-p-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 13px; border: 1.5px solid var(--line-strong);
+  border-radius: 10px; background: var(--surface); color: var(--ink); font: 600 13.5px/1.3 var(--font-ui); cursor: pointer; touch-action: manipulation;
+}
+.re-p-btn:hover:not(:disabled) { border-color: var(--ink); }
+.re-p-btn:disabled { opacity: .45; cursor: default; }
+.re-p-btn.is-danger { border-color: var(--danger); color: var(--danger); }
+.re-p-btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.re-btn.is-danger { border-color: var(--danger); background: var(--danger); color: var(--surface); }
+
+.re-p-card { display: flex; flex-direction: column; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+
+/* переключатели */
+.re-p-switches { display: flex; flex-direction: column; }
+.re-p-sw { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid var(--line); }
+.re-p-sw:first-child { border-top: 0; padding-top: 2px; }
+.re-p-sw b { display: block; font-size: 14.5px; font-weight: 500; }
+.re-p-sw small { display: block; font-size: 12.5px; color: var(--muted); }
+.re-p-tgl {
+  position: relative; width: 46px; height: 28px; padding: 0; border: 1.5px solid var(--line-strong); border-radius: 999px;
+  background: var(--surface-2); cursor: pointer; transition: background .15s;
+}
+.re-p-tgl::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 21px; height: 21px; border-radius: 50%; background: var(--surface);
+  box-shadow: 0 1px 3px var(--shadow); transition: transform .15s;
+}
+.re-p-tgl[aria-checked="true"] { border-color: var(--fl); background: var(--fl); }
+.re-p-tgl[aria-checked="true"]::after { transform: translateX(18px); }
+
+/* числа */
+.re-p-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.re-p-kpi { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.re-p-kpi b { font-family: var(--font-display); font-size: 22px; font-weight: 600; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.re-p-kpi span { font-size: 12px; color: var(--muted); }
+.re-p-bar { display: block; height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.re-p-bar i { display: block; height: 100%; border-radius: 3px; background: var(--fl); }
+
+/* чек-лист */
+.re-p-todo { display: flex; flex-direction: column; }
+.re-p-todo a { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 14.5px; }
+.re-p-todo a:first-child { border-top: 0; }
+.re-p-tick { display: grid; place-items: center; width: 20px; height: 20px; border: 1.5px solid var(--line-strong); border-radius: 50%; }
+.re-p-todo .is-done .re-p-tick { border-color: var(--fl); background: var(--fl); color: var(--surface); }
+.re-p-tick svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.re-p-todo small { color: var(--muted); font-size: 12.5px; }
+.re-p-chev, .re-p-secmenu svg { width: 16px; height: 16px; fill: none; stroke: var(--faint); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ссылки для зала */
+.re-p-links { display: flex; flex-direction: column; gap: 8px; }
+.re-p-link { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.re-p-link code { overflow: hidden; color: var(--ink); padding: 8px 10px; border-radius: 8px; background: var(--surface-2); font-family: var(--font-data); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+
+/* разделы панели списком: только с телефона, на компьютере они слева */
+.re-p-phone { display: flex; flex-direction: column; gap: 8px; }
+.re-p-secmenu { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.re-p-secmenu a { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 13px 14px; border-top: 1px solid var(--line); }
+.re-p-secmenu a:first-child { border-top: 0; }
+.re-p-secmenu b { display: block; font-size: 15px; font-weight: 500; }
+.re-p-secmenu small { display: block; font-size: 12.5px; color: var(--muted); }
+
+/* служебные действия */
+.re-p-danger { border-color: var(--danger); }
+.re-p-danger summary { cursor: pointer; font-size: 15px; font-weight: 600; color: var(--danger); }
+.re-p-acts { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.re-p-acts > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+
+.re-p-confirm .re-p-hint { font-size: 14px; color: var(--ink); }
+.re-p-confirm .re-sheet-actions { grid-template-columns: 1fr 1fr; }
+
+/* участники для организатора */
+.re-p-tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.re-p-search {
+  flex: 1 1 220px; display: flex; align-items: center; gap: 8px; height: 42px; padding: 0 12px; border: 1.5px solid var(--line);
+  border-radius: 12px; background: var(--surface);
+}
+.re-p-search:focus-within { border-color: var(--ink); }
+.re-p-search svg { flex: none; width: 18px; height: 18px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; }
+.re-p-search input { flex: 1; min-width: 0; border: 0; background: none; color: var(--ink); font-size: 16px; outline: none; }
+.re-p-search input::placeholder { color: var(--faint); }
+.re-p-tools form { display: contents; }
+.re-p-cols { display: none; }
+.re-p-list { margin: 0; padding: 0; list-style: none; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.re-p-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; width: 100%; padding: 10px 14px;
+  border: 0; border-top: 1px solid var(--line); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.re-p-list li:first-child .re-p-row { border-top: 0; }
+.re-p-row:hover { background: var(--surface-2); }
+.re-p-name { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 500; }
+.re-p-meta { display: block; font-size: 12.5px; color: var(--muted); }
+.re-p-side { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.re-p-pin { font-family: var(--font-data); font-size: 13px; font-weight: 600; }
+.re-p-cell { display: none; font-size: 13.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.re-p-ok { color: var(--fl); font-weight: 600; }
+.re-p-pill { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.re-p-pill.is-ok { background: var(--fl-soft); color: var(--fl); }
+.re-p-pill.is-due { background: var(--accent); color: var(--on-accent); }
+.re-p-none { padding: 18px; border: 1px dashed var(--line-strong); border-radius: 14px; color: var(--muted); }
+
+.re-p-sheet { gap: 10px; }
+.re-p-kv { display: flex; justify-content: space-between; gap: 12px; padding-top: 9px; border-top: 1px solid var(--line); font-size: 14px; }
+.re-p-kv > span:first-child { color: var(--muted); }
+.re-p-kv b { font-weight: 600; text-align: right; overflow-wrap: anywhere; }
+.re-p-sheet-links { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 13.5px; }
+.re-p-sheet-links a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+
+@media (min-width: 760px) {
+  .re-screen.re-panel { gap: 20px; }
+  .re-p-phone { display: none; }
+  .re-p-kpis { gap: 12px; }
+  .re-p-search { flex: 0 0 340px; }
+  .re-p-cols, .re-p-row { grid-template-columns: var(--p-cols); gap: 12px; }
+  .re-p-cols {
+    display: grid; padding: 0 15px; font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted);
+  }
+  .re-p-row { padding-block: 11px; }
+  .re-p-row .re-p-meta, .re-p-row .re-p-side { display: none; }
+  .re-p-row .re-p-cell { display: block; }
+  .re-panel .re-sheet {
+    top: 50%; right: auto; bottom: auto; left: 50%; width: min(460px, calc(100% - 48px)); max-width: none; max-height: 84%;
+    margin: 0; padding: 20px 22px; border-radius: 16px; transform: translate(-50%, -50%);
+  }
+  .re-panel .re-grabber { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .re-p-tgl, .re-p-tgl::after { transition: none; } }

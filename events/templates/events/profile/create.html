@@ -1,10 +1,11 @@
-{% extends 'events/profile/base.html' %}
+{% extends 'events/base.html' %}
 {% load crispy_forms_tags %}
 
-{% block title %}
-Создать новое событие
-{% endblock title %}
-
-{% block body %}
+{% block container %}
+<div class="site-narrow">
+  <a class="small" href="{% url 'my_events' %}">← Мои события</a>
+  <h1>Новое событие</h1>
+  <p class="text-body-secondary">Название и дату можно поменять позже. Остальное настроите в панели события: там же чек-лист подготовки.</p>
   {% crispy form %}
-{% endblock body %}
+</div>
+{% endblock container %}
