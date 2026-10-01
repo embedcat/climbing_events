@@ -38,6 +38,7 @@ export interface EntryConfig {
 }
 
 export interface PublicParticipant {
+  id: number
   first_name: string
   last_name: string
   gender: Gender
@@ -45,6 +46,8 @@ export interface PublicParticipant {
   group: string
   set_index: number
   set: string
+  /** тип регистрации: от него зависит цена взноса */
+  reg_type_index: number
   is_entered_result: boolean
 }
 
@@ -56,7 +59,10 @@ export interface Standing {
 export interface EntryPayload {
   participant: PublicParticipant
   results: RouteResult[]
-  standing?: Standing
+  /** null: организатор скрыл результаты, места не показываем */
+  standing?: Standing | null
+  /** повторный ввод запрещён, а участник уже вносил результат: его отметки только для просмотра */
+  locked?: boolean
 }
 
 /** Анкета при вводе без регистрации. Набор полей зависит от настроек события. */

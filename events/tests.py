@@ -13,7 +13,7 @@ from django.urls import reverse
 from django.db.utils import IntegrityError
 from events.models import CustomUser, Event, Participant, Route, Wallet, PromoCode, PayDetail
 from events import img_tools, services
-from events.forms import ParticipantRegistrationForm, CreateEventForm
+from events.forms import CreateEventForm
 from events.exceptions import DuplicateParticipantError, ParticipantTooYoungError
 
 class ClimbingEventsBaseTestCase(TestCase):
@@ -320,31 +320,6 @@ class ServicesTestCase(ClimbingEventsBaseTestCase):
         self.assertEqual(p1.score, 21770.0)
 
 
-class FormsTestCase(ClimbingEventsBaseTestCase):
-    def test_participant_registration_form_fields(self):
-        event = services.create_event(owner=self.superuser, title="Form Event", date=datetime(2026, 10, 1))
-        # Explicitly configure fields for form rendering
-        event.registration_fields = [Event.FIELD_GENDER, Event.FIELD_BIRTH_YEAR, Event.FIELD_EMAIL]
-        event.required_fields = [Event.FIELD_BIRTH_YEAR]
-        event.save()
-        
-        form = ParticipantRegistrationForm(
-            group_list=services.get_group_list(event),
-            set_list=services.get_set_list(event),
-            registration_fields=services.get_registration_fields(event),
-            required_fields=services.get_registration_required_fields(event),
-            is_enter_form=False,
-            reg_type_list=event.reg_type_list
-        )
-        self.assertIn('first_name', form.fields)
-        self.assertIn('last_name', form.fields)
-        self.assertIn('gender', form.fields)
-        self.assertIn('birth_year', form.fields)
-        self.assertIn('email', form.fields)
-        self.assertTrue(form.fields['birth_year'].required)
-        self.assertFalse(form.fields['gender'].required)
-
-
 class ViewsTestCase(ClimbingEventsBaseTestCase):
     def setUp(self):
         super().setUp()
@@ -376,47 +351,46 @@ class ViewsTestCase(ClimbingEventsBaseTestCase):
         # Should display 3 events on page 2 (12 total events)
         self.assertEqual(len(response_page2.context['events']), 3)
 
-    def test_registration_view_get_post(self):
-        url = reverse('registration', kwargs={'event_id': self.event.id})
-        
-        # GET request
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'events/event/registration.html')
-
-        # POST request (successful registration)
-        post_data = {
-            'first_name': 'Алексей',
-            'last_name': 'Алексеев',
-            'gender': Participant.GENDER_MALE,
-            'birth_year': 1990,
-            'city': 'Москва',
-            'team': 'Скала',
-            'grade': Participant.GRADE_BR,
-            'email': 'alex@example.com',
-            'phone_number': '+79998887766'
-        }
-        response_post = self.client.post(url, data=post_data)
-        # Redirect to event_registration_ok view
-        self.assertEqual(response_post.status_code, 302)
-        
-        # Check participant is registered
-        self.assertEqual(Participant.objects.filter(event=self.event, last_name='Алексеев').count(), 1)
+    @override_settings(VITE_DEV_SERVER='http://localhost:5173')
+    def test_every_event_address_mounts_the_same_vue_app(self):
+        for name in ('event', 'enter_results', 'results', 'participants', 'registration', 'event_pay',
+                     'event_pay_done'):
+            response = self.client.get(reverse(name, kwargs={'event_id': self.event.id}))
+            self.assertEqual(response.status_code, 200, name)
+            self.assertContains(response, f'id="event-app" data-event-id="{self.event.id}"')
 
     @override_settings(VITE_DEV_SERVER='http://localhost:5173')
-    def test_enter_results_page_mounts_vue_app(self):
-        self.event.is_enter_result_allowed = True
-        self.event.save()
-        response = self.client.get(reverse('enter_results', kwargs={'event_id': self.event.id}))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, f'id="entry-app" data-event-id="{self.event.id}"')
+    def test_page_has_link_preview_tags(self):
+        response = self.client.get(reverse('event', kwargs={'event_id': self.event.id}))
+        self.assertContains(response, '<meta property="og:title" content="View Event">')
+        self.assertContains(response, '<title>View Event — RockEvents</title>')
 
-    def test_enter_results_page_hidden_for_unpublished_event(self):
+    def test_event_page_hidden_for_unpublished_event(self):
         self.event.is_published = False
         self.event.save()
         response = self.client.get(reverse('enter_results', kwargs={'event_id': self.event.id}))
-        self.assertNotContains(response, 'id="entry-app"')
+        self.assertNotContains(response, 'id="event-app"')
         self.assertContains(response, 'Событие не опубликовано')
+
+    def test_event_page_is_open_to_its_owner_when_unpublished(self):
+        self.event.is_published = False
+        self.event.save()
+        self.client.force_login(self.superuser)
+        with override_settings(VITE_DEV_SERVER='http://localhost:5173'):
+            response = self.client.get(reverse('event', kwargs={'event_id': self.event.id}))
+        self.assertContains(response, 'id="event-app"')
+
+    def test_old_pay_and_registration_links_lead_to_the_event_page(self):
+        pid = 5
+        eid = self.event.id
+        self.assertRedirects(self.client.get(reverse('pay_create', args=[eid, pid])),
+                             f"{reverse('event_pay', args=[eid])}?p={pid}", fetch_redirect_response=False)
+        self.assertRedirects(self.client.get(reverse('pay_ok', args=[eid])), reverse('event_pay_done', args=[eid]),
+                             fetch_redirect_response=False)
+        self.assertRedirects(self.client.get(reverse('pay_unavailable', args=[eid])), reverse('event_pay', args=[eid]),
+                             fetch_redirect_response=False)
+        self.assertRedirects(self.client.get(reverse('event_registration_ok', args=[eid, pid])),
+                             reverse('event', args=[eid]), fetch_redirect_response=False)
 
     def test_enter_wo_reg_old_link_redirects_to_enter_page(self):
         response = self.client.get(reverse('enter_wo_reg', kwargs={'event_id': self.event.id}))

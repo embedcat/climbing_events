@@ -1,5 +1,16 @@
-// Анкета участника при вводе без регистрации. Какие поля показывать и какие обязательны, решает событие.
-import type { EntryConfig, Gender, RegistrationPayload } from '../../api/entry'
+// Анкета участника: при регистрации и при вводе без регистрации. Какие поля показывать и какие обязательны,
+// решает событие.
+import type { Gender, RegistrationPayload } from '../../api/entry'
+
+/** Что анкете нужно знать о событии. Его отдают и конфигурация ввода, и страница события. */
+export interface RegistrationConfig {
+  registration_fields: string[]
+  required_fields: string[]
+  /** пусто, если группа одна */
+  groups: string[]
+  /** пусто, если сет один */
+  sets: unknown[]
+}
 
 export interface RegistrationForm {
   last_name: string
@@ -32,11 +43,11 @@ export const emptyForm = (): RegistrationForm => ({
   birth_year: '', city: '', team: '', grade: '', email: '', phone_number: '',
 })
 
-const hasField = (config: EntryConfig, name: string): boolean => config.registration_fields.includes(name)
-const isRequired = (config: EntryConfig, name: string): boolean => config.required_fields.includes(name)
+const hasField = (config: RegistrationConfig, name: string): boolean => config.registration_fields.includes(name)
+const isRequired = (config: RegistrationConfig, name: string): boolean => config.required_fields.includes(name)
 
 /** Что ещё надо заполнить, в винительном падеже: «Заполните фамилию, имя, пол». */
-export function missingFields(config: EntryConfig, form: RegistrationForm): string[] {
+export function missingFields(config: RegistrationConfig, form: RegistrationForm): string[] {
   const missing: string[] = []
   if (!form.last_name.trim()) missing.push('фамилию')
   if (!form.first_name.trim()) missing.push('имя')
@@ -53,7 +64,7 @@ export function missingFields(config: EntryConfig, form: RegistrationForm): stri
 }
 
 /** Поля анкеты, которые отправляем: только те, что попросило событие. */
-export function toRegistrationPayload(config: EntryConfig, form: RegistrationForm): RegistrationPayload {
+export function toRegistrationPayload(config: RegistrationConfig, form: RegistrationForm): RegistrationPayload {
   const payload: RegistrationPayload = { last_name: form.last_name.trim(), first_name: form.first_name.trim() }
   if (hasField(config, 'gender') && form.gender) payload.gender = form.gender
   if (config.groups.length) payload.group_index = form.group_index

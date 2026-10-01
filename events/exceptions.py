@@ -64,3 +64,13 @@ class InvalidResultsError(Exception):
 class WithoutRegistrationDisabledError(Exception):
     def __str__(self):
         return "Для этого события ввод без регистрации отключён."
+
+
+class RegistrationNotNeededError(Exception):
+    def __str__(self):
+        return "Регистрация на это событие не нужна: имя, группу и сет укажите вместе с результатами."
+
+
+class PayUnavailableError(Exception):
+    def __str__(self):
+        return "Оплата временно недоступна."

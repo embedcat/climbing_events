@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { isDesktop } from '../../domain/device'
 import { plural } from '../../domain/format'
 import {
   cellView, flashRedpointTotals, formatScore, frenchTotals, fullName, genderLabel,
@@ -83,7 +84,9 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
         <p class="re-small">{{ summary }}</p>
       </template>
 
-      <p v-if="isMe" class="re-is-me">Это вы. Телефон запомнил, в результатах сразу открывается ваша группа.</p>
+      <p v-if="isMe" class="re-is-me">
+        Это вы. {{ isDesktop ? 'Браузер' : 'Телефон' }} запомнил, в результатах сразу открывается ваша группа.
+      </p>
       <div class="re-sheet-actions" :class="{ 'is-one': isMe && !payload.event.can_edit }">
         <button ref="button" type="button" class="re-btn" @click="flow.closeSheet()">Закрыть</button>
         <button v-if="!isMe" type="button" class="re-btn is-primary" @click="flow.rememberPerson(row)">Это я, запомнить</button>

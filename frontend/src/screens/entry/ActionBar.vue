@@ -3,7 +3,8 @@ import { computed } from 'vue'
 import { plural } from '../../domain/format'
 import type { EntryFlow } from './useEntryFlow'
 
-const props = defineProps<{ flow: EntryFlow; resultsUrl: string }>()
+const props = defineProps<{ flow: EntryFlow; canSeeResults: boolean; resultsHref: string }>()
+defineEmits<{ results: [event: MouseEvent] }>()
 
 const total = computed(() => props.flow.results.length)
 const summary = computed(() => props.flow.summary)
@@ -15,12 +16,15 @@ const badRoutes = computed(() => props.flow.invalidRoutes.map((index) => index +
 </script>
 
 <template>
-  <footer class="re-action">
-    <template v-if="flow.step === 'done'">
-      <div class="re-act-row is-two">
+  <footer class="re-action is-narrow">
+    <template v-if="flow.step === 'done' || flow.step === 'locked'">
+      <div v-if="flow.step === 'done' && flow.updateAllowed" class="re-act-row is-two">
         <button type="button" class="re-btn" @click="flow.edit()">Исправить</button>
-        <a class="re-btn is-primary" :href="resultsUrl">Смотреть результаты</a>
+        <a v-if="canSeeResults" class="re-btn is-primary" :href="resultsHref" @click="$emit('results', $event)">Смотреть результаты</a>
       </div>
+      <a
+        v-else-if="canSeeResults" class="re-btn is-primary is-wide" :href="resultsHref" @click="$emit('results', $event)"
+      >Смотреть результаты</a>
     </template>
     <template v-else>
       <div v-if="flow.sendError" class="re-send-err" role="alert">{{ flow.sendErrorText }}</div>

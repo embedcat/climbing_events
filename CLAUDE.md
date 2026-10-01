@@ -104,13 +104,25 @@ all domain logic lives in one app, organized by *layer* instead:
     so new features should get an API endpoint, not only a server-rendered view.
   - Because both surfaces share `services.py`, keep business rules consistent between
     them rather than duplicating logic in a view.
-- Экран ввода результатов участником (`/e/<id>/enter/`) целиком на Vue: страницу отдаёт `EnterResultsView`, данные
-  идут через `/api/events/<id>/entry/{config,identify,submit,submit-without-registration}/`, логика в
-  `services.py` (`get_entry_config`, `identify_participant`, `submit_results_by_pin`,
-  `submit_results_without_registration`, `parse_results`, `check_results`). Код экрана — `frontend/src/screens/entry/`.
-- Экран результатов (`/e/<id>/results/`) тоже на Vue: данные из `/api/events/<id>/results/`
-  (`services.get_results_payload`), код — `frontend/src/screens/results/`. Места считает `_update_results` только для
-  тех, кто ввёл результат; у остальных `place == 0`. `services.get_results` остался для Excel-протокола.
+- Страница события для участника целиком на Vue (`frontend/src/screens/event/`, точка входа `entries/event.ts`).
+  Все адреса `/e/<id>/`, `enter/`, `participants/`, `results/`, `registration/`, `pay/`, `pay/done/` отдаёт один
+  `EventPageView` (шаблон `events/event/page.html`: заголовок, превью ссылок, корневой `<div id="event-app">`), а
+  экран выбирает Vue по адресу (`router.ts`). Вкладки «Инфо», «Ввод», «Участники», «Результаты», анкета и оплата —
+  экраны одного приложения, поэтому шапка не перезагружается. Данные идут через
+  `/api/events/<id>/{page,participants,registration,me,pay,pay/promo}/` (`services.get_event_page_payload`,
+  `get_public_participants`, `register_participant_on_site`, `get_participant_me`, `get_pay_payload`,
+  `check_promo_code`; этап события — `services.get_event_stage`). Старые адреса оплаты и «регистрация завершена»
+  только редиректят на страницу события.
+- Вкладка «Ввод» — `frontend/src/screens/entry/`, данные из `/api/events/<id>/entry/{config,identify,submit,submit-without-registration}/`,
+  логика в `services.py` (`get_entry_config`, `identify_participant`, `is_entry_locked`, `submit_results_by_pin`,
+  `submit_results_without_registration`, `parse_results`, `check_results`). Повторный ввод запрещён и участник уже
+  вносил результат: `identify` отвечает 200 с `locked: true`, а не ошибкой. Пока результаты скрыты, места
+  (`standing`) не отдаём.
+- Вкладка «Результаты» — `frontend/src/screens/results/`, данные из `/api/events/<id>/results/`
+  (`services.get_results_payload`). Места считает `_update_results` только для тех, кто ввёл результат; у остальных
+  `place == 0`. `services.get_results` остался для Excel-протокола.
+- Браузер помнит участника (`frontend/src/domain/remember.ts`: id, имя, пол, группа, сет, без PIN): по нему страница
+  события показывает карточку «Вы». Запись общая для всех экранов страницы (`createRememberedMe`).
 - Массовый ввод организатором (`/e/<id>/matrix/`, только владелец и суперпользователь): Vue-экран
   `frontend/src/screens/matrix/`, API `/api/events/<id>/matrix/` и `matrix/save/` (`services.get_matrix_payload`,
   `services.save_matrix_changes`: всё-или-ничего, пишет только переданные трассы, места пересчитывает после записи).

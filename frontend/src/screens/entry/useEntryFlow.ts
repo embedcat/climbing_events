@@ -7,8 +7,9 @@ import {
 } from '../../api/entry'
 import { asApiError } from '../../api/http'
 import { clearDraft, draftKey, loadDraft, saveDraft } from '../../domain/draft'
+import { onPhone } from '../../domain/device'
 import { readPinFromHash } from '../../domain/link'
-import { rememberParticipant } from '../../domain/remember'
+import { createRememberedMe, type RememberedMe } from '../../domain/remember'
 import {
   cloneResults, cycleTile, emptyResults, invalidFrenchRoutes, stepAttempt, summarize,
   type AttemptKind, type RouteResult,
@@ -18,12 +19,14 @@ import {
   emptyForm, missingFields, pickForm, toRegistrationPayload, type RegistrationForm,
 } from './registration'
 
-export type Step = 'loading' | 'fatal' | 'closed' | 'identify' | 'entry' | 'done'
+export type Step = 'loading' | 'fatal' | 'closed' | 'identify' | 'entry' | 'locked' | 'done'
 
 export interface FlowDeps {
   eventId: number
   api: EntryApi
   store: KeyValueStore
+  /** запомненный участник; общий с остальными экранами страницы события */
+  remembered?: RememberedMe
   /** location.hash страницы; подменяется в тестах */
   readHash?: () => string
   /** убрать PIN из адресной строки */
@@ -35,6 +38,7 @@ export interface FlowDeps {
 
 export function useEntryFlow(deps: FlowDeps) {
   const { eventId, api, store } = deps
+  const remembered = deps.remembered ?? createRememberedMe(store, eventId)
   const now = deps.now ?? Date.now
   const readHash = deps.readHash ?? (() => window.location.hash)
   const clearHash = deps.clearHash ?? (() => {
@@ -83,6 +87,8 @@ export function useEntryFlow(deps: FlowDeps) {
   const summary = computed(() => summarize(results.value, french.value))
   const missing = computed(() => (config.value && withoutRegistration.value ? missingFields(config.value, form) : []))
   const alreadyEntered = computed(() => who.value?.is_entered_result ?? false)
+  /** Организатор разрешил менять результаты после отправки. Если нет, отправить можно один раз. */
+  const updateAllowed = computed(() => config.value?.is_update_result_allowed ?? true)
 
   /** Что показываем про вводящего: из ответа сервера по PIN или из анкеты. */
   const currentWho = computed(() => {
@@ -90,6 +96,7 @@ export function useEntryFlow(deps: FlowDeps) {
     if (!c) return null
     if (who.value) return who.value
     return {
+      id: 0,
       first_name: form.first_name.trim(),
       last_name: form.last_name.trim(),
       gender: form.gender || 'MALE',
@@ -97,6 +104,7 @@ export function useEntryFlow(deps: FlowDeps) {
       group: form.group_index >= 0 ? c.groups[form.group_index] ?? '' : '',
       set_index: Math.max(form.set_index, 0),
       set: form.set_index >= 0 ? c.sets[form.set_index]?.name ?? '' : '',
+      reg_type_index: 0,
       is_entered_result: false,
     } satisfies PublicParticipant
   })
@@ -105,7 +113,13 @@ export function useEntryFlow(deps: FlowDeps) {
     const error = sendError.value
     if (!error) return ''
     if (error.code === 'invalid_fields') return 'Проверьте анкету: одно из полей заполнено неверно.'
-    const saved = ' Результаты сохранены на телефоне, ничего не потеряется.'
+    if (error.code === 'update_not_allowed') {
+      const w = currentWho.value
+      const verb = w?.gender === 'FEMALE' ? 'вносила' : 'вносил'
+      return `${w ? `${w.last_name} ${w.first_name} уже ${verb} результаты. ` : ''}` +
+        'Повторный ввод на этом событии закрыт: исправить может только организатор.'
+    }
+    const saved = ` Результаты сохранены ${onPhone.value}, ничего не потеряется.`
     return error.isNetwork || error.status >= 500 || error.code === 'unknown' ? error.message + saved : error.message
   })
 
@@ -169,6 +183,14 @@ export function useEntryFlow(deps: FlowDeps) {
       who.value = payload.participant
       serverResults.value = cloneResults(payload.results)
       pinMessage.value = ''
+      if (payload.locked) {
+        // повторный ввод запрещён: не ошибка, а результаты только для просмотра
+        results.value = cloneResults(payload.results)
+        standing.value = payload.standing ?? null
+        restoredAt.value = null
+        step.value = 'locked'
+        return
+      }
       openEntry(false)
     } catch (e) {
       const error = asApiError(e)
@@ -185,7 +207,15 @@ export function useEntryFlow(deps: FlowDeps) {
     }
   }
 
+  let initStarted = false
+
+  /** Страница события запускает экран при первом показе вкладки и больше не трогает: PIN и отметки сохраняются. */
+  async function ensureInit(): Promise<void> {
+    if (!initStarted) await init()
+  }
+
   async function init(): Promise<void> {
+    initStarted = true
     step.value = 'loading'
     fatalMessage.value = ''
     try {
@@ -217,6 +247,7 @@ export function useEntryFlow(deps: FlowDeps) {
 
   function notMe(): void {
     who.value = null
+    standing.value = null
     pin.value = ''
     pinInput.value = ''
     pinMessage.value = ''
@@ -265,7 +296,7 @@ export function useEntryFlow(deps: FlowDeps) {
       serverResults.value = cloneResults(payload.results)
       submitted.value = payload.participant
       standing.value = payload.standing ?? null
-      rememberParticipant(store, eventId, payload.participant)
+      remembered.remember(payload.participant)
       restoredAt.value = null
       draftSavedAt.value = null
       step.value = 'done'
@@ -314,10 +345,10 @@ export function useEntryFlow(deps: FlowDeps) {
   return reactive({
     step, config, fatalMessage, french, withoutRegistration,
     pinInput, pin, pinBusy, pinMessage, pinIsError, who, form, showFieldErrors, fieldErrors,
-    results, restoredAt, draftSavedAt, storageOk, alreadyEntered,
+    results, restoredAt, draftSavedAt, storageOk, alreadyEntered, updateAllowed,
     sending, sendError, sendErrorText, sheetOpen, submitted, standing, currentWho,
     invalidRoutes, summary, missing, toast,
-    init, identify, notMe, toggleTile, changeAttempt, setField, dropDraft, requestSubmit, send, edit,
+    init, ensureInit, identify, notMe, toggleTile, changeAttempt, setField, dropDraft, requestSubmit, send, edit,
     closeSheet: () => { sheetOpen.value = false },
     showToast,
   })

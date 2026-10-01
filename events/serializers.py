@@ -70,11 +70,12 @@ class PayDetailSerializer(serializers.ModelSerializer):
 
 
 class EntryRegistrationSerializer(serializers.Serializer):
-    """ Анкета участника при вводе без регистрации. Набор полей зависит от настроек события """
+    """ Анкета участника: при регистрации и при вводе без регистрации. Набор полей зависит от настроек события.
+    Тип регистрации выбирают только при регистрации (with_reg_type) """
     first_name = serializers.CharField(max_length=Participant._meta.get_field('first_name').max_length)
     last_name = serializers.CharField(max_length=Participant._meta.get_field('last_name').max_length)
 
-    def __init__(self, *args, event: Event, **kwargs):
+    def __init__(self, *args, event: Event, with_reg_type: bool = False, **kwargs):
         super().__init__(*args, **kwargs)
         fields = services.get_registration_fields(event=event)
         required = services.get_registration_required_fields(event=event)
@@ -104,6 +105,9 @@ class EntryRegistrationSerializer(serializers.Serializer):
         sets = services.get_set_list(event=event)
         if sets:
             self.fields['set_index'] = serializers.IntegerField(min_value=0, max_value=len(sets) - 1)
+        reg_types = services.get_reg_types(event=event)
+        if with_reg_type and reg_types:
+            self.fields['reg_type_index'] = serializers.IntegerField(min_value=0, max_value=len(reg_types) - 1)
 
     def validate(self, attrs):
         if Event.FIELD_PHONE in attrs:

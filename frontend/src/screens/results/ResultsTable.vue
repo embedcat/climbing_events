@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { ResultRow } from '../../api/results'
-import { cellView, formatPoints, formatScore, shortName } from '../../domain/standings'
+import { isDesktop } from '../../domain/device'
+import { cellView, formatPoints, formatScore, fullName, shortName } from '../../domain/standings'
 import type { ResultsFlow } from './useResultsFlow'
 
 const props = defineProps<{ flow: ResultsFlow }>()
@@ -32,6 +33,8 @@ const waitingTitle = computed(() => {
   return `Ещё не ${verb} результат`
 })
 
+/** На телефоне «Андреев И.», на компьютере имя целиком. */
+const nameOf = (row: ResultRow): string => (isDesktop.value ? fullName(row) : shortName(row))
 const cell = (row: ResultRow, index: number) =>
   cellView(row.results[index], props.flow.french, row.counted[index] ?? true)
 const groupEdge = (index: number) => index > 0 && index % 5 === 0
@@ -127,7 +130,7 @@ onUnmounted(() => cancelAnimationFrame(frame))
           <td class="s1">{{ row.place }}</td>
           <td class="s2">
             <button type="button" class="re-nbtn" @click.stop="flow.openPerson(row.id)">
-              <span class="n">{{ shortName(row) }}</span>
+              <span class="n">{{ nameOf(row) }}</span>
               <span class="v">
                 {{ formatScore(row, scoreType) }}
                 <span v-if="flow.deltas.get(row.id)" class="re-delta" :class="flow.deltas.get(row.id)! > 0 ? 'is-up' : 'is-down'">
@@ -154,7 +157,7 @@ onUnmounted(() => cancelAnimationFrame(frame))
             <td class="s1">—</td>
             <td class="s2">
               <button type="button" class="re-nbtn" @click.stop="flow.openPerson(row.id)">
-                <span class="n">{{ shortName(row) }}</span>
+                <span class="n">{{ nameOf(row) }}</span>
                 <span class="v">нет результата</span>
               </button>
             </td>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { onDevice } from '../../domain/device'
 import type { EntryFlow } from './useEntryFlow'
 
 const props = defineProps<{ flow: EntryFlow }>()
@@ -35,7 +36,8 @@ const standingLabel = computed(() => {
         <span class="re-pc-of">место<br>из {{ flow.standing.of }}</span>
       </div>
     </div>
-    <p class="re-muted re-small">Места будут меняться, пока другие участники вводят результаты.</p>
-    <p class="re-remember">Мы запомнили вас на этом телефоне: в результатах сразу откроется ваша группа.</p>
+    <p v-if="flow.standing" class="re-muted re-small">Места будут меняться, пока другие участники вводят результаты.</p>
+    <p v-else class="re-muted re-small">Место появится, когда организатор откроет результаты.</p>
+    <p class="re-remember">Мы запомнили вас {{ onDevice }}: в результатах сразу откроется ваша группа.</p>
   </section>
 </template>

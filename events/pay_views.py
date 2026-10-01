@@ -1,4 +1,3 @@
-import base64
 import logging
 import hashlib
 
@@ -25,14 +24,6 @@ def check_notify_hash(notify: dict, secret: str) -> bool:
              f"{notify['datetime']}&{notify['sender']}&{notify['codepro']}&{secret}&{notify['label']}"
     sha1_hash = hashlib.sha1(bytes(string, "UTF-8")).hexdigest()
     return sha1_hash == notify['sha1_hash']
-
-
-def is_pay_available(event: Event) -> bool:
-    if event.pay_type == Event.PAY_TYPE_YOOMONEY:
-        return event.wallet and event.is_pay_allowed
-    if event.pay_type == Event.PAY_TYPE_SBP:
-        return event.is_pay_allowed
-    return False
 
 
 def is_premium_pay_available(event: Event) -> bool:
@@ -115,85 +106,17 @@ class NotifyView(views.View):
         return HttpResponse(status=400)
 
 
-class CreatePay(views.View):
-    @staticmethod
-    def get(request, event_id, p_id):
-        event = get_object_or_404(Event, id=event_id)
-        participant = get_object_or_404(Participant, id=p_id)
-        if participant.paid:
-            return redirect('pay_ok', event_id)
-        if not is_pay_available(event=event):
-            return redirect('pay_unavailable', event_id)
-
-        if event.pay_type == Event.PAY_TYPE_YOOMONEY:
-            try:
-                amount = int(event.price_list.get(str(participant.reg_type_index), 0)) if event.reg_type_num > 1 else int(event.price)
-            except:
-                return redirect('pay_unavailable', event_id)
-
-            label = f"e{event_id}_p{p_id}"
-            success_uri = request.build_absolute_uri(reverse('pay_ok', args=(event_id,)))
-            return render(
-                request=request,
-                template_name='events/event/pay-yoomoney.html',
-                context={
-                    'title': f'{participant.last_name} {participant.first_name}',
-                    'event': event,
-                    'participant': participant,
-                    'label': label,
-                    'amount': amount,
-                    'success_uri': success_uri,
-                    'receiver': event.wallet.wallet_id,
-                }
-            )
-        if event.pay_type == Event.PAY_TYPE_SBP:
-            qr_uri = event.price_list.get(str(participant.reg_type_index), 0) if event.reg_type_num > 1 else str(event.price)
-            qr_code = services.qr_create(text=qr_uri, version=10).getvalue()
-            img_str = base64.b64encode(qr_code).decode("utf-8")  # convert to str and cut b'' chars
-            parts = qr_uri.split('&')
-            amount = 0
-            for part in parts:
-                if part.startswith('sum='):
-                    amount = int(int(part[4:]) / 100)
-                    break
-            return render(
-                request=request,
-                template_name='events/event/pay-sbp.html',
-                context={
-                    'title': f'{participant.last_name} {participant.first_name}',
-                    'event': event,
-                    'participant': participant,
-                    'amount': amount,
-                    'qr_uri': qr_uri,
-                    'img_str': img_str,
-                }
-            )
+# Оплату взноса участника показывает страница события (Vue-экран). Старые адреса из писем и закладок ведут на неё.
+def pay_create_redirect(request, event_id, p_id):
+    return redirect(f"{reverse('event_pay', args=(event_id,))}?p={p_id}")
 
 
-class PayOk(views.View):
-    @staticmethod
-    def get(request, event_id):
-        event = get_object_or_404(Event, id=event_id)
-        return render(
-            request=request,
-            template_name='events/event/pay-ok.html',
-            context={
-                'event': event,
-            }
-        )
+def pay_ok_redirect(request, event_id):
+    return redirect('event_pay_done', event_id=event_id)
 
 
-class PayUnavailable(views.View):
-    @staticmethod
-    def get(request, event_id):
-        event = get_object_or_404(Event, id=event_id)
-        return render(
-            request=request,
-            template_name='events/event/pay-unavailable.html',
-            context={
-                'event': event,
-            }
-        )
+def pay_unavailable_redirect(request, event_id):
+    return redirect('event_pay', event_id=event_id)
 
 
 class PremiumCreatePayView(views.View):

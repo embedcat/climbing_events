@@ -2,17 +2,17 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { EntryConfig } from '../../api/entry'
 import { memoryStore } from '../../domain/storage'
-import EntryApp from './EntryApp.vue'
+import EntryScreen from './EntryScreen.vue'
 import { apiError, fakeApi, makeConfig, makeParticipant, makePayload, networkError } from './testing'
 import { useEntryFlow } from './useEntryFlow'
 
 const RESULTS_URL = '/e/7/results/'
 
-async function mountApp(configOverrides: Partial<EntryConfig> = {}) {
+async function mountApp(configOverrides: Partial<EntryConfig> = {}, canSeeResults = true) {
   const config = makeConfig(configOverrides)
   const api = fakeApi(config)
   const flow = useEntryFlow({ eventId: 7, api, store: memoryStore(), readHash: () => '', clearHash: () => {} })
-  const wrapper = mount(EntryApp, { props: { flow, resultsUrl: RESULTS_URL }, attachTo: document.body })
+  const wrapper = mount(EntryScreen, { props: { flow, canSeeResults, resultsHref: RESULTS_URL }, attachTo: document.body })
   await flushPromises()
   return { wrapper, api, flow, config }
 }
@@ -229,5 +229,112 @@ describe('экран ввода: без регистрации', () => {
       last_name: 'Маркова', first_name: 'Мария', gender: 'FEMALE', group_index: 1, set_index: 0, city: 'Тула',
     }, expect.arrayContaining([{ top: 1, zone: 0 }]), false)
     expect(wrapper.text()).toContain('Результаты отправлены')
+  })
+})
+
+describe('экран ввода: повторный ввод запрещён', () => {
+  const lockedPayload = (config: EntryConfig, extra: Record<string, unknown> = {}) => makePayload(config, {
+    participant: makeParticipant({ is_entered_result: true, group: 'Спорт', group_index: 1, set: '10:00', set_index: 0 }),
+    results: Array.from({ length: config.routes_num }, (_, i) => ({ top: i === 0 ? 1 : i === 1 ? 2 : 0, zone: 0 })),
+    standing: { place: 4, of: 12 },
+    locked: true,
+    ...extra,
+  })
+
+  it('вместо ошибки на шаге PIN: «Вы уже внесли результаты», место, отметки только для просмотра', async () => {
+    const config = makeConfig({ is_update_result_allowed: false, groups: ['Новички', 'Спорт'], sets: [{ index: 0, name: '10:00', is_full: false }] })
+    const { wrapper, api } = await mountApp({ is_update_result_allowed: false, groups: config.groups, sets: config.sets })
+    api.identify.mockResolvedValueOnce(lockedPayload(config))
+    await typePin(wrapper)
+
+    expect(wrapper.find('.re-pin-msg.is-error').exists()).toBe(false)
+    expect(wrapper.get('h2.re-h2').text()).toBe('Вы уже внесли результаты')
+    expect(wrapper.get('.re-pc-label').text()).toBe('Сейчас в группе «Спорт», женщины')
+    expect(wrapper.get('.re-pc-place').text()).toBe('4')
+    expect(wrapper.get('.re-pc-of').text()).toContain('из 12')
+    expect(wrapper.get('.re-locked-note').text()).toContain('Повторный ввод на этом событии закрыт')
+    expect(wrapper.get('.re-locked-note').text()).toContain('подойдите к организатору')
+    expect(wrapper.findAll('.re-tile.is-ro')).toHaveLength(10)
+    expect(wrapper.find('button.re-tile').exists()).toBe(false)
+    expect(wrapper.findAll('.re-tile.is-ro')[0].classes()).toContain('is-fl')
+    expect(wrapper.findAll('.re-tile.is-ro')[1].classes()).toContain('is-rp')
+  })
+
+  it('внизу только «Смотреть результаты»: ни «Отправить», ни «Исправить»', async () => {
+    const config = makeConfig({ is_update_result_allowed: false })
+    const { wrapper, api } = await mountApp({ is_update_result_allowed: false })
+    api.identify.mockResolvedValueOnce(lockedPayload(config))
+    await typePin(wrapper)
+    const buttons = wrapper.findAll('.re-action .re-btn')
+    expect(buttons.map((b) => b.text())).toEqual(['Смотреть результаты'])
+    expect(buttons[0].attributes('href')).toBe(RESULTS_URL)
+  })
+
+  it('результаты скрыты: места нет и кнопки результатов тоже', async () => {
+    const config = makeConfig({ is_update_result_allowed: false })
+    const { flow, wrapper, api } = await mountApp({ is_update_result_allowed: false }, false)
+    api.identify.mockResolvedValueOnce(lockedPayload(config, { standing: null }))
+    await typePin(wrapper)
+    expect(flow.step).toBe('locked')
+    expect(wrapper.find('.re-place-card').exists()).toBe(false)
+    expect(wrapper.find('.re-action').exists()).toBe(false)
+  })
+
+  it('французская система: таблица отметок вместо плиток', async () => {
+    const config = makeConfig({ is_update_result_allowed: false, score_type: 'FR', routes_num: 3 })
+    const { wrapper, api } = await mountApp({ is_update_result_allowed: false, score_type: 'FR', routes_num: 3 })
+    api.identify.mockResolvedValueOnce(lockedPayload(config, { results: [{ top: 2, zone: 1 }, { top: 0, zone: 0 }, { top: 0, zone: 3 }] }))
+    await typePin(wrapper)
+    const rows = wrapper.findAll('.re-ck-table tbody tr').map((r) => r.text())
+    expect(rows).toEqual(['12-я попытка1-я попытка', '3—3-я попытка'])
+  })
+
+  it('«Не вы?» возвращает к PIN', async () => {
+    const config = makeConfig({ is_update_result_allowed: false })
+    const { wrapper, api } = await mountApp({ is_update_result_allowed: false })
+    api.identify.mockResolvedValueOnce(lockedPayload(config))
+    await typePin(wrapper)
+    await wrapper.get('.re-who .re-linkbtn').trigger('click')
+    expect(wrapper.find('input.re-pin').exists()).toBe(true)
+  })
+
+  it('пока участник не отправил, под плитками предупреждение: отправить можно один раз', async () => {
+    const { wrapper } = await mountApp({ is_update_result_allowed: false })
+    await typePin(wrapper)
+    expect(wrapper.get('.re-once').text()).toBe('Отправить можно один раз: исправить результаты потом сможет только организатор.')
+  })
+
+  it('когда повторный ввод разрешён, предупреждения нет', async () => {
+    const { wrapper } = await mountApp()
+    await typePin(wrapper)
+    expect(wrapper.find('.re-once').exists()).toBe(false)
+  })
+
+  it('после отправки без права исправлять — только «Смотреть результаты»', async () => {
+    const { wrapper } = await mountApp({ is_update_result_allowed: false })
+    await typePin(wrapper)
+    await tile(wrapper, 1).trigger('click')
+    await submitButton(wrapper).trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('Результаты отправлены')
+    expect(wrapper.findAll('.re-action .re-btn').map((b) => b.text())).toEqual(['Смотреть результаты'])
+  })
+
+  it('после отправки при скрытых результатах места нет, есть объяснение', async () => {
+    const config = makeConfig()
+    const { wrapper, api } = await mountApp({}, false)
+    api.submit.mockImplementationOnce(async (_id, _pin, results) => makePayload(config, { results, standing: null }))
+    await typePin(wrapper)
+    await tile(wrapper, 1).trigger('click')
+    await submitButton(wrapper).trigger('click')
+    await flushPromises()
+    expect(wrapper.find('.re-place-card').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Место появится, когда организатор откроет результаты')
+  })
+
+  it('закрыт ввод: объяснение вместо одной строки', async () => {
+    const { wrapper } = await mountApp({ is_enter_result_allowed: false })
+    expect(wrapper.get('.re-closed h2').text()).toBe('Ввод результатов закрыт')
+    expect(wrapper.get('.re-closed').text()).toContain('подойдите к организатору')
   })
 })

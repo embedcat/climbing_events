@@ -24,6 +24,7 @@ class EntryTestBase(ClimbingEventsBaseTestCase):
         self.event.is_published = True
         self.event.is_enter_result_allowed = True
         self.event.is_registration_open = True
+        self.event.is_results_allowed = True
         self.event.save()
         self.participant = self.make_participant()
 
@@ -233,13 +234,33 @@ class IdentifyApiTests(EntryTestBase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['code'], 'entry_closed')
 
-    def test_update_not_allowed_only_after_first_entry(self):
+    def test_not_locked_by_default(self):
+        data = self.post('identify', {'pin': PIN}).json()
+        self.assertFalse(data['locked'])
+        self.assertNotIn('standing', data)
+
+    def test_update_not_allowed_locks_only_after_first_entry(self):
+        """Повторный ввод запрещён: после первого ввода PIN открывает не ошибку, а результаты только для просмотра"""
         self.set_event(is_update_result_allowed=False)
-        self.assertEqual(self.post('identify', {'pin': PIN}).status_code, 200)
+        self.assertFalse(self.post('identify', {'pin': PIN}).json()['locked'])
         services.enter_results(event=self.event, participant=self.participant, accents={'0': {'top': 1, 'zone': 1}})
         response = self.post('identify', {'pin': PIN})
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['code'], 'update_not_allowed')
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['locked'])
+        self.assertEqual(data['standing'], {'place': 1, 'of': 1})
+        self.assertEqual(data['results'][0]['top'], 1)
+
+    def test_locked_screen_has_no_place_while_results_are_hidden(self):
+        self.set_event(is_update_result_allowed=False, is_results_allowed=False)
+        services.enter_results(event=self.event, participant=self.participant, accents={'0': {'top': 1, 'zone': 1}})
+        data = self.post('identify', {'pin': PIN}).json()
+        self.assertTrue(data['locked'])
+        self.assertIsNone(data['standing'])
+
+    def test_entered_participant_may_edit_when_updates_are_allowed(self):
+        services.enter_results(event=self.event, participant=self.participant, accents={'0': {'top': 1, 'zone': 1}})
+        self.assertFalse(self.post('identify', {'pin': PIN}).json()['locked'])
 
     def test_returns_saved_results(self):
         services.enter_results(event=self.event, participant=self.participant,
@@ -315,11 +336,21 @@ class SubmitApiTests(EntryTestBase):
         self.participant.refresh_from_db()
         self.assertFalse(self.participant.is_entered_result)
 
+    def test_hidden_results_mean_no_place_in_the_answer(self):
+        self.set_event(is_results_allowed=False)
+        data = self.post('submit', {'pin': PIN, 'results': self.results(r1=1)}).json()
+        self.assertIsNone(data['standing'])
+
+    def test_answer_has_the_participant_id(self):
+        data = self.post('submit', {'pin': PIN, 'results': self.results(r1=1)}).json()
+        self.assertEqual(data['participant']['id'], self.participant.id)
+
     def test_update_not_allowed(self):
         self.set_event(is_update_result_allowed=False)
         self.assertEqual(self.post('submit', {'pin': PIN, 'results': self.results(r1=1)}).status_code, 200)
         response = self.post('submit', {'pin': PIN, 'results': self.results(r1=2)})
         self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['code'], 'update_not_allowed')
         self.participant.refresh_from_db()
         self.assertEqual(self.participant.french_accents['0'], {'top': 1, 'zone': 1})
 

@@ -1,9 +1,11 @@
+from collections import Counter
 from dataclasses import asdict, dataclass
 import io
 import operator
 import os
 import random
 import string
+import re
 from datetime import datetime
 from typing import Iterable
 import dacite
@@ -12,16 +14,19 @@ from events.xl_tools import save_virtual_workbook
 import segno
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
+from django.core.mail import send_mail
 from django.db import transaction
 from django.db.models import QuerySet, Count
 from django.http import HttpResponse
+from django.utils import timezone
+from django.utils.formats import date_format
 
 from config import settings
 from events import img_tools, xl_tools, mock
 from events.exceptions import (
     DuplicateParticipantError, EntryClosedError, InvalidResultsError, ParticipantNotFoundError,
-    ParticipantTooYoungError, RegistrationClosedError, ResultsUpdateNotAllowedError, SetFullError,
-    WithoutRegistrationDisabledError,
+    ParticipantTooYoungError, PayUnavailableError, RegistrationClosedError, RegistrationNotNeededError,
+    ResultsUpdateNotAllowedError, SetFullError, WithoutRegistrationDisabledError,
 )
 from events.models import CustomUser, Event, PayDetail, PromoCode, Route, Participant, Wallet
 
@@ -579,6 +584,7 @@ def get_participant_public(event: Event, participant: Participant) -> dict:
     groups = get_group_list(event=event) if event.group_num > 1 else []
     sets = get_set_list(event=event)
     return dict(
+        id=participant.id,
         first_name=participant.first_name,
         last_name=participant.last_name,
         gender=participant.gender,
@@ -586,6 +592,7 @@ def get_participant_public(event: Event, participant: Participant) -> dict:
         group=groups[participant.group_index] if participant.group_index < len(groups) else '',
         set_index=participant.set_index,
         set=sets[participant.set_index] if participant.set_index < len(sets) else '',
+        reg_type_index=participant.reg_type_index,
         is_entered_result=participant.is_entered_result,
     )
 
@@ -652,13 +659,19 @@ def _ensure_update_allowed(event: Event, participant: Participant) -> None:
 def identify_participant(event: Event, pin) -> Participant:
     """ Участник, который по PIN открывает ввод результатов """
     _ensure_entry_open(event=event)
-    participant = find_participant_by_pin(event=event, pin=pin)
-    _ensure_update_allowed(event=event, participant=participant)
-    return participant
+    return find_participant_by_pin(event=event, pin=pin)
 
 
-def get_participant_standing(event: Event, participant: Participant) -> dict:
-    """ Место участника в своей группе и сколько всего участников в этом зачёте """
+def is_entry_locked(event: Event, participant: Participant) -> bool:
+    """ Повторный ввод запрещён, а участник уже вносил результат: показываем его отметки только для просмотра """
+    return participant.is_entered_result and not event.is_update_result_allowed
+
+
+def get_participant_standing(event: Event, participant: Participant) -> dict | None:
+    """ Место участника в своей группе и сколько всего участников в этом зачёте.
+    Пока организатор скрыл результаты, мест нигде не показываем, поэтому None """
+    if not event.is_results_allowed:
+        return None
     ranked = event.participant.filter(gender=participant.gender)
     if event.is_separate_score_by_groups:
         ranked = ranked.filter(group_index=participant.group_index)
@@ -669,6 +682,7 @@ def get_participant_standing(event: Event, participant: Participant) -> dict:
 
 def submit_results_by_pin(event: Event, pin, raw_results) -> Participant:
     participant = identify_participant(event=event, pin=pin)
+    _ensure_update_allowed(event=event, participant=participant)
     enter_results(event=event, participant=participant, accents=parse_results(event=event, raw=raw_results))
     participant.refresh_from_db()
     return participant
@@ -710,6 +724,248 @@ def get_registration_email_msg_html(event: Event, participant: Participant, pay_
     html = get_registration_msg_html(event=event, participant=participant, pay_url=pay_url)
     html += f"<hr><p style='color:grey'>Это письмо сформировано автоматически, не отвечайте на него. Контакты для связи с организатором ищите на странице описания соревнования.</p>"
     return html
+
+
+# ================================================
+# ========= Event page for participants ==========
+# ================================================
+
+STAGE_REGISTRATION = 'reg'
+STAGE_REGISTRATION_CLOSED = 'reg_closed'
+STAGE_LIVE = 'live'
+STAGE_OVER = 'over'
+STAGE_DONE = 'done'
+
+YOOMONEY_FORM_URL = 'https://yoomoney.ru/quickpay/confirm.xml'
+_SBP_SUM_RE = re.compile(r'[?&]sum=(\d+)')
+
+
+def get_event_stage(event: Event) -> str:
+    """ Что сейчас с событием: от этого зависят карточка этапа, кнопка внизу и закрытые вкладки «Ввод» и «Результаты».
+    «Ввод закрыт» — день события после того, как организатор закрыл ввод, а is_expired ещё не выставлен:
+    узнаём по тому, что кто-то уже внёс результат """
+    if event.is_expired:
+        return STAGE_DONE
+    if is_event_live(event=event):
+        return STAGE_LIVE
+    if event.participant.filter(is_entered_result=True).exists():
+        return STAGE_OVER
+    return STAGE_REGISTRATION if is_registration_open(event=event) else STAGE_REGISTRATION_CLOSED
+
+
+def is_pay_available(event: Event) -> bool:
+    if event.pay_type == Event.PAY_TYPE_YOOMONEY:
+        return bool(event.wallet and event.is_pay_allowed)
+    if event.pay_type == Event.PAY_TYPE_SBP:
+        return bool(event.is_pay_allowed)
+    return False
+
+
+def _get_pay_source(event: Event, reg_type_index: int = 0):
+    """ ЮMoney: цена взноса. СБП: ссылка на оплату, цена зашита в неё. С типами регистрации у каждого типа своя """
+    if event.reg_type_num > 1:
+        return (event.price_list or {}).get(str(reg_type_index))
+    return event.price
+
+
+def get_pay_amount(event: Event, reg_type_index: int = 0) -> int | None:
+    """ Стартовый взнос в рублях или None, если он не задан """
+    source = _get_pay_source(event=event, reg_type_index=reg_type_index)
+    if not source:
+        return None
+    try:
+        if event.pay_type == Event.PAY_TYPE_SBP:
+            match = _SBP_SUM_RE.search(str(source))
+            return int(match.group(1)) // 100 if match else None
+        return int(source)
+    except (TypeError, ValueError):
+        return None
+
+
+def get_reg_types(event: Event) -> list:
+    """ Типы регистрации (например «+ футболка») с ценой: редкая настройка, но её надо поддерживать """
+    if event.reg_type_num <= 1 or not event.reg_type_list:
+        return []
+    pay = is_pay_available(event=event)
+    return [dict(index=index, name=name.strip(),
+                 price=get_pay_amount(event=event, reg_type_index=index) if pay else None)
+            for index, name in enumerate(event.reg_type_list.split(','))]
+
+
+def _get_set_counts(event: Event) -> dict:
+    return dict(event.participant.values_list('set_index').annotate(n=Count('id')))
+
+
+def _get_podium(event: Event) -> list:
+    """ Первые три места в каждой группе у мужчин и женщин. Без разделения зачёта по группам блок один """
+    separate = event.is_separate_score_by_groups
+    groups = list(enumerate(get_group_list(event=event))) if separate else [(None, '')]
+    winners = event.participant.filter(is_entered_result=True, place__gte=1, place__lte=3) \
+        .order_by('place', 'last_name', 'first_name')
+
+    def places(gender: str, group_index) -> list:
+        selected = winners.filter(gender=gender)
+        if group_index is not None:
+            selected = selected.filter(group_index=group_index)
+        return [dict(id=p.id, last_name=p.last_name, first_name=p.first_name, place=p.place) for p in selected]
+
+    return [dict(group_index=index, group=name if event.group_num > 1 else '',
+                 male=places(Participant.GENDER_MALE, index), female=places(Participant.GENDER_FEMALE, index))
+            for index, name in groups]
+
+
+def get_event_page_payload(event: Event, can_manage: bool = False) -> dict:
+    """ Всё, что нужно странице события для участника: «Инфо», анкета регистрации, оплата и закрытые вкладки.
+    Без данных участников: список отдаёт get_public_participants """
+    set_names = get_set_list(event=event)
+    counts = _get_set_counts(event=event)
+    capacity = event.set_max_participants
+    sets = [dict(index=index, name=name, count=counts.get(index, 0), capacity=capacity,
+                 is_full=0 < capacity <= counts.get(index, 0)) for index, name in enumerate(set_names)]
+    participants_count = event.participant.count()
+    stage = get_event_stage(event=event)
+    multi_day = bool(event.date_end and event.date_end != event.date)
+    until = event.registration_close_datetime
+    pay_allowed = is_pay_available(event=event)
+    prices = [t['price'] for t in get_reg_types(event=event) if t['price'] is not None]
+    price = (min(prices) if prices else get_pay_amount(event=event)) if pay_allowed else None
+    return dict(
+        id=event.id,
+        title=event.title,
+        date=event.date_display,
+        date_long=event.date_display if multi_day or not event.date else date_format(event.date, 'l, j E Y').lower(),
+        date_short=date_format(event.date, 'j E') if event.date else '',
+        gym=event.gym,
+        poster=event.poster.url if event.poster else None,
+        description=event.description or '',
+        groups=get_group_list(event=event) if event.group_num > 1 else [],
+        sets=sets,
+        stage=stage,
+        participants_count=participants_count,
+        entered_count=event.participant.filter(is_entered_result=True).count(),
+        is_without_registration=event.is_without_registration,
+        is_results_allowed=event.is_results_allowed,
+        registration=dict(
+            is_open=is_registration_open(event=event) and not event.is_without_registration,
+            until=date_format(timezone.localtime(until), 'j E, H:i') if until else None,
+            free_places=max(0, capacity * max(event.set_num, 1) - participants_count) if capacity > 0 else None,
+            min_age=event.participant_min_age,
+            fields=get_registration_fields(event=event),
+            required_fields=get_registration_required_fields(event=event),
+            grades=[dict(value=value, label=label) for value, label in Participant.GRADES],
+            reg_types=get_reg_types(event=event),
+            show_pin=event.is_view_pin_after_registration,
+        ),
+        pay=dict(is_allowed=pay_allowed, type=event.pay_type, price=price),
+        podium=_get_podium(event=event) if stage == STAGE_DONE and event.is_results_allowed else [],
+        can_manage=can_manage,
+    )
+
+
+def _standing_scope(event: Event, participant: Participant) -> tuple:
+    return participant.gender, participant.group_index if event.is_separate_score_by_groups else 0
+
+
+def _get_standing_counts(event: Event, participants: list) -> Counter:
+    """ Сколько участников в каждом зачёте (пол и группа): знаменатель в «место N из M» """
+    counted = [p for p in participants if p.is_entered_result or not event.is_count_only_entered_results]
+    return Counter(_standing_scope(event, p) for p in counted)
+
+
+def get_public_participants(event: Event, can_manage: bool = False) -> dict:
+    """ Публичный список участников для вкладки «Участники». Поля анкеты — только те, что событие собирает.
+    Email, телефон, PIN и статус оплаты — только организатору """
+    fields = get_registration_fields(event=event)
+    grades = dict(Participant.GRADES)
+    participants = list(event.participant.order_by('last_name', 'first_name'))
+    counts = _get_standing_counts(event=event, participants=participants)
+    rows = []
+    for p in participants:
+        place = p.place if event.is_results_allowed and p.is_entered_result and p.place > 0 else None
+        row = dict(
+            id=p.id,
+            last_name=p.last_name,
+            first_name=p.first_name,
+            gender=p.gender,
+            birth_year=(p.birth_year or None) if Event.FIELD_BIRTH_YEAR in fields else None,
+            grade=grades.get(p.grade, '') if Event.FIELD_GRADE in fields else '',
+            city=(p.city or '') if Event.FIELD_CITY in fields else '',
+            team=(p.team or '') if Event.FIELD_TEAM in fields else '',
+            group_index=p.group_index,
+            set_index=p.set_index,
+            reg_type_index=p.reg_type_index,
+            entered=p.is_entered_result,
+            place=place,
+            place_of=counts[_standing_scope(event, p)] if place else None,
+        )
+        if can_manage:
+            row.update(pin=p.pin, phone=str(p.phone_number or ''), email=p.email or '', paid=p.paid)
+        rows.append(row)
+    return dict(participants=rows, can_manage=can_manage)
+
+
+def register_participant_on_site(event: Event, cd: dict) -> Participant:
+    """ Регистрация участника самим участником: на странице события и через API """
+    if event.is_without_registration:
+        raise RegistrationNotNeededError
+    if not is_registration_open(event=event):
+        raise RegistrationClosedError
+    participant = register_participant(event=event, cd=cd)
+    if participant is None:
+        raise SetFullError
+    return participant
+
+
+def send_registration_email(event: Event, participant: Participant, pay_url: str) -> bool:
+    """ Письмо с PIN и ссылкой на оплату: только если участник оставил email и включена оплата """
+    if not (participant.email and event.is_pay_allowed):
+        return False
+    send_mail(subject='Регистрация завершена',
+              message=get_registration_msg_html(event=event, participant=participant, pay_url=pay_url),
+              from_email=None,
+              recipient_list=[participant.email],
+              fail_silently=True,
+              html_message=get_registration_email_msg_html(event=event, participant=participant, pay_url=pay_url))
+    return True
+
+
+def get_participant_me(event: Event, participant: Participant) -> dict:
+    """ Карточка «Вы»: то, что запомненному в браузере участнику видно только ему, — статус оплаты и место """
+    return dict(
+        participant=get_participant_public(event=event, participant=participant),
+        paid=participant.paid,
+        standing=get_participant_standing(event=event, participant=participant)
+        if participant.is_entered_result else None,
+    )
+
+
+def check_promo_code(event: Event, code: str) -> dict | None:
+    """ Промокод события: PromoCode.price — новая цена взноса, а не скидка """
+    code = (code or '').strip()
+    promo = event.PromoCode.filter(title__iexact=code).first() if code else None
+    if promo and (not promo.max_applied_num or (promo.applied_num or 0) < promo.max_applied_num):
+        return dict(price=promo.price, promocode_id=promo.id)
+    return None
+
+
+def _qr_data_uri(text: str) -> str:
+    return segno.make_qr(text, error='m').svg_data_uri(scale=4, border=2)
+
+
+def get_pay_payload(event: Event, participant: Participant, success_url: str) -> dict:
+    """ Что нужно экрану оплаты: для ЮMoney — поля формы, для СБП — ссылка банку и QR-код для другого устройства """
+    if participant.paid:
+        return dict(type='paid')
+    source = _get_pay_source(event=event, reg_type_index=participant.reg_type_index)
+    amount = get_pay_amount(event=event, reg_type_index=participant.reg_type_index)
+    if not is_pay_available(event=event) or not source:
+        raise PayUnavailableError
+    if event.pay_type == Event.PAY_TYPE_SBP:
+        return dict(type='sbp', amount=amount, link=str(source), qr=_qr_data_uri(str(source)))
+    if amount is None:
+        raise PayUnavailableError
+    return dict(type='yoomoney', amount=amount, receiver=event.wallet.wallet_id,
+                label=f'e{event.id}_p{participant.id}', success_url=success_url, action=YOOMONEY_FORM_URL)
 
 
 # ================================================

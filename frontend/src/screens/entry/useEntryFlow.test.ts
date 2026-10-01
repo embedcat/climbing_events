@@ -2,7 +2,7 @@ import { flushPromises } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { EntryConfig } from '../../api/entry'
 import { draftKey } from '../../domain/draft'
-import { loadRememberedParticipant } from '../../domain/remember'
+import { createRememberedMe, loadRememberedParticipant } from '../../domain/remember'
 import { emptyResults } from '../../domain/results'
 import { memoryStore } from '../../domain/storage'
 import { apiError, fakeApi, makeConfig, makeParticipant, makePayload, networkError } from './testing'
@@ -453,5 +453,284 @@ describe('ввод без регистрации', () => {
     flow.requestSubmit()
     await flushPromises()
     expect(flow.sendErrorText).toBe('В выбранном сете нет мест.')
+  })
+})
+
+describe('повторный ввод запрещён', () => {
+  const lockedPayload = (config: EntryConfig, overrides = {}) => makePayload(config, {
+    participant: makeParticipant({ is_entered_result: true, group: 'Спорт', group_index: 1 }),
+    results: [{ top: 1, zone: 0 }, { top: 0, zone: 0 }, { top: 2, zone: 0 }, ...emptyResults(7)],
+    standing: { place: 2, of: 5 },
+    locked: true,
+    ...overrides,
+  })
+
+  it('PIN уже вводившего открывает не ошибку, а его результаты только для просмотра', async () => {
+    const { flow, api, config } = setup({ is_update_result_allowed: false })
+    api.identify.mockResolvedValueOnce(lockedPayload(config))
+    await enter(flow)
+    expect(flow.step).toBe('locked')
+    expect(flow.pinIsError).toBe(false)
+    expect(flow.pinMessage).toBe('')
+    expect(flow.standing).toEqual({ place: 2, of: 5 })
+    expect(flow.results.map((r) => r.top).slice(0, 3)).toEqual([1, 0, 2])
+    expect(flow.who?.last_name).toBe('Зайцева')
+  })
+
+  it('черновик не создаётся и не подхватывается, отметки менять нельзя', async () => {
+    const { flow, api, config, store } = setup({ is_update_result_allowed: false })
+    api.identify.mockResolvedValueOnce(lockedPayload(config))
+    await enter(flow)
+    flow.toggleTile(1)
+    expect(flow.restoredAt).toBeNull()
+    expect(flow.step).toBe('locked')
+    expect(store.data.has(draftKey(EVENT_ID, '1234'))).toBe(true) // toggleTile по-прежнему пишет, но экран его не показывает
+  })
+
+  it('место не показывается, пока результаты скрыты', async () => {
+    const { flow, api, config } = setup({ is_update_result_allowed: false })
+    api.identify.mockResolvedValueOnce(lockedPayload(config, { standing: null }))
+    await enter(flow)
+    expect(flow.step).toBe('locked')
+    expect(flow.standing).toBeNull()
+  })
+
+  it('«Не вы?» возвращает к PIN и убирает место', async () => {
+    const { flow, api, config } = setup({ is_update_result_allowed: false })
+    api.identify.mockResolvedValueOnce(lockedPayload(config))
+    await enter(flow)
+    flow.notMe()
+    expect(flow.step).toBe('identify')
+    expect(flow.standing).toBeNull()
+    expect(flow.pinInput).toBe('')
+  })
+
+  it('пока участник ничего не вносил, обычная форма, но с предупреждением, что отправить можно один раз', async () => {
+    const { flow } = setup({ is_update_result_allowed: false })
+    await enter(flow)
+    expect(flow.step).toBe('entry')
+    expect(flow.updateAllowed).toBe(false)
+  })
+
+  it('разрешённый повторный ввод: updateAllowed включён', async () => {
+    const { flow } = setup()
+    await flow.init()
+    expect(flow.updateAllowed).toBe(true)
+  })
+
+  it('отказ сервера при отправке по PIN: понятное сообщение с именем', async () => {
+    const { flow, api } = setup({ is_update_result_allowed: false })
+    await enter(flow)
+    flow.toggleTile(0)
+    api.submit.mockRejectedValueOnce(apiError('update_not_allowed', 403, 'Повторный ввод результатов запрещён.'))
+    flow.requestSubmit()
+    await flushPromises()
+    expect(flow.step).toBe('entry')
+    expect(flow.sendErrorText).toBe(
+      'Зайцева Юлия уже вносила результаты. Повторный ввод на этом событии закрыт: исправить может только организатор.')
+  })
+
+  it('без регистрации: сервер находит участника по имени и отказывает, сообщение с родом', async () => {
+    const { flow, api } = setup({
+      is_without_registration: true, is_update_result_allowed: false,
+      registration_fields: ['gender'], groups: [], sets: [],
+    })
+    await flow.init()
+    flow.setField('last_name', 'Зайцев')
+    flow.setField('first_name', 'Егор')
+    flow.setField('gender', 'MALE')
+    flow.toggleTile(0)
+    api.submitWithoutRegistration.mockRejectedValueOnce(apiError('update_not_allowed', 403))
+    flow.requestSubmit()
+    await flushPromises()
+    expect(flow.sendErrorText).toBe(
+      'Зайцев Егор уже вносил результаты. Повторный ввод на этом событии закрыт: исправить может только организатор.')
+    expect(flow.sendErrorText).not.toContain('сохранены')
+  })
+
+  it('нет связи: результаты остались в браузере, ничего не потеряется', async () => {
+    const { flow, api } = setup()
+    await enter(flow)
+    flow.toggleTile(0)
+    api.submit.mockRejectedValueOnce(networkError())
+    flow.requestSubmit()
+    await flushPromises()
+    expect(flow.sendErrorText).toBe('Нет связи с сервером. Результаты сохранены на телефоне, ничего не потеряется.')
+  })
+})
+
+describe('запоминание участника', () => {
+  it('после отправки запись содержит id и сет: по ним страница события берёт статус оплаты и место', async () => {
+    const { flow, api, store, config } = setup()
+    await flow.init()
+    const woman = makeParticipant({ id: 41, set_index: 2, set: 'Вечер', group_index: 1, group: 'Спорт' })
+    api.identify.mockResolvedValueOnce(makePayload(config, { participant: woman }))
+    await flow.identify('1234')
+    flow.toggleTile(0)
+    flow.requestSubmit()
+    await flushPromises()
+    expect(loadRememberedParticipant(store, EVENT_ID)).toEqual({
+      id: 1, first_name: 'Юлия', last_name: 'Зайцева', gender: 'FEMALE', group_index: 0, set_index: 0,
+    })
+  })
+
+  it('экран ввода пишет в общую запись страницы, а не только в браузер', async () => {
+    const store = memoryStore()
+    const remembered = createRememberedMe(store, EVENT_ID)
+    const config = makeConfig()
+    const api = fakeApi(config)
+    const flow = useEntryFlow({ eventId: EVENT_ID, api, store, remembered, readHash: () => '', clearHash: () => {} })
+    await flow.init()
+    await flow.identify('1234')
+    flow.toggleTile(0)
+    flow.requestSubmit()
+    await flushPromises()
+    expect(remembered.me.value?.last_name).toBe('Зайцева')
+  })
+})
+
+describe('ensureInit', () => {
+  it('запускает экран один раз: возврат на вкладку не сбрасывает ни PIN, ни отметки', async () => {
+    const { flow, api } = setup()
+    await flow.ensureInit()
+    await flow.identify('1234')
+    flow.toggleTile(0)
+    await flow.ensureInit()
+    expect(api.getConfig).toHaveBeenCalledTimes(1)
+    expect(flow.step).toBe('entry')
+    expect(flow.results[0].top).toBe(1)
+  })
+})
+
+describe('повторный ввод запрещён', () => {
+  const lockedPayload = (config: EntryConfig, overrides = {}) => makePayload(config, {
+    participant: makeParticipant({ is_entered_result: true, group: 'Спорт', group_index: 1 }),
+    results: [{ top: 1, zone: 0 }, { top: 0, zone: 0 }, { top: 2, zone: 0 }, ...emptyResults(7)],
+    standing: { place: 2, of: 5 },
+    locked: true,
+    ...overrides,
+  })
+
+  it('PIN уже вводившего открывает не ошибку, а его результаты только для просмотра', async () => {
+    const { flow, api, config } = setup({ is_update_result_allowed: false })
+    api.identify.mockResolvedValueOnce(lockedPayload(config))
+    await enter(flow)
+    expect(flow.step).toBe('locked')
+    expect(flow.pinIsError).toBe(false)
+    expect(flow.pinMessage).toBe('')
+    expect(flow.standing).toEqual({ place: 2, of: 5 })
+    expect(flow.results.map((r) => r.top).slice(0, 3)).toEqual([1, 0, 2])
+    expect(flow.who?.last_name).toBe('Зайцева')
+  })
+
+  it('место не показывается, пока результаты скрыты', async () => {
+    const { flow, api, config } = setup({ is_update_result_allowed: false })
+    api.identify.mockResolvedValueOnce(lockedPayload(config, { standing: null }))
+    await enter(flow)
+    expect(flow.step).toBe('locked')
+    expect(flow.standing).toBeNull()
+  })
+
+  it('«Не вы?» возвращает к PIN и убирает место', async () => {
+    const { flow, api, config } = setup({ is_update_result_allowed: false })
+    api.identify.mockResolvedValueOnce(lockedPayload(config))
+    await enter(flow)
+    flow.notMe()
+    expect(flow.step).toBe('identify')
+    expect(flow.standing).toBeNull()
+    expect(flow.pinInput).toBe('')
+  })
+
+  it('пока участник ничего не вносил, обычная форма, но отправить можно один раз', async () => {
+    const { flow } = setup({ is_update_result_allowed: false })
+    await enter(flow)
+    expect(flow.step).toBe('entry')
+    expect(flow.updateAllowed).toBe(false)
+  })
+
+  it('разрешённый повторный ввод: updateAllowed включён', async () => {
+    const { flow } = setup()
+    await flow.init()
+    expect(flow.updateAllowed).toBe(true)
+  })
+
+  it('отказ сервера при отправке по PIN: понятное сообщение с именем', async () => {
+    const { flow, api } = setup({ is_update_result_allowed: false })
+    await enter(flow)
+    flow.toggleTile(0)
+    api.submit.mockRejectedValueOnce(apiError('update_not_allowed', 403, 'Повторный ввод результатов запрещён.'))
+    flow.requestSubmit()
+    await flushPromises()
+    expect(flow.step).toBe('entry')
+    expect(flow.sendErrorText).toBe(
+      'Зайцева Юлия уже вносила результаты. Повторный ввод на этом событии закрыт: исправить может только организатор.')
+  })
+
+  it('без регистрации: сервер находит участника по имени и отказывает, сообщение с родом', async () => {
+    const { flow, api } = setup({
+      is_without_registration: true, is_update_result_allowed: false,
+      registration_fields: ['gender'], groups: [], sets: [],
+    })
+    await flow.init()
+    flow.setField('last_name', 'Зайцев')
+    flow.setField('first_name', 'Егор')
+    flow.setField('gender', 'MALE')
+    flow.toggleTile(0)
+    api.submitWithoutRegistration.mockRejectedValueOnce(apiError('update_not_allowed', 403))
+    flow.requestSubmit()
+    await flushPromises()
+    expect(flow.sendErrorText).toBe(
+      'Зайцев Егор уже вносил результаты. Повторный ввод на этом событии закрыт: исправить может только организатор.')
+    expect(flow.sendErrorText).not.toContain('сохранены')
+  })
+
+  it('нет связи: результаты остались в браузере, ничего не потеряется', async () => {
+    const { flow, api } = setup()
+    await enter(flow)
+    flow.toggleTile(0)
+    api.submit.mockRejectedValueOnce(networkError())
+    flow.requestSubmit()
+    await flushPromises()
+    expect(flow.sendErrorText).toBe('Нет связи с сервером. Результаты сохранены на телефоне, ничего не потеряется.')
+  })
+})
+
+describe('запоминание участника', () => {
+  it('после отправки запись содержит id и сет: по ним страница события берёт статус оплаты и место', async () => {
+    const { flow, store } = setup()
+    await flow.init()
+    await flow.identify('1234')
+    flow.toggleTile(0)
+    flow.requestSubmit()
+    await flushPromises()
+    expect(loadRememberedParticipant(store, EVENT_ID)).toEqual({
+      id: 1, first_name: 'Юлия', last_name: 'Зайцева', gender: 'FEMALE', group_index: 0, set_index: 0,
+    })
+  })
+
+  it('экран ввода пишет в общую запись страницы', async () => {
+    const store = memoryStore()
+    const remembered = createRememberedMe(store, EVENT_ID)
+    const api = fakeApi(makeConfig())
+    const flow = useEntryFlow({ eventId: EVENT_ID, api, store, remembered, readHash: () => '', clearHash: () => {} })
+    await flow.init()
+    await flow.identify('1234')
+    flow.toggleTile(0)
+    flow.requestSubmit()
+    await flushPromises()
+    expect(remembered.me.value?.last_name).toBe('Зайцева')
+  })
+})
+
+describe('ensureInit', () => {
+  it('запускает экран один раз: возврат на вкладку не сбрасывает ни PIN, ни отметки', async () => {
+    const { flow, api } = setup()
+    await flow.ensureInit()
+    await flow.identify('1234')
+    flow.toggleTile(0)
+    await flow.ensureInit()
+    expect(api.getConfig).toHaveBeenCalledTimes(1)
+    expect(flow.step).toBe('entry')
+    expect(flow.results[0].top).toBe(1)
   })
 })

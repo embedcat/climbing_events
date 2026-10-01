@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { onPhone } from '../../domain/device'
 import { formatTime } from '../../domain/format'
 import FrenchList from './FrenchList.vue'
 import RegistrationFields from './RegistrationFields.vue'
@@ -11,8 +12,8 @@ const props = defineProps<{ flow: EntryFlow }>()
 const draftText = computed(() => {
   if (!props.flow.storageOk) return 'Браузер не даёт сохранить черновик'
   return props.flow.draftSavedAt
-    ? `Черновик на телефоне · ${formatTime(props.flow.draftSavedAt)}`
-    : 'Черновик сохраняется на телефоне'
+    ? `Черновик ${onPhone.value} · ${formatTime(props.flow.draftSavedAt)}`
+    : `Черновик сохраняется ${onPhone.value}`
 })
 
 const whoMeta = computed(() => {
@@ -56,4 +57,7 @@ const whoMeta = computed(() => {
     @step="(index, kind, delta) => flow.changeAttempt(index, kind, delta)"
   />
   <TilesGrid v-else :results="flow.results" @toggle="(index) => flow.toggleTile(index)" />
+  <p v-if="!flow.updateAllowed" class="re-once">
+    Отправить можно один раз: исправить результаты потом сможет только организатор.
+  </p>
 </template>

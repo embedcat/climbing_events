@@ -1,0 +1,34 @@
+{% load vite %}<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  {% if can_view %}
+  <title>{{ event.title }} — RockEvents</title>
+  <meta name="description" content="{{ event.short_description }}">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{ event.title }}">
+  <meta property="og:description" content="{{ event.date_display }} · {{ event.gym }}. {{ event.short_description }}">
+  <meta property="og:image" content="{% if poster_url %}{{ poster_url }}{% else %}/static/events/img/preview.png{% endif %}">
+  {% else %}
+  <title>Событие не опубликовано — RockEvents</title>
+  {% endif %}
+  <style>
+    html, body { margin: 0; background: #f3f5f8; }
+    @media (prefers-color-scheme: dark) { html, body { background: #0f141a; color: #e4e9ef; } }
+    .re-plain { max-width: 520px; margin: 0 auto; padding: 48px 16px; font: 16px/1.4 system-ui, sans-serif; }
+  </style>
+  {% if can_view %}{% vite_entry 'src/entries/event.ts' %}{% endif %}
+  {% include 'events/snippets/sn-metrika.html' %}
+</head>
+<body>
+{% if can_view %}
+<div id="event-app" data-event-id="{{ event.id }}" data-csrf-token="{{ csrf_token }}"
+     data-manage-url="{% url 'admin_actions' event.id %}" data-matrix-url="{% url 'matrix' event.id %}"></div>
+<noscript><p class="re-plain">Для работы страницы события нужен включённый JavaScript.</p></noscript>
+{% else %}
+<p class="re-plain">Событие не опубликовано.</p>
+{% endif %}
+</body>
+</html>

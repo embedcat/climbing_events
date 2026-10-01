@@ -4,7 +4,7 @@ import type { ResultsPayload } from '../../api/results'
 import { rememberParticipant } from '../../domain/remember'
 import { memoryStore } from '../../domain/storage'
 import { apiError } from '../entry/testing'
-import ResultsApp from './ResultsApp.vue'
+import ResultsScreen from './ResultsScreen.vue'
 import { fakeResultsApi, fr, makePayload, makeRow, makeTable, res, standardPayload } from './testing'
 import { useResultsFlow } from './useResultsFlow'
 
@@ -19,7 +19,7 @@ async function mountApp(payload: ResultsPayload = standardPayload(), options: { 
     rememberParticipant(store, EVENT_ID, { first_name: first, last_name: last, gender, group_index: group })
   }
   const flow = useResultsFlow({ eventId: EVENT_ID, api, store, isHidden: () => false })
-  const wrapper = mount(ResultsApp, { props: { flow, editUrl }, attachTo: document.body })
+  const wrapper = mount(ResultsScreen, { props: { flow, editUrl }, attachTo: document.body })
   await flushPromises()
   return { wrapper, flow, api, state, store }
 }
@@ -323,7 +323,7 @@ describe('состояния экрана', () => {
     const { api } = fakeResultsApi(standardPayload())
     api.getResults.mockRejectedValueOnce(apiError('results_closed', 403))
     const flow = useResultsFlow({ eventId: EVENT_ID, api, store: memoryStore(), isHidden: () => false })
-    const wrapper = mount(ResultsApp, { props: { flow, editUrl }, attachTo: document.body })
+    const wrapper = mount(ResultsScreen, { props: { flow, editUrl }, attachTo: document.body })
     await flushPromises()
     expect(wrapper.text()).toContain('Просмотр результатов закрыт')
     expect(wrapper.find('table').exists()).toBe(false)
@@ -333,7 +333,7 @@ describe('состояния экрана', () => {
     const { api } = fakeResultsApi(standardPayload())
     api.getResults.mockRejectedValueOnce(apiError('network', 0, 'Нет связи с сервером.'))
     const flow = useResultsFlow({ eventId: EVENT_ID, api, store: memoryStore(), isHidden: () => false })
-    const wrapper = mount(ResultsApp, { props: { flow, editUrl }, attachTo: document.body })
+    const wrapper = mount(ResultsScreen, { props: { flow, editUrl }, attachTo: document.body })
     await flushPromises()
     expect(wrapper.get('[role="alert"]').text()).toContain('Повторить')
     await wrapper.get('[role="alert"] .re-linkbtn').trigger('click')

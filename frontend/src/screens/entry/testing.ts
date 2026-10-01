@@ -28,6 +28,7 @@ export function makeConfig(overrides: Partial<EntryConfig> = {}): EntryConfig {
 
 export function makeParticipant(overrides: Partial<PublicParticipant> = {}): PublicParticipant {
   return {
+    id: 1,
     first_name: 'Юлия',
     last_name: 'Зайцева',
     gender: 'FEMALE',
@@ -35,6 +36,7 @@ export function makeParticipant(overrides: Partial<PublicParticipant> = {}): Pub
     group: '',
     set_index: 0,
     set: '',
+    reg_type_index: 0,
     is_entered_result: false,
     ...overrides,
   }

@@ -1,23 +1,19 @@
 import asyncio
 import datetime
-import json
 import logging
-import operator
 
 from asgiref.sync import sync_to_async
 from django import views
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.mail import send_mail
 from django.core.paginator import Paginator
-from django.db.models import Count, Q
+from django.db.models import Q
 from django.forms import formset_factory, modelformset_factory, ModelChoiceField
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
 
 from config import settings
-from events.exceptions import DuplicateParticipantError, ParticipantTooYoungError
-from events.forms import EventPremiumSettingsForm, ParticipantRegistrationForm, AdminDescriptionForm, \
+from events.forms import EventPremiumSettingsForm, AdminDescriptionForm, \
     EventSettingsForm, RouteEditForm, ParticipantForm, CreateEventForm, EventPaySettingsForm, \
     PromoCodeAddForm, WalletForm, ScoreTableForm
 from events.models import GRADES, Event, Participant, PayDetail, Route, PromoCode, Wallet
@@ -71,17 +67,27 @@ class MainView(views.View):
         )
 
 
-class EventView(views.View):
+class EventPageView(views.View):
+    """ Страница события для участника: шапка с вкладками и все её экраны («Инфо», «Ввод», «Участники», «Результаты»,
+    регистрация, оплата) — один Vue-экран, он сам разбирает адрес и берёт данные из API.
+    HTML отдаёт Django, чтобы работали превью ссылок в чатах """
     @staticmethod
     def get(request, event_id):
         event = get_object_or_404(Event, id=event_id)
         return render(
             request=request,
-            template_name='events/event/description.html',
+            template_name='events/event/page.html',
             context={
                 'event': event,
+                'can_view': event.is_published or request.user == event.owner or request.user.is_superuser,
+                'poster_url': request.build_absolute_uri(event.poster.url) if event.poster else '',
             }
         )
+
+
+def event_page_redirect(request, event_id, **kwargs):
+    """ Старые адреса (письма с ссылкой на оплату, страница «регистрация завершена»): ведут на страницу события """
+    return redirect('event', event_id=event_id)
 
 
 class AdminActionsView(IsOwnerMixin, views.View):
@@ -343,170 +349,12 @@ class PaySettingsView(IsOwnerMixin, views.View):
         )
 
 
-class EnterResultsView(views.View):
-    """ Ввод результатов участником. Экран целиком на Vue, данные он берёт из API """
-    @staticmethod
-    def get(request, event_id):
-        event = get_object_or_404(Event, id=event_id)
-        return render(
-            request=request,
-            template_name='events/event/enter.html',
-            context={
-                'event': event,
-                'can_view': event.is_published or request.user == event.owner or request.user.is_superuser,
-            }
-        )
-
-
-class ResultsView(views.View):
-    """ Результаты события. Экран целиком на Vue, данные он берёт из API """
-    @staticmethod
-    def get(request, event_id):
-        event = get_object_or_404(Event, id=event_id)
-        return render(
-            request=request,
-            template_name='events/event/results.html',
-            context={
-                'event': event,
-                'can_view': event.is_published or request.user == event.owner or request.user.is_superuser,
-            }
-        )
-
-
 class MatrixView(IsOwnerMixin, views.View):
     """ Массовый ввод результатов организатором. Экран целиком на Vue, данные он берёт из API """
     @staticmethod
     def get(request, event_id):
         event = get_object_or_404(Event, id=event_id)
         return render(request=request, template_name='events/event/matrix.html', context={'event': event})
-
-
-class ParticipantsView(views.View):
-    @staticmethod
-    def get(request, event_id):
-        event = get_object_or_404(Event, id=event_id)
-        queryset = Participant.objects.filter(event__id=event_id)
-        participants = sorted(queryset, key=operator.attrgetter('last_name'))
-        set_list = services.get_set_list(event=event)
-        chart_set_data = {
-            'labels': set_list,
-            'data': [event.participant.filter(set_index=index).count() for index in range(len(set_list))],
-        }
-        group_list = services.get_group_list(event=event)
-        chart_group_data = {
-            'labels': group_list,
-            'data': [event.participant.filter(group_index=index).count() for index in range(len(group_list))],
-        }
-        cities = Participant.objects.filter(event__id=event_id).values('city').order_by('-city').annotate(
-            num=Count('city'))
-        cities = sorted(cities, key=operator.itemgetter('num'), reverse=True)
-        chart_city_data = {
-            'labels': [str(city['city']) for city in cities],
-            'data': [city['num'] for city in cities],
-        }
-        return render(
-            request=request,
-            template_name='events/event/participants.html',
-            context={
-                'event': event,
-                'participants': participants,
-                'chart_set_data': json.dumps(chart_set_data),
-                'chart_group_data': json.dumps(chart_group_data),
-                'chart_city_data': json.dumps(chart_city_data),
-                'fields': services.get_registration_fields(event=event),
-            }
-        )
-
-
-class RegistrationView(views.View):
-    @staticmethod
-    def get(request, event_id):
-        event = get_object_or_404(Event, id=event_id)
-        if event.is_without_registration:
-            return redirect('enter_results', event_id=event_id)
-        group_list = services.get_group_list(event=event)
-        set_list = services.get_set_list_available(event=event)
-        registration_fields = services.get_registration_fields(event=event)
-        required_fields = services.get_registration_required_fields(event=event)
-        return render(
-            request=request,
-            template_name='events/event/registration.html',
-            context={
-                'event': event,
-                'is_registration_open': services.is_registration_open(event=event),
-                'form': ParticipantRegistrationForm(group_list=group_list,
-                                                    set_list=set_list,
-                                                    registration_fields=registration_fields,
-                                                    required_fields=required_fields,
-                                                    is_enter_form=False,
-                                                    reg_type_list=event.reg_type_list)
-            }
-        )
-
-    @staticmethod
-    def post(request, event_id):
-        error = None
-        event = get_object_or_404(Event, id=event_id)
-        group_list = services.get_group_list(event=event)
-        set_list = services.get_set_list(event=event)
-        registration_fields = services.get_registration_fields(event=event)
-        required_fields = services.get_registration_required_fields(event=event)
-        form = ParticipantRegistrationForm(request.POST,
-                                           request.FILES,
-                                           group_list=group_list,
-                                           set_list=set_list,
-                                           registration_fields=registration_fields,
-                                           required_fields=required_fields,
-                                           is_enter_form=False,
-                                           reg_type_list=event.reg_type_list)
-        if form.is_valid():
-            try:
-                participant = services.register_participant(event=event, cd=form.cleaned_data)
-                if event.is_view_pin_after_registration or event.is_pay_allowed:
-                    return redirect('event_registration_ok', event_id=event_id, participant_id=participant.id)
-                else:
-                    return redirect('participants', event_id=event_id)
-            except (DuplicateParticipantError, ParticipantTooYoungError) as e:
-                error = e
-        return render(
-            request=request,
-            template_name='events/event/registration.html',
-            context={
-                'event': event,
-                'is_registration_open': True,
-                'form': form,
-                'error': error,
-            }
-        )
-
-
-class EventRegistrationOkView(views.View):
-    @staticmethod
-    def get(request, event_id, participant_id):
-        event = get_object_or_404(Event, id=event_id)
-        participant = get_object_or_404(Participant, id=participant_id)
-        pay_url = request.build_absolute_uri(reverse('pay_create', args=(event_id, participant_id,)))
-        msg = services.get_registration_msg_html(event=event,
-                                                 participant=participant,
-                                                 pay_url=pay_url)
-        email = services.get_registration_email_msg_html(event=event,
-                                                 participant=participant,
-                                                 pay_url=pay_url)
-        if participant.email and event.is_pay_allowed:
-            send_mail(subject='Регистрация завершена',
-                      message=msg,
-                      from_email=None,
-                      recipient_list=[participant.email],
-                      fail_silently=True,
-                      html_message=email)
-        return render(
-            request=request,
-            template_name='events/event/registration-ok.html',
-            context={
-                'event': event,
-                'msg': msg,
-            }
-        )
 
 
 class RouteEditor(IsOwnerMixin, views.View):
@@ -669,22 +517,6 @@ class MyEventsView(LoginRequiredMixin, views.View):
                           'events': events,
                           'all_events': Event.objects.exclude(owner=request.user.id).order_by('-date') if request.user.is_superuser else None,
                       })
-
-
-def check_promo_code(request):
-    promo_code_title = request.GET.get('promocode')
-    event_id = request.GET.get('event_id')
-    response = {'result': False,
-                'price': 0}
-    try:
-        promo_code = PromoCode.objects.get(title=promo_code_title, event__id=event_id)
-        if promo_code.max_applied_num == 0 or promo_code.applied_num < promo_code.max_applied_num:
-            response = {'result': True,
-                        'price': promo_code.price,
-                        'promocode_id': promo_code.id}
-    except PromoCode.DoesNotExist:
-        pass
-    return JsonResponse(response)
 
 
 def page_not_found_view(request, exception):

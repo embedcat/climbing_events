@@ -4,7 +4,7 @@ import { computed, reactive, ref } from 'vue'
 import type { Gender } from '../../api/entry'
 import { asApiError } from '../../api/http'
 import type { ResultRow, ResultsApi, ResultsPayload, ResultsTable } from '../../api/results'
-import { loadRememberedParticipant, rememberParticipant } from '../../domain/remember'
+import { createRememberedMe, type RememberedMe } from '../../domain/remember'
 import type { KeyValueStore } from '../../domain/storage'
 import {
   allRows, changeMessage, diffResults, findRemembered, findRow, findTable, formatAgo,
@@ -25,6 +25,8 @@ export interface ResultsFlowDeps {
   eventId: number
   api: ResultsApi
   store: KeyValueStore
+  /** запомненный участник; общий с остальными экранами страницы события */
+  remembered?: RememberedMe
   /** location.search: `?autorefresh&m` и `?autorefresh&f` — ссылки монитора события для зала */
   search?: string
   isHidden?: () => boolean
@@ -33,6 +35,7 @@ export interface ResultsFlowDeps {
 
 export function useResultsFlow(deps: ResultsFlowDeps) {
   const { eventId, api, store } = deps
+  const remembered = deps.remembered ?? createRememberedMe(store, eventId)
   const now = deps.now ?? Date.now
   const isHidden = deps.isHidden ?? (() => typeof document !== 'undefined' && document.hidden)
   const params = new URLSearchParams(deps.search ?? '')
@@ -46,8 +49,8 @@ export function useResultsFlow(deps: ResultsFlowDeps) {
   const gender = ref<Gender>('MALE')
   const groupIndex = ref(0)
   const sheetId = ref<number | null>(null)
-  /** Запомненный на телефоне участник; строку в таблице ищем по имени, потому что id могут смениться. */
-  const remembered = ref(loadRememberedParticipant(store, eventId))
+  /** Запомненный в браузере участник; строку в таблице ищем по имени, потому что id могут смениться. */
+  const myRecord = remembered.me
   const meRowVisible = ref(true)
   /** Просьба прокрутить таблицу к строке; seq нужен, чтобы повторная просьба тоже срабатывала. */
   const focusRow = ref<{ id: number; seq: number } | null>(null)
@@ -74,7 +77,7 @@ export function useResultsFlow(deps: ResultsFlowDeps) {
   const pollInterval = computed(() => (monitor ? MONITOR_INTERVAL_MS : isLive.value ? LIVE_INTERVAL_MS : 0))
   const agoText = computed(() => formatAgo(Math.max(0, (clock.value - lastUpdate.value) / 1000)))
 
-  const meId = computed(() => (payload.value ? findRemembered(payload.value, remembered.value) : null))
+  const meId = computed(() => (payload.value ? findRemembered(payload.value, myRecord.value) : null))
   const me = computed(() => (payload.value && meId.value !== null ? findRow(payload.value, meId.value) : null))
   const meInCurrentTable = computed(() => me.value?.table === table.value)
   const sheet = computed(() => (payload.value && sheetId.value !== null ? findRow(payload.value, sheetId.value) : null))
@@ -120,7 +123,7 @@ export function useResultsFlow(deps: ResultsFlowDeps) {
       groupIndex.value = 0
       return
     }
-    const mine = findRemembered(next, remembered.value)
+    const mine = findRemembered(next, myRecord.value)
     const found = mine !== null ? findRow(next, mine) : null
     if (found) {
       gender.value = found.table.gender
@@ -188,6 +191,12 @@ export function useResultsFlow(deps: ResultsFlowDeps) {
     tick()
   }
 
+  /** Вернулись на вкладку «Результаты»: запускаем опрос заново и, если данные устарели, обновляем сразу. */
+  function resume(): void {
+    if (tickTimer === undefined) tickTimer = setInterval(tick, CLOCK_TICK_MS)
+    wake()
+  }
+
   function dispose(): void {
     clearInterval(tickTimer)
     clearTimeout(toastTimer)
@@ -215,14 +224,14 @@ export function useResultsFlow(deps: ResultsFlowDeps) {
   }
 
   function rememberPerson(row: ResultRow): void {
-    const who = {
+    remembered.remember({
+      id: row.id,
       first_name: row.first_name,
       last_name: row.last_name,
       gender: row.gender,
       group_index: payload.value ? findRow(payload.value, row.id)?.table.group_index ?? 0 : 0,
-    }
-    rememberParticipant(store, eventId, who)
-    remembered.value = who
+      set_index: row.set_index,
+    })
     sheetId.value = null
     showToast('Запомнили. В следующий раз сразу откроется ваша группа.')
   }
@@ -241,7 +250,7 @@ export function useResultsFlow(deps: ResultsFlowDeps) {
     gender, groupIndex, groupCounts, hasGroups, myGroupIndex,
     sheetId, sheet, meId, me, meInCurrentTable, meRowVisible, focusRow,
     deltas, changed, toast,
-    init, refresh, wake, dispose, selectGender, selectGroup, openPerson, closeSheet, rememberPerson, goToMe,
+    init, refresh, wake, resume, dispose, selectGender, selectGroup, openPerson, closeSheet, rememberPerson, goToMe,
     setMeRowVisible: (visible: boolean) => { meRowVisible.value = visible },
     showToast,
   })

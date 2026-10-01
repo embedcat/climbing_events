@@ -286,7 +286,7 @@ describe('«это я»', () => {
     expect(flow.meId).toBe(row.id)
     expect(flow.toast).toMatch(/Запомнили/)
     expect(JSON.parse(store.get(rememberKey(EVENT_ID))!)).toEqual(
-      { first_name: 'Пётр', last_name: 'Борисов', gender: 'MALE', group_index: 0 })
+      { id: row.id, first_name: 'Пётр', last_name: 'Борисов', gender: 'MALE', group_index: 0, set_index: 0 })
     flow.dispose()
   })
 

@@ -1,20 +1,8 @@
 /* Экран результатов (docs/mockups/results-phone.html): одна таблица на группу.
-   Место, имя и счёт закреплены слева, трассы прокручиваются вбок. Общее лежит в common.css. */
+   Место, имя и счёт закреплены слева, трассы прокручиваются вбок. Оболочка и общее лежат в event.css и common.css. */
 
-.re-results {
-  --re-top: 140px;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  max-width: 1100px;
-  height: calc(100vh - var(--re-top));
-  height: calc(100svh - var(--re-top));
-  min-height: 420px;
-  overflow: hidden;
-}
-.re-pad { padding: 16px; }
-.re-res-main { flex: 1 1 auto; display: flex; flex-direction: column; gap: 10px; min-height: 0; padding: 12px; }
-.re-res-main > * { flex-shrink: 0; }
+.re-results .re-res-main { gap: 10px; padding: 12px; }
+.re-results .re-res-main.is-narrow { padding: 16px 16px 24px; }
 
 /* строка «идёт» и выбор таблицы */
 .re-live { display: flex; align-items: center; gap: 8px; min-height: 28px; padding-inline: 4px; font-size: 12.5px; color: var(--muted); }
@@ -130,12 +118,19 @@
 .re-is-me { padding: 10px 12px; border-radius: 12px; background: var(--accent-soft); font-size: 13.5px; }
 .re-edit-link { align-self: center; }
 
-@media (min-width: 900px) {
+/* компьютер: таблица крупнее, имя целиком, рамка по ширине таблицы, поэтому при 15 трассах прокрутки вбок нет */
+@media (min-width: 760px) {
+  .re-results .re-res-main { gap: 12px; padding: 20px var(--gut) 16px; }
+  .re-results .re-res-main.is-narrow { padding: 28px var(--gut) 40px; }
+  .re-chips { flex-wrap: wrap; overflow: visible; }
+  .re-res-main > .re-tbl-wrap { align-self: flex-start; max-width: 100%; }
   .re-rt { font-size: 14px; }
-  .re-rt td.c, .re-rt th.c { width: 34px; min-width: 34px; font-size: 12px; }
-  .re-rt.is-fr td.c, .re-rt.is-fr th.c { width: 44px; min-width: 44px; }
-  .re-rt .s2 { width: 200px; min-width: 200px; max-width: 200px; }
+  .re-rt td.c, .re-rt th.c { width: 34px; min-width: 34px; }
+  .re-rt td.c { font-size: 12px; }
+  .re-rt.is-fr td.c, .re-rt.is-fr th.c { width: 46px; min-width: 46px; }
+  .re-rt .s2 { width: 220px; min-width: 220px; max-width: 220px; padding-left: 6px; }
   .re-nbtn .n { font-size: 15px; }
+  .re-me-bar { padding: 10px var(--gut) 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

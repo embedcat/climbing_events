@@ -296,20 +296,20 @@ class ResultsApiTests(ResultsTestBase):
 @override_settings(VITE_DEV_SERVER='http://localhost:5173')
 class ResultsPageTests(ResultsTestBase):
     def test_page_mounts_vue_app(self):
+        # результаты — вкладка страницы события: тот же HTML, экран выбирает Vue по адресу
         response = self.client.get(reverse('results', args=[self.event.id]))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, f'id="results-app" data-event-id="{self.event.id}"')
-        self.assertContains(response, f'data-enter-url="{reverse("enter_results", args=[self.event.id])}"')
-        self.assertContains(response, 'src/entries/results.ts')
+        self.assertContains(response, f'id="event-app" data-event-id="{self.event.id}"')
+        self.assertContains(response, 'src/entries/event.ts')
 
     def test_unpublished_event_shows_banner(self):
         self.set_event(is_published=False)
         response = self.client.get(reverse('results', args=[self.event.id]))
-        self.assertNotContains(response, 'id="results-app"')
+        self.assertNotContains(response, 'id="event-app"')
         self.assertContains(response, 'Событие не опубликовано')
 
     def test_owner_sees_page_of_unpublished_event(self):
         self.set_event(is_published=False)
         self.client.force_login(self.superuser)
         response = self.client.get(reverse('results', args=[self.event.id]))
-        self.assertContains(response, 'id="results-app"')
+        self.assertContains(response, 'id="event-app"')
