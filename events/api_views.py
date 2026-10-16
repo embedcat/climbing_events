@@ -85,13 +85,15 @@ class ParticipantViewSet(viewsets.ModelViewSet):
             return Participant.objects.none()
 
         # If not filtering, check user
+        # select_related: the serializer checks event owner for every participant
         if user and user.is_authenticated:
             if user.is_superuser:
-                return Participant.objects.all().order_by('last_name')
-            return Participant.objects.filter(Q(event__owner=user) | Q(event__is_published=True)).order_by('last_name')
-        
+                return Participant.objects.select_related('event').order_by('last_name')
+            return Participant.objects.select_related('event').filter(
+                Q(event__owner=user) | Q(event__is_published=True)).order_by('last_name')
+
         # Anonymous can only see participants of published events
-        return Participant.objects.filter(event__is_published=True).order_by('last_name')
+        return Participant.objects.select_related('event').filter(event__is_published=True).order_by('last_name')
 
     def create(self, request, *args, **kwargs):
         event_id = request.data.get('event')
@@ -141,9 +143,11 @@ class ParticipantViewSet(viewsets.ModelViewSet):
             "id": participant.id,
             "first_name": participant.first_name,
             "last_name": participant.last_name,
+            "middle_name": participant.middle_name,
             "pin": participant.pin,
             "gender": participant.gender,
             "birth_year": participant.birth_year,
+            "birth_date": participant.birth_date,
             "city": participant.city,
             "team": participant.team,
             "grade": participant.grade,

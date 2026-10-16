@@ -4,7 +4,7 @@ import operator
 import os
 import random
 import string
-from datetime import datetime
+from datetime import date, datetime
 from typing import Iterable
 import dacite
 from events.xl_tools import save_virtual_workbook
@@ -130,6 +130,7 @@ def update_event_settings(event: Event, cd: dict) -> None:
     event.is_check_result_before_enter = cd['is_check_result_before_enter']
     event.is_update_result_allowed = cd['is_update_result_allowed']
     event.participant_min_age = cd['participant_min_age']
+    event.birth_format = cd.get('birth_format') or event.birth_format
     event.reg_type_list = cd['reg_type_list']
     event.reg_type_num = 0 if event.reg_type_list == None else len(event.reg_type_list.split(','))
 
@@ -236,10 +237,17 @@ def update_participant(event: Event, participant: Participant, cd: dict) -> Part
         participant.first_name = cd['first_name']
     if 'last_name' in cd:
         participant.last_name = cd['last_name']
+    if Event.FIELD_MIDDLE_NAME in cd:
+        participant.middle_name = cd[Event.FIELD_MIDDLE_NAME] or ''
     if Event.FIELD_GENDER in cd:
         participant.gender = cd[Event.FIELD_GENDER]
     if Event.FIELD_BIRTH_YEAR in cd:
         participant.birth_year = cd[Event.FIELD_BIRTH_YEAR]
+    if Event.FIELD_BIRTH_DATE in cd:
+        participant.birth_date = cd[Event.FIELD_BIRTH_DATE]
+        # пустая дата год не стирает: у участников, зарегистрированных в режиме «год», даты нет
+        if participant.birth_date:
+            participant.birth_year = participant.birth_date.year
     if Event.FIELD_CITY in cd:
         participant.city = cd[Event.FIELD_CITY]
     if Event.FIELD_TEAM in cd:
@@ -282,6 +290,8 @@ def _create_participant(event: Event, first_name: str, last_name: str,
                         email: str = '',
                         reg_type_index: int = 0,
                         phone_number: str = '',
+                        middle_name: str = '',
+                        birth_date: date = None,
                         ) -> Participant or None:
     if 0 < event.set_max_participants <= event.participant.filter(set_index=set_index).count():
         return None
@@ -291,8 +301,10 @@ def _create_participant(event: Event, first_name: str, last_name: str,
     participant = Participant.objects.create(
         first_name=first_name,
         last_name=last_name,
+        middle_name=middle_name,
         gender=gender,
         birth_year=birth_year,
+        birth_date=birth_date,
         city=city,
         team=team,
         grade=grade,
@@ -307,6 +319,10 @@ def _create_participant(event: Event, first_name: str, last_name: str,
     return participant
 
 
+def _get_age(birth_date: date, on_date: date) -> int:
+    return on_date.year - birth_date.year - ((on_date.month, on_date.day) < (birth_date.month, birth_date.day))
+
+
 def register_participant(event: Event, cd: dict) -> Participant:
     first_name = cd.get('first_name', '')
     last_name = cd.get('last_name', '')
@@ -316,9 +332,17 @@ def register_participant(event: Event, cd: dict) -> Participant:
     if event.participant.filter(first_name=first_name, last_name=last_name).exists():
         raise DuplicateParticipantError
 
-    birth_year = cd.get(Event.FIELD_BIRTH_YEAR, 0)
-    if event.participant_min_age and birth_year:
-        if datetime.today().year - int(birth_year) < event.participant_min_age:
+    birth_date = cd.get(Event.FIELD_BIRTH_DATE)
+    birth_year = birth_date.year if birth_date else cd.get(Event.FIELD_BIRTH_YEAR, 0)
+    if event.participant_min_age:
+        if birth_date:
+            # с полной датой проверяем точный возраст на день начала события
+            age = _get_age(birth_date=birth_date, on_date=event.date or date.today())
+        elif birth_year:
+            age = datetime.today().year - int(birth_year)
+        else:
+            age = None
+        if age is not None and age < event.participant_min_age:
             raise ParticipantTooYoungError(event.participant_min_age)
 
     groups = get_group_list(event=event)
@@ -340,8 +364,10 @@ def register_participant(event: Event, cd: dict) -> Participant:
         event=event,
         first_name=first_name,
         last_name=last_name,
+        middle_name=cd.get(Event.FIELD_MIDDLE_NAME) or '',
         gender=cd.get(Event.FIELD_GENDER, Participant.GENDER_MALE),
         birth_year=birth_year or 0,
+        birth_date=birth_date,
         city=cd.get(Event.FIELD_CITY, ''),
         team=cd.get(Event.FIELD_TEAM, ''),
         grade=cd.get(Event.FIELD_GRADE, Participant.GRADE_BR),
@@ -668,13 +694,15 @@ def _get_random_string(length):
 
 def _debug_create_random_participant(event: Event) -> Participant:
     gender = random.choice([g[0] for g in Participant.GENDERS])
+    birth_date = date.fromordinal(random.randint(date(1950, 1, 1).toordinal(), date(2020, 12, 31).toordinal()))
     return _create_participant(
         event=event,
         first_name=random.choice(
             mock.male_names) if gender == Participant.GENDER_MALE else random.choice(mock.female_names),
         last_name=random.choice(mock.last_names) + ("а" if gender == Participant.GENDER_FEMALE else ""),
         gender=gender,
-        birth_year=random.randint(1950, 2020),
+        birth_year=birth_date.year,
+        birth_date=birth_date,
         city=random.choice(mock.cities),
         team=f"Команда №{random.randrange(5)}",
         grade=random.choice([g[0] for g in Participant.GRADES]),

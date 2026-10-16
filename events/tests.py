@@ -1300,3 +1300,212 @@ class PosterTests(ClimbingEventsBaseTestCase):
         call_command('compress_posters', stdout=io.StringIO())
         self.event.refresh_from_db()
         self.assertEqual(self.event.poster.name, compressed_name)
+
+
+class MiddleNameAndBirthDateTests(ClimbingEventsBaseTestCase):
+    """Отчество и формат даты рождения (год / полная дата) при регистрации."""
+
+    def setUp(self):
+        super().setUp()
+        self.other_user = CustomUser.objects.create_user(id=3, username='other', email='other@example.com',
+                                                         password='password123')
+        # владелец — обычный пользователь, чтобы отличать его от суперадмина и постороннего
+        self.event = services.create_event(owner=self.user, title="Birth Event", date=date(2026, 10, 1))
+        self.event.is_published = True
+        self.event.is_registration_open = True
+        self.event.registration_fields = [Event.FIELD_MIDDLE_NAME, Event.FIELD_BIRTH_YEAR]
+        self.event.required_fields = [Event.FIELD_BIRTH_YEAR]
+        self.event.birth_format = Event.BIRTH_FORMAT_DATE
+        self.event.save()
+
+    def _registration_form(self, **kwargs):
+        return ParticipantRegistrationForm(
+            group_list=services.get_group_list(self.event),
+            set_list=services.get_set_list(self.event),
+            registration_fields=services.get_registration_fields(self.event),
+            required_fields=services.get_registration_required_fields(self.event),
+            is_enter_form=False,
+            reg_type_list=self.event.reg_type_list,
+            birth_format=self.event.birth_format,
+            **kwargs,
+        )
+
+    def _participant_form(self):
+        from events.forms import ParticipantForm
+        return ParticipantForm(group_list='', set_list=[], is_pay_allowed=False, reg_type_list=None,
+                               registration_fields=services.get_registration_fields(self.event),
+                               birth_format=self.event.birth_format)
+
+    def _create_participant(self, **kwargs):
+        defaults = dict(first_name='Иван', last_name='Иванов', middle_name='Иванович', gender=Participant.GENDER_MALE,
+                        birth_year=1990, birth_date=date(1990, 5, 17), email='ivan@example.com',
+                        phone_number='+79998887766', event=self.event, pin=1234, set_index=0)
+        defaults.update(kwargs)
+        return Participant.objects.create(**defaults)
+
+    def test_full_name(self):
+        self.assertEqual(self._create_participant().full_name, 'Иванов Иван Иванович')
+        self.assertEqual(self._create_participant(middle_name='', pin=4321, first_name='Пётр').full_name,
+                         'Иванов Пётр')
+
+    def test_registration_form_middle_name_after_first_name(self):
+        form = self._registration_form()
+        names = list(form.fields)
+        self.assertEqual(names.index(Event.FIELD_MIDDLE_NAME), names.index('first_name') + 1)
+        self.assertFalse(form.fields[Event.FIELD_MIDDLE_NAME].required)
+
+        self.event.required_fields = [Event.FIELD_MIDDLE_NAME]
+        self.assertTrue(self._registration_form().fields[Event.FIELD_MIDDLE_NAME].required)
+
+    def test_registration_form_birth_field_follows_format(self):
+        form = self._registration_form()
+        self.assertIn(Event.FIELD_BIRTH_DATE, form.fields)
+        self.assertNotIn(Event.FIELD_BIRTH_YEAR, form.fields)
+        self.assertTrue(form.fields[Event.FIELD_BIRTH_DATE].required)
+
+        self.event.birth_format = Event.BIRTH_FORMAT_YEAR
+        form = self._registration_form()
+        self.assertIn(Event.FIELD_BIRTH_YEAR, form.fields)
+        self.assertNotIn(Event.FIELD_BIRTH_DATE, form.fields)
+        self.assertTrue(form.fields[Event.FIELD_BIRTH_YEAR].required)
+
+    def test_participant_form_birth_field_follows_format(self):
+        self.assertIn(Event.FIELD_BIRTH_DATE, self._participant_form().fields)
+        self.assertNotIn(Event.FIELD_BIRTH_YEAR, self._participant_form().fields)
+        self.assertIn(Event.FIELD_MIDDLE_NAME, self._participant_form().fields)
+
+        self.event.birth_format = Event.BIRTH_FORMAT_YEAR
+        self.assertIn(Event.FIELD_BIRTH_YEAR, self._participant_form().fields)
+        self.assertNotIn(Event.FIELD_BIRTH_DATE, self._participant_form().fields)
+
+        self.event.registration_fields = []
+        form = self._participant_form()
+        for field in (Event.FIELD_BIRTH_YEAR, Event.FIELD_BIRTH_DATE, Event.FIELD_MIDDLE_NAME):
+            self.assertNotIn(field, form.fields)
+
+    def test_register_participant_with_birth_date(self):
+        p = services.register_participant(self.event, {
+            'first_name': 'Иван', 'last_name': 'Иванов', 'middle_name': 'Иванович',
+            'birth_date': date(1990, 5, 17),
+        })
+        p.refresh_from_db()
+        self.assertEqual(p.middle_name, 'Иванович')
+        self.assertEqual(p.birth_date, date(1990, 5, 17))
+        self.assertEqual(p.birth_year, 1990)
+
+    def test_min_age_with_birth_date_is_exact_on_event_date(self):
+        self.event.participant_min_age = 18
+        self.event.save()
+        with self.assertRaises(ParticipantTooYoungError):
+            services.register_participant(self.event, {
+                'first_name': 'Юный', 'last_name': 'Лазун', 'birth_date': date(2008, 10, 2)})
+        p = services.register_participant(self.event, {
+            'first_name': 'Взрослый', 'last_name': 'Лазун', 'birth_date': date(2008, 10, 1)})
+        self.assertEqual(p.birth_year, 2008)
+
+    def test_update_participant_birth_date_syncs_year_and_empty_date_keeps_it(self):
+        p = self._create_participant(birth_year=1995, birth_date=None)
+        services.update_participant(self.event, p, {'birth_date': None})
+        p.refresh_from_db()
+        self.assertEqual(p.birth_year, 1995)
+        self.assertIsNone(p.birth_date)
+
+        services.update_participant(self.event, p, {'birth_date': date(1990, 5, 17), 'middle_name': 'Петрович'})
+        p.refresh_from_db()
+        self.assertEqual(p.birth_year, 1990)
+        self.assertEqual(p.birth_date, date(1990, 5, 17))
+        self.assertEqual(p.middle_name, 'Петрович')
+
+    def test_registration_view_with_birth_date(self):
+        url = reverse('registration', kwargs={'event_id': self.event.id})
+        response = self.client.post(url, data={
+            'last_name': 'Иванов', 'first_name': 'Иван', 'middle_name': 'Иванович', 'birth_date': '1990-05-17'})
+        self.assertEqual(response.status_code, 302)
+        p = Participant.objects.get(event=self.event, last_name='Иванов')
+        self.assertEqual(p.middle_name, 'Иванович')
+        self.assertEqual(p.birth_date, date(1990, 5, 17))
+        self.assertEqual(p.birth_year, 1990)
+
+    def test_registration_view_rejects_future_birth_date(self):
+        url = reverse('registration', kwargs={'event_id': self.event.id})
+        tomorrow = date.fromordinal(date.today().toordinal() + 1)
+        response = self.client.post(url, data={
+            'last_name': 'Иванов', 'first_name': 'Иван', 'birth_date': tomorrow.isoformat()})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(Event.FIELD_BIRTH_DATE, response.context['form'].errors)
+        self.assertFalse(Participant.objects.filter(event=self.event).exists())
+
+    def test_participants_list_shows_birth_date_only_to_owner(self):
+        self._create_participant()
+        url = reverse('participants', kwargs={'event_id': self.event.id})
+
+        response = self.client.get(url)
+        self.assertFalse(response.context['show_birth_date'])
+        self.assertContains(response, 'Иванов Иван Иванович')
+        self.assertNotContains(response, '17.05.1990')
+
+        self.client.force_login(self.user)
+        response = self.client.get(url)
+        self.assertTrue(response.context['show_birth_date'])
+        self.assertContains(response, '17.05.1990')
+
+    def test_settings_page_saves_birth_format_and_keeps_it_when_missing(self):
+        self.client.force_login(self.user)
+        url = reverse('admin_settings', args=[self.event.id])
+        data = RoutesNumChangeTests._settings_post_data(self, self.event.routes_num)
+
+        response = self.client.post(url, data=data)
+        self.assertEqual(response.status_code, 302)
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.birth_format, Event.BIRTH_FORMAT_DATE)
+
+        response = self.client.post(url, data={**data, 'birth_format': Event.BIRTH_FORMAT_YEAR})
+        self.assertEqual(response.status_code, 302)
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.birth_format, Event.BIRTH_FORMAT_YEAR)
+
+    def test_api_registration_with_middle_name_and_birth_date(self):
+        response = self.client.post(reverse('api_participants-list'), data={
+            'event': self.event.id, 'first_name': 'Семён', 'last_name': 'Семёнов', 'middle_name': 'Семёнович',
+            'birth_date': '1992-03-04',
+        }, content_type='application/json')
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()['birth_date'], '1992-03-04')
+        p = Participant.objects.get(id=response.json()['id'])
+        self.assertEqual(p.middle_name, 'Семёнович')
+        self.assertEqual(p.birth_year, 1992)
+
+    def test_api_private_fields_visible_only_to_owner(self):
+        self._create_participant()
+        url = reverse('api_participants-list') + f'?event={self.event.id}'
+        private = ('email', 'phone_number', 'birth_date')
+
+        for user in (self.user, self.superuser):
+            self.client.force_login(user)
+            data = self.client.get(url).json()[0]
+            for field in private:
+                self.assertIn(field, data)
+            self.assertEqual(data['middle_name'], 'Иванович')
+
+        self.client.force_login(self.other_user)
+        data = self.client.get(url).json()[0]
+        for field in private:
+            self.assertNotIn(field, data)
+        self.assertEqual(data['birth_year'], 1990)
+
+    def test_startlist_birth_column_follows_format(self):
+        from openpyxl import load_workbook
+        self._create_participant()
+        self.client.force_login(self.user)
+        url = reverse('admin_protocols', args=[self.event.id])
+
+        sheet = load_workbook(io.BytesIO(self.client.post(url, data={'export_startlist': ''}).content)).worksheets[0]
+        self.assertEqual(sheet['B8'].value, 'Иванов Иван Иванович')
+        self.assertEqual(sheet['C7'].value, 'Дата рождения')
+        self.assertEqual(sheet['C8'].value.date(), date(1990, 5, 17))
+
+        self.event.birth_format = Event.BIRTH_FORMAT_YEAR
+        self.event.save()
+        sheet = load_workbook(io.BytesIO(self.client.post(url, data={'export_startlist': ''}).content)).worksheets[0]
+        self.assertEqual(sheet['C7'].value, 'Год рождения')
+        self.assertEqual(sheet['C8'].value, 1990)

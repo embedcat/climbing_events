@@ -490,7 +490,8 @@ class EnterWithoutReg(views.View):
                                                     required_fields=services.get_registration_required_fields(
                                                         event=event),
                                                     is_enter_form=True,
-                                                    reg_type_list=None)
+                                                    reg_type_list=None,
+                                                    birth_format=event.birth_format)
 
             }
         )
@@ -507,7 +508,8 @@ class EnterWithoutReg(views.View):
                                            registration_fields=services.get_registration_fields(event=event),
                                            required_fields=services.get_registration_required_fields(event=event),
                                            is_enter_form=True,
-                                           reg_type_list=None)
+                                           reg_type_list=None,
+                                           birth_format=event.birth_format)
         AccentFormSet = formset_factory(AccentFrenchForm if event.score_type == Event.SCORE_FRENCH else AccentForm)
         accent_formset = AccentFormSet(request.POST, prefix='accents')
         if form.is_valid() and accent_formset.is_valid():
@@ -579,6 +581,9 @@ class ParticipantsView(views.View):
                 'chart_group_data': json.dumps(chart_group_data),
                 'chart_city_data': json.dumps(chart_city_data),
                 'fields': services.get_registration_fields(event=event),
+                # полную дату рождения видит только организатор, остальные — год
+                'show_birth_date': event.birth_format == Event.BIRTH_FORMAT_DATE
+                and (request.user == event.owner or request.user.is_superuser),
             }
         )
 
@@ -604,7 +609,8 @@ class RegistrationView(views.View):
                                                     registration_fields=registration_fields,
                                                     required_fields=required_fields,
                                                     is_enter_form=False,
-                                                    reg_type_list=event.reg_type_list)
+                                                    reg_type_list=event.reg_type_list,
+                                                    birth_format=event.birth_format)
             }
         )
 
@@ -623,7 +629,8 @@ class RegistrationView(views.View):
                                            registration_fields=registration_fields,
                                            required_fields=required_fields,
                                            is_enter_form=False,
-                                           reg_type_list=event.reg_type_list)
+                                           reg_type_list=event.reg_type_list,
+                                           birth_format=event.birth_format)
         if form.is_valid():
             try:
                 participant = services.register_participant(event=event, cd=form.cleaned_data)
@@ -745,6 +752,7 @@ class ParticipantView(IsOwnerMixin, views.View):
                                         is_pay_allowed=event.is_pay_allowed,
                                         registration_fields=services.get_registration_fields(event=event),
                                         reg_type_list=event.reg_type_list,
+                                        birth_format=event.birth_format,
                                         ),
             }
         )
@@ -760,6 +768,7 @@ class ParticipantView(IsOwnerMixin, views.View):
                                is_pay_allowed=event.is_pay_allowed,
                                registration_fields=services.get_registration_fields(event=event),
                                reg_type_list=event.reg_type_list,
+                               birth_format=event.birth_format,
                                )
         if form.is_valid():
             services.update_participant(event=event, participant=participant, cd=form.cleaned_data)
@@ -778,6 +787,7 @@ class ParticipantView(IsOwnerMixin, views.View):
                                             is_pay_allowed=event.is_pay_allowed,
                                             registration_fields=services.get_registration_fields(event=event),
                                             reg_type_list=event.reg_type_list,
+                                            birth_format=event.birth_format,
                                             ),
                 }
             )

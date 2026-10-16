@@ -1,6 +1,9 @@
+import datetime
+
 from colorfield.fields import ColorField
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from phonenumber_field.modelfields import PhoneNumberField
@@ -88,6 +91,14 @@ def _get_default_score_table_json():
     return {g[0]: f'{str(10 + 5 * i)}' for i, g in enumerate(GRADES)}
 
 
+BIRTH_DATE_MIN = datetime.date(1900, 1, 1)
+
+
+def validate_birth_date(value):
+    if value < BIRTH_DATE_MIN or value > datetime.date.today():
+        raise ValidationError('Укажите реальную дату рождения')
+
+
 class CustomUser(AbstractUser):
     premium_price = models.IntegerField(default=0, null=True, blank=True)
 
@@ -145,7 +156,11 @@ class Event(models.Model):
     set_num = models.IntegerField(default=1)
     set_list = models.CharField(max_length=200, default='Общий сет')
     set_max_participants = models.IntegerField(default=0)
+    FIELD_MIDDLE_NAME = 'middle_name'
+    # в registration_fields/required_fields означает «спрашивать год или дату рождения», что именно — birth_format
     FIELD_BIRTH_YEAR = 'birth_year'
+    # ключ поля формы и cleaned_data в режиме BIRTH_FORMAT_DATE, в registration_fields не входит
+    FIELD_BIRTH_DATE = 'birth_date'
     FIELD_CITY = 'city'
     FIELD_TEAM = 'team'
     FIELD_GENDER = 'gender'
@@ -153,6 +168,7 @@ class Event(models.Model):
     FIELD_EMAIL = 'email'
     FIELD_PHONE = 'phone_number'
     OPTIONAL_FIELDS = [
+        FIELD_MIDDLE_NAME,
         FIELD_BIRTH_YEAR,
         FIELD_CITY,
         FIELD_TEAM,
@@ -162,15 +178,17 @@ class Event(models.Model):
         FIELD_PHONE,
     ]
     REQUIRED_FIELDS = [
-        (FIELD_BIRTH_YEAR, 'Год рождения'),
+        (FIELD_MIDDLE_NAME, 'Отчество'),
+        (FIELD_BIRTH_YEAR, 'Год/дата рождения'),
         (FIELD_CITY, 'Город'),
         (FIELD_TEAM, 'Команда'),
         (FIELD_EMAIL, 'Email'),
         (FIELD_PHONE, 'Телефон'),
     ]
     REGISTRATION_FIELDS = [
+        (FIELD_MIDDLE_NAME, 'Отчество'),
         (FIELD_GENDER, 'Пол'),
-        (FIELD_BIRTH_YEAR, 'Год рождения'),
+        (FIELD_BIRTH_YEAR, 'Год/дата рождения'),
         (FIELD_CITY, 'Город'),
         (FIELD_TEAM, 'Команда'),
         (FIELD_GRADE, 'Разряд'),
@@ -179,6 +197,13 @@ class Event(models.Model):
     ]
     registration_fields = ArrayField(models.CharField(max_length=20, choices=REGISTRATION_FIELDS), blank=True, null=True, default=_get_default_registration_fields)
     required_fields = ArrayField(models.CharField(max_length=20, choices=REQUIRED_FIELDS), blank=True, null=True, default=list)
+    BIRTH_FORMAT_YEAR = 'year'
+    BIRTH_FORMAT_DATE = 'date'
+    BIRTH_FORMATS = [
+        (BIRTH_FORMAT_YEAR, 'Год рождения'),
+        (BIRTH_FORMAT_DATE, 'Полная дата рождения'),
+    ]
+    birth_format = models.CharField(max_length=4, choices=BIRTH_FORMATS, default=BIRTH_FORMAT_YEAR)
     is_without_registration = models.BooleanField(default=False)
     is_view_pin_after_registration = models.BooleanField(default=True)
     is_check_result_before_enter = models.BooleanField(default=False)
@@ -233,6 +258,7 @@ class Event(models.Model):
 class Participant(models.Model):
     first_name = models.CharField(max_length=32)
     last_name = models.CharField(max_length=32)
+    middle_name = models.CharField(max_length=32, blank=True, default='')
     GENDER_MALE = 'MALE'
     GENDER_FEMALE = 'FEMALE'
     GENDERS = [
@@ -241,6 +267,8 @@ class Participant(models.Model):
     ]
     gender = models.CharField(max_length=6, choices=GENDERS, default=GENDER_MALE)
     birth_year = models.IntegerField(null=True)
+    # заполняется только в режиме Event.BIRTH_FORMAT_DATE, birth_year при этом тоже пишется
+    birth_date = models.DateField(null=True, blank=True, validators=[validate_birth_date])
     city = models.CharField(null=True, max_length=32)
     team = models.CharField(null=True, max_length=32)
 
@@ -284,6 +312,10 @@ class Participant(models.Model):
     counted_routes = ArrayField(models.IntegerField(), blank=True, null=True, default=_get_default_array)
 
     phone_number = PhoneNumberField(blank=True)
+
+    @property
+    def full_name(self) -> str:
+        return ' '.join(part for part in (self.last_name, self.first_name, self.middle_name) if part)
 
     def __str__(self):
         return f'<Part-t: Name={self.last_name}, PIN={self.pin}, Score={self.score}, set={self.set_index}>'

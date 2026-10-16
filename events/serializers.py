@@ -1,3 +1,5 @@
+from collections.abc import Mapping
+
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from events.models import Event, Participant, Route, Wallet, PromoCode, PayDetail
@@ -34,8 +36,24 @@ class EventSerializer(serializers.ModelSerializer):
 
 
 class ParticipantSerializer(serializers.ModelSerializer):
+    # видят только организатор события и суперадмин (docs/PRODUCT.md, «Регистрация и участники»)
+    PRIVATE_FIELDS = ('email', 'phone_number', 'birth_date')
+
     city = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     team = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        # до сохранения (serializer.data в ParticipantViewSet.create) сюда приходит validated_data — dict
+        event = instance.get('event') if isinstance(instance, Mapping) else instance.event
+        is_owner = user is not None and user.is_authenticated and (
+            user.is_superuser or (event is not None and event.owner_id == user.id))
+        if not is_owner:
+            for field in self.PRIVATE_FIELDS:
+                data.pop(field, None)
+        return data
 
     class Meta:
         model = Participant

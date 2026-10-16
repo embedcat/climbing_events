@@ -7,9 +7,22 @@ from django.core.files.uploadedfile import UploadedFile
 from config import settings
 
 from events import img_tools
-from events.models import Participant, Event, ACCENT_TYPE, Route, PromoCode, Wallet
+from events.models import Participant, Event, ACCENT_TYPE, Route, PromoCode, Wallet, validate_birth_date
 from tinymce.widgets import TinyMCE
 from phonenumber_field.formfields import PhoneNumberField
+
+
+def _birth_date_widget():
+    # type=date даёт нативный календарь на телефоне, браузер отправляет дату в ISO
+    return forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d')
+
+
+def _birth_date_field(required: bool) -> forms.DateField:
+    return forms.DateField(label='Дата рождения',
+                           required=required,
+                           widget=_birth_date_widget(),
+                           input_formats=['%Y-%m-%d', '%d.%m.%Y'],
+                           validators=[validate_birth_date])
 
 
 class ParticipantRegistrationForm(forms.ModelForm):
@@ -20,6 +33,7 @@ class ParticipantRegistrationForm(forms.ModelForm):
         required_fields = kwargs.pop('required_fields')
         is_enter_form = kwargs.pop('is_enter_form')
         reg_type_list = kwargs.pop('reg_type_list')
+        birth_format = kwargs.pop('birth_format', Event.BIRTH_FORMAT_YEAR)
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_method = 'post'
@@ -30,12 +44,20 @@ class ParticipantRegistrationForm(forms.ModelForm):
             self.helper.add_input(Submit('submit', 'Зарегистрироваться'))
         self.helper.label_class = 'mb-1'
 
+        # отчество первым из дополнительных полей, чтобы стояло сразу после имени
+        if Event.FIELD_MIDDLE_NAME in registration_fields:
+            self.fields[Event.FIELD_MIDDLE_NAME] = forms.CharField(label='Отчество', max_length=32,
+                                                                   required=Event.FIELD_MIDDLE_NAME in required_fields)
         if Event.FIELD_GENDER in registration_fields:
             self.fields[Event.FIELD_GENDER] = forms.ChoiceField(choices=Participant.GENDERS, label='Пол',
                                                                 required=False)
         if Event.FIELD_BIRTH_YEAR in registration_fields:
-            self.fields[Event.FIELD_BIRTH_YEAR] = forms.IntegerField(label='Год рождения',
-                                                                     required=Event.FIELD_BIRTH_YEAR in required_fields)
+            is_birth_required = Event.FIELD_BIRTH_YEAR in required_fields
+            if birth_format == Event.BIRTH_FORMAT_DATE:
+                self.fields[Event.FIELD_BIRTH_DATE] = _birth_date_field(required=is_birth_required)
+            else:
+                self.fields[Event.FIELD_BIRTH_YEAR] = forms.IntegerField(label='Год рождения',
+                                                                         required=is_birth_required)
         if Event.FIELD_CITY in registration_fields:
             self.fields[Event.FIELD_CITY] = forms.CharField(label='Город',
                                                             required=Event.FIELD_CITY in required_fields)
@@ -171,6 +193,8 @@ class EventSettingsForm(forms.ModelForm):
         self.fields['registration_close_datetime'].input_formats = settings.INPUT_DATE_FORMATS + [
             '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%m/%d/%Y %H:%M', '%m/%d/%Y %H:%M:%S'
         ]
+        # радиокнопки в браузере всегда присылают значение, а без ключа update_event_settings оставит текущее
+        self.fields['birth_format'].required = False
 
     def clean(self):
         cleaned_data = super().clean()
@@ -213,6 +237,7 @@ class EventSettingsForm(forms.ModelForm):
             'set_max_participants',
             'registration_fields',
             'required_fields',
+            'birth_format',
             'participant_min_age',
             'reg_type_list',
         ]
@@ -244,14 +269,18 @@ class EventSettingsForm(forms.ModelForm):
             'set_max_participants': 'Максимальное число участников в сете (0 - не ограничено)',
             'registration_fields': 'Дополнительные поля формы регистрации',
             'required_fields': 'Обязательные поля при регистрации',
+            'birth_format': 'Формат даты рождения',
             'participant_min_age': 'Минимальный возраст участника',
             'reg_type_list': 'Список типов регистрации участников, через запятую',
         }
         widgets = {
             'registration_close_datetime': DateTimePickerInput(options={'format': 'MM/DD/YYYY HH:00', 'stepping': 60}),
+            'birth_format': forms.RadioSelect,
         }
         help_texts = {
             'registration_close_datetime': 'Оставьте пустым для отмены автоматического закрытия регистрации',
+            'birth_format': 'Что спрашивать в поле «Год/дата рождения». Полную дату видит только организатор. '
+                            'При смене формата уже введённые годы рождения сохраняются.',
             'group_list': 'Например: "Спорт, Любители, Новички"',
             'set_list': 'Например: "Утренний сет (8:00), Дневной сет (13:00), Вечерний сет (18:00)"',
             'reg_type_list': 'Например: "Стандарт, + Футболка, + Футболка и сувенир"',
@@ -417,6 +446,7 @@ class ParticipantForm(forms.ModelForm):
         registration_fields = kwargs.pop('registration_fields')
         is_pay_allowed = kwargs.pop('is_pay_allowed')
         reg_type_list = kwargs.pop('reg_type_list')
+        birth_format = kwargs.pop('birth_format', Event.BIRTH_FORMAT_YEAR)
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_method = 'post'
@@ -441,6 +471,13 @@ class ParticipantForm(forms.ModelForm):
                                                               required=False)
         
         deleting_fields = list(set(Event.OPTIONAL_FIELDS) - set(registration_fields))
+        # birth_year в registration_fields включает одно из двух полей, в зависимости от формата события
+        if Event.FIELD_BIRTH_YEAR not in registration_fields:
+            deleting_fields.append(Event.FIELD_BIRTH_DATE)
+        elif birth_format == Event.BIRTH_FORMAT_DATE:
+            deleting_fields.append(Event.FIELD_BIRTH_YEAR)
+        else:
+            deleting_fields.append(Event.FIELD_BIRTH_DATE)
         for field in deleting_fields:
             del self.fields[field]
         if not is_pay_allowed:
@@ -451,9 +488,11 @@ class ParticipantForm(forms.ModelForm):
         fields = [
             'last_name',
             'first_name',
+            Event.FIELD_MIDDLE_NAME,
             'pin',
             Event.FIELD_GENDER,
             Event.FIELD_BIRTH_YEAR,
+            Event.FIELD_BIRTH_DATE,
             Event.FIELD_CITY,
             Event.FIELD_TEAM,
             Event.FIELD_GRADE,
@@ -464,15 +503,20 @@ class ParticipantForm(forms.ModelForm):
         labels = {
             'last_name': 'Фамилия',
             'first_name': 'Имя',
+            Event.FIELD_MIDDLE_NAME: 'Отчество',
             'pin': 'Пин-код',
             Event.FIELD_GENDER: 'Пол',
             Event.FIELD_BIRTH_YEAR: 'Год рождения',
+            Event.FIELD_BIRTH_DATE: 'Дата рождения',
             Event.FIELD_CITY: 'Город',
             Event.FIELD_TEAM: 'Команда',
             Event.FIELD_GRADE: 'Спортивный разряд',
             Event.FIELD_EMAIL: 'E-mail',
             Event.FIELD_PHONE: 'Телефон',
             'paid': 'Оплата произведена',
+        }
+        widgets = {
+            Event.FIELD_BIRTH_DATE: _birth_date_widget(),
         }
 
 

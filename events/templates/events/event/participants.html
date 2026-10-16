@@ -47,7 +47,7 @@
         <th data-field="gender" data-sortable="true">Пол</th>
         {% endif %}
         {% if 'birth_year' in fields %}
-        <th data-field="bithdate" data-sortable="true">Год рождения</th>
+        <th data-field="bithdate" data-sortable="true">{% if show_birth_date %}Дата рождения{% else %}Год рождения{% endif %}</th>
         {% endif %}
         {% if 'city' in fields %}
         <th data-field="city" data-sortable="true">Город</th>
@@ -74,7 +74,7 @@
       <tr>
         <td>{{ forloop.counter }}</td>
         <td>
-          {{ participant.last_name }} {{ participant.first_name }}
+          {{ participant.full_name }}
           {% if user == event.owner or user.is_superuser %}
           <span title="Результат {% if not participant.is_entered_result %}не {% endif %}введён"><i class="fa-solid fa-check {% if participant.is_entered_result %} text-success {% else %} text-danger {% endif %}"></i></span>
           <span class="small"><em><a href="{% url 'participant' event.id participant.id %}">(ред.)</a></em></span>
@@ -99,7 +99,7 @@
         <td>{{ participant.get_gender_display }}</td>
         {% endif %}
         {% if 'birth_year' in fields %}
-        <td>{{ participant.birth_year }}</td>
+        <td>{% if show_birth_date and participant.birth_date %}{{ participant.birth_date|date:"d.m.Y" }}{% else %}{{ participant.birth_year }}{% endif %}</td>
         {% endif %}
         {% if 'city' in fields %}
         <td>{{ participant.city }}</td>

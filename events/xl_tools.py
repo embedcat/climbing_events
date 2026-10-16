@@ -28,12 +28,16 @@ def load_template(filename: str) -> Workbook:
 
 def export_participants_to_start_list(event: Event):
     ROW_OFFSET = 8
+    HEADS_ROW = 7
     book = load_template('events/xl_templates/startlist_template.xlsx')
     sheet = book.active
     sheet.cell(row=1, column=1).value = event.gym
     sheet.cell(row=2, column=1).value = event.title
     sheet.merge_cells(start_row=3, start_column=6, end_row=3, end_column=8)
     sheet.cell(row=3, column=6).value = event.date_display
+    is_birth_date = event.birth_format == Event.BIRTH_FORMAT_DATE
+    if is_birth_date:
+        sheet.cell(row=HEADS_ROW, column=3).value = 'Дата рождения'
 
     group_list = services.get_group_list(event=event)
     reg_type_list = event.reg_type_list.split(',') if event.reg_type_num > 1 else []
@@ -46,8 +50,13 @@ def export_participants_to_start_list(event: Event):
         participants = sorted(queryset, key=operator.attrgetter('last_name'))
         for index, p in enumerate(participants):
             sheet.cell(row=ROW_OFFSET + index, column=1).value = index + 1
-            sheet.cell(row=ROW_OFFSET + index, column=2).value = f'{p.last_name} {p.first_name}'
-            sheet.cell(row=ROW_OFFSET + index, column=3).value = p.birth_year
+            sheet.cell(row=ROW_OFFSET + index, column=2).value = p.full_name
+            birth_cell = sheet.cell(row=ROW_OFFSET + index, column=3)
+            if is_birth_date and p.birth_date:
+                birth_cell.value = p.birth_date
+                birth_cell.number_format = 'DD.MM.YYYY'
+            else:
+                birth_cell.value = p.birth_year
             sheet.cell(row=ROW_OFFSET + index, column=4).value = p.get_gender_display()
             sheet.cell(row=ROW_OFFSET + index, column=5).value = p.city
             sheet.cell(row=ROW_OFFSET + index, column=6).value = p.get_grade_display()
@@ -87,8 +96,7 @@ def export_result(event: Event):
             sheet.title = title
             for index, p in enumerate(participants):
                 sheet.cell(row=ROW_OFFSET + index, column=1).value = p['participant'].place
-                sheet.cell(row=ROW_OFFSET + index,
-                           column=2).value = f"{p['participant'].last_name} {p['participant'].first_name}"
+                sheet.cell(row=ROW_OFFSET + index, column=2).value = p['participant'].full_name
                 sheet.cell(row=ROW_OFFSET + index, column=3).value = p['participant'].birth_year
                 sheet.cell(row=ROW_OFFSET + index, column=4).value = p['participant'].city
                 sheet.cell(row=ROW_OFFSET + index, column=5).value = p['participant'].get_grade_display()
