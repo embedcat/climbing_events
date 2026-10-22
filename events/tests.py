@@ -1596,6 +1596,13 @@ class PayNotifyTests(ClimbingEventsBaseTestCase):
         self.assertEqual(self.client.post(self.url, self._notify(f'e{self.event.id}_p999999')).status_code, 400)
         self.assertEqual(self.client.post(self.url, self._notify('ebad_pbad')).status_code, 400)
 
+    def test_notify_link_uses_https_behind_proxy(self):
+        # nginx передаёт Host и X-Forwarded-Proto (см. nginx.host.conf)
+        url = reverse('help', args=['payment'])
+        response = self.client.get(url, HTTP_HOST='testserver', HTTP_X_FORWARDED_PROTO='https')
+        self.assertContains(response, 'https://testserver/pay/notify/')
+        self.assertContains(self.client.get(url, HTTP_HOST='testserver'), 'http://testserver/pay/notify/')
+
     def test_test_notification_without_label(self):
         # кнопка «Протестировать» в настройках ЮMoney
         self.assertEqual(self.client.post(self.url, self._notify('')).status_code, 200)

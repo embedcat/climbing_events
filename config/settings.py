@@ -270,10 +270,9 @@ PHONENUMBER_DEFAULT_REGION = 'RU'
 
 CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
 
-# Настройка для работы за прокси (Nginx)
-secure_proxy_ssl_header = ('HTTP_X_FORWARDED_PROTO', 'https')
-use_x_forwarded_host = True
-use_x_forwarded_port = True
+# Настройка для работы за прокси (Nginx): по X-Forwarded-Proto Django понимает, что запрос пришёл по https,
+# и строит абсолютные ссылки (например, ссылку для уведомлений ЮMoney) с https://
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # CORS Configurations
 CORS_ALLOW_ALL_ORIGINS = True # Разрешаем все источники для разработки. В продакшене настройте CORS_ALLOWED_ORIGINS.
