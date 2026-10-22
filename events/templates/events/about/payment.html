@@ -20,12 +20,12 @@
 <ol>
     <p class="list-item"><img src="/static/events/img/wallet1.png" class="img-thumbnail img-thumbnail-help" alt="Настройка кошелька">
     <li><p class="list-item">Введите название кошелька.</p></li>
-    <li><p class="list-item">Скопируйте ID кошелька Yoomoney.</p></li>
-    <li><p class="list-item">Перейдите в раздел настроек кошелька.</p></li>
-    <p class="list-item"><img src="/static/events/img/wallet2.png" class="img-thumbnail img-thumbnail-help" alt="Настройка кошелька">
-    <li><p class="list-item">Сбор денег - Уведомления - Подключить.</p></li>
-    <li><p class="list-item">Куда отправлять (URL сайта) - вставьте ссылку <a href="{{ notify_link }}" target="_blank">{{ notify_link }}</a>.</p></li>
-    <li><p class="list-item">Скопируйте "Секрет для проверки подлинности" и вставьте его в соответствующее поле на RockEvents, нажмите "Отправить" - кошелек создан и появился в списке кошельков. При необходимости можно добавить и другие кошельки.</p></li>
+    <li><p class="list-item">Скопируйте номер кошелька Yoomoney (он есть в настройках кошелька) и вставьте его в поле "ID кошелька".</p></li>
+    <p class="list-item"><img src="/static/events/img/wallet1-yoomoney.png" class="img-thumbnail img-thumbnail-help" alt="Номер кошелька Yoomoney">
+    <li><p class="list-item">Откройте страницу HTTP-уведомлений Yoomoney: <a href="https://yoomoney.ru/transfer/myservices/http-notification" target="_blank">https://yoomoney.ru/transfer/myservices/http-notification</a> (откроется после входа в кошелёк).</p></li>
+    <p class="list-item"><img src="/static/events/img/wallet2.png" class="img-thumbnail img-thumbnail-help" alt="HTTP-уведомления Yoomoney">
+    <li><p class="list-item">Куда отправлять (URL сайта) - вставьте ссылку <a href="{{ notify_link }}" target="_blank">{{ notify_link }}</a>. Её же можно скопировать на странице кошельков RockEvents.</p></li>
+    <li><p class="list-item">Нажмите "Показать секрет", скопируйте "Секрет для проверки подлинности" и вставьте его в соответствующее поле на RockEvents, нажмите "Отправить" - кошелек создан и появился в списке кошельков. При необходимости можно добавить и другие кошельки.</p></li>
     <li><p class="list-item">Поставьте галочку "Отправлять HTTP-уведомления".</p></li>
     <li><p class="list-item">Нажмите "Готово". Все эти шаги нужны, чтобы Yoomoney автоматически передавало данные о проведеных платежах на сервер RockEvents, и участники автоматически помечались как уплатившие стартовый взнос.</p></li>
     <li><p class="list-item">Рекомендуется проверить корректность введённых данных - зарегистрировать участника и оплатить за него стартовый взнос. После успешного платежа у него должен появиться статус "Оплачен стартовый взнос" на странице списка участников.</p></li>
@@ -35,6 +35,7 @@
 <ol>
     <p class="list-item"><img src="/static/events/img/wallet3.png" class="img-thumbnail img-thumbnail-help" alt="Настройка оплаты">
     <li><p class="list-item">Поставьте галочку "Оплачивать стартовые взносы на сайте".</p></li>
+    <li><p class="list-item">Выберите тип оплаты "Кошелек Yoomoney".</p></li>
     <li><p class="list-item">Установите величину стартовый взноса.</p></li>
     <li><p class="list-item">Выберите из списка кошелек для зачисления стартовых взносов.</p></li>
     <li><p class="list-item">Нажмите "Сохранить".</p></li>
