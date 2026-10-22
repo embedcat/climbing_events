@@ -1,8 +1,11 @@
+import hashlib
+import hmac
 import io
 import re
 import tempfile
 from datetime import datetime, date
 from unittest import mock
+from urllib.parse import quote
 from PIL import Image
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -16,6 +19,7 @@ from events.models import ACCENT_NO, ACCENT_FLASH, ACCENT_REDPOINT
 from events import img_tools, services
 from events.forms import ParticipantRegistrationForm, CreateEventForm
 from events.exceptions import DuplicateParticipantError, ParticipantTooYoungError
+from events.pay_views import check_notify_sign
 
 class ClimbingEventsBaseTestCase(TestCase):
     def setUp(self):
@@ -1509,3 +1513,91 @@ class MiddleNameAndBirthDateTests(ClimbingEventsBaseTestCase):
         sheet = load_workbook(io.BytesIO(self.client.post(url, data={'export_startlist': ''}).content)).worksheets[0]
         self.assertEqual(sheet['C7'].value, 'Год рождения')
         self.assertEqual(sheet['C8'].value, 1990)
+
+
+class PayNotifyTests(ClimbingEventsBaseTestCase):
+    """HTTP-уведомления ЮMoney о входящих переводах (подпись sign, HMAC-SHA256)."""
+    SECRET = 'wallet-secret'
+
+    def setUp(self):
+        super().setUp()
+        self.wallet = Wallet.objects.create(owner=self.user, title='Кошелёк', wallet_id='4100100000000000',
+                                            notify_secret_key=self.SECRET)
+        self.event = services.create_event(owner=self.user, title="Pay Event", date=date(2026, 10, 1))
+        self.event.wallet = self.wallet
+        self.event.is_pay_allowed = True
+        self.event.save()
+        self.participant = Participant.objects.create(first_name='Иван', last_name='Иванов', birth_year=1990,
+                                                      gender=Participant.GENDER_MALE, event=self.event, pin=1234)
+        self.url = reverse('pay_notify')
+
+    def _notify(self, label, secret=SECRET, operation_id='835100000000000001'):
+        # набор полей реального уведомления о переводе с карты
+        data = {
+            'notification_type': 'card-incoming', 'operation_id': operation_id, 'amount': '97.00',
+            'withdraw_amount': '100.00', 'currency': '643', 'datetime': '2026-10-22T10:44:30Z', 'sender': '',
+            'codepro': 'false', 'label': label, 'unaccepted': 'false',
+            'lastname': '', 'firstname': '', 'fathersname': '', 'email': '', 'phone': '',
+            'city': '', 'street': '', 'building': '', 'suite': '', 'flat': '', 'zip': '',
+        }
+        signed = '&'.join(f"{k}={quote(v, safe='')}" for k, v in sorted(data.items()))
+        data['sign'] = hmac.new(secret.encode(), signed.encode(), hashlib.sha256).hexdigest()
+        return data
+
+    def test_sign_matches_yoomoney_docs_example(self):
+        notify = {
+            'notification_type': 'p2p-incoming', 'operation_id': '441361714955017004', 'amount': '98.00',
+            'withdraw_amount': '100.00', 'currency': '643', 'datetime': '2013-12-26T08:28:34Z',
+            'sender': '41000000000', 'codepro': 'false', 'label': 'ML23045', 'unaccepted': 'false',
+            'sha1_hash': 'ac13833bd6ba9eff1fa9e4bed76f3d6ebb57f6c0',
+            'sign': 'a452af731650e2c5b39abcdc7c28dd27db7b3b654c2230ad2c386e64afb98605',
+        }
+        self.assertTrue(check_notify_sign(notify, 'secret123'))
+        self.assertFalse(check_notify_sign(notify, 'other-secret'))
+        self.assertFalse(check_notify_sign({k: v for k, v in notify.items() if k != 'sign'}, 'secret123'))
+
+    def test_valid_notification_marks_participant_paid(self):
+        promo = PromoCode.objects.create(event=self.event, title='PROMO', price=50)
+        label = f'e{self.event.id}_p{self.participant.id}_c{promo.id}'
+
+        response = self.client.post(self.url, self._notify(label))
+
+        self.assertEqual(response.status_code, 200)
+        self.participant.refresh_from_db()
+        self.assertTrue(self.participant.paid)
+        promo.refresh_from_db()
+        self.assertEqual(promo.applied_num, 1)
+        pay_detail = PayDetail.objects.get(participant=self.participant)
+        self.assertEqual(pay_detail.operation_id, '835100000000000001')
+        self.assertEqual(pay_detail.wallet, self.wallet)
+
+    def test_repeated_notification_is_processed_once(self):
+        promo = PromoCode.objects.create(event=self.event, title='PROMO', price=50)
+        data = self._notify(f'e{self.event.id}_p{self.participant.id}_c{promo.id}')
+
+        self.assertEqual(self.client.post(self.url, data).status_code, 200)
+        self.assertEqual(self.client.post(self.url, data).status_code, 200)
+
+        self.assertEqual(PayDetail.objects.count(), 1)
+        promo.refresh_from_db()
+        self.assertEqual(promo.applied_num, 1)
+
+    def test_wrong_sign_is_rejected(self):
+        response = self.client.post(self.url, self._notify(f'e{self.event.id}_p{self.participant.id}',
+                                                           secret='other-secret'))
+
+        self.assertEqual(response.status_code, 400)
+        self.participant.refresh_from_db()
+        self.assertFalse(self.participant.paid)
+        self.assertFalse(PayDetail.objects.exists())
+
+    def test_unknown_event_or_participant_is_rejected_without_error(self):
+        self.assertEqual(self.client.post(self.url, self._notify('e999999_p1')).status_code, 400)
+        self.assertEqual(self.client.post(self.url, self._notify(f'e{self.event.id}_p999999')).status_code, 400)
+        self.assertEqual(self.client.post(self.url, self._notify('ebad_pbad')).status_code, 400)
+
+    def test_test_notification_without_label(self):
+        # кнопка «Протестировать» в настройках ЮMoney
+        self.assertEqual(self.client.post(self.url, self._notify('')).status_code, 200)
+        self.assertEqual(self.client.post(self.url, self._notify('', secret='other-secret')).status_code, 400)
+        self.assertFalse(PayDetail.objects.exists())
